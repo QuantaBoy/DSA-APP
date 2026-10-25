@@ -51,6 +51,17 @@ class Problem {
   bool isDue(DateTime today) => !nextDue.isAfter(dateOnly(today));
   int daysOverdue(DateTime today) => dateOnly(today).difference(nextDue).inDays;
 
+  Map<String, Object?> toMap() => {
+        'name': name, 'platform': platform, 'difficulty': difficulty, 'topic': topic, 'url': url, 'notes': notes,
+        'solvedOn': dayKey(solvedOn), 'stage': stage, 'nextDue': dayKey(nextDue),
+      };
+
+  factory Problem.fromMap(String id, Map<String, dynamic> m) => Problem(
+        id: id, name: m['name'] as String, platform: m['platform'] as String, difficulty: m['difficulty'] as String,
+        topic: m['topic'] as String, url: m['url'] as String?, notes: m['notes'] as String?,
+        solvedOn: parseDay(m['solvedOn'] as String), stage: m['stage'] as int, nextDue: parseDay(m['nextDue'] as String),
+      );
+
   /// Records one review: returns the rescheduled problem and the log entry to save.
   (Problem, Review) review({required bool remembered, required DateTime on}) {
     final day = dateOnly(on);
@@ -73,4 +84,17 @@ class Review {
   final DateTime reviewedOn;
   final bool remembered;
   final int stageBefore;
+
+  Map<String, Object?> toMap() =>
+      {'problemId': problemId, 'reviewedOn': dayKey(reviewedOn), 'remembered': remembered, 'stageBefore': stageBefore};
+
+  factory Review.fromMap(Map<String, dynamic> m) => Review(
+        problemId: m['problemId'] as String, reviewedOn: parseDay(m['reviewedOn'] as String),
+        remembered: m['remembered'] as bool, stageBefore: m['stageBefore'] as int,
+      );
 }
+
+/// Days are stored as 'YYYY-MM-DD' text: no time zone, sorts correctly, readable in the Firebase console.
+String dayKey(DateTime day) => dateOnly(day).toIso8601String().substring(0, 10);
+
+DateTime parseDay(String key) => dateOnly(DateTime.parse(key));

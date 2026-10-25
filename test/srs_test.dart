@@ -72,6 +72,20 @@ void main() {
     expect(nextTopic(problems, [review('g', false), review('g', false)]).reason, NextReason.learn);
   });
 
+  test('problem and review survive a save and load', () {
+    final p = Problem.solved(id: 'x', name: 'Two Sum', platform: 'LeetCode', difficulty: 'Easy', topic: 'Array',
+        url: 'https://leetcode.com/problems/two-sum', notes: 'hash map', solvedOn: DateTime(2026, 1, 9, 23, 59));
+    final map = p.toMap();
+    expect(map['solvedOn'], '2026-01-09');
+    expect(map['nextDue'], '2026-01-10');
+    final back = Problem.fromMap('x', map);
+    expect([back.name, back.url, back.notes, back.stage], [p.name, p.url, p.notes, 0]);
+    expect([back.solvedOn, back.nextDue], [p.solvedOn, p.nextDue]);
+
+    final r = Review.fromMap(review('x', true).toMap());
+    expect([r.problemId, r.reviewedOn, r.remembered, r.stageBefore], ['x', d(2026, 10, 5), true, 0]);
+  });
+
   test('reviews of deleted problems are ignored', () {
     expect(topicResults([problem('a', 'Array')], [review('gone', true)]), isEmpty);
   });

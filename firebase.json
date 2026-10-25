@@ -1,1 +1,25 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"memory-stack-e6990","appId":"1:153577681363:android:6a82e0352ef267b9aeff26","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"memory-stack-e6990","configurations":{"android":"1:153577681363:android:6a82e0352ef267b9aeff26","web":"1:153577681363:web:e9cef817bfb9690daeff26"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "memory-stack-e6990",
+          "appId": "1:153577681363:android:6a82e0352ef267b9aeff26",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "memory-stack-e6990",
+          "configurations": {
+            "android": "1:153577681363:android:6a82e0352ef267b9aeff26",
+            "web": "1:153577681363:web:e9cef817bfb9690daeff26"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}
