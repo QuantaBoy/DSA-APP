@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "153577681363",
+    "project_id": "memory-stack-e6990",
+    "storage_bucket": "memory-stack-e6990.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:153577681363:android:6a82e0352ef267b9aeff26",
+        "android_client_info": {
+          "package_name": "com.memorystack.memory_stack"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCbWWmJxEMH5Fqwijdyo5YQnEk9EaRJxPo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
