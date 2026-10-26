@@ -98,3 +98,7 @@ class Review {
 String dayKey(DateTime day) => dateOnly(day).toIso8601String().substring(0, 10);
 
 DateTime parseDay(String key) => dateOnly(DateTime.parse(key));
+
+/// "26 Oct 2026"
+String prettyDay(DateTime d) =>
+    '${d.day} ${const ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.month - 1]} ${d.year}';
