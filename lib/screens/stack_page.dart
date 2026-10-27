@@ -4,6 +4,7 @@ import '../data/store.dart';
 import '../logic/models.dart';
 import '../logic/srs.dart';
 import 'open_link.dart';
+import 'widgets.dart';
 
 /// Every problem in your review stack, soonest review first.
 class StackPage extends StatelessWidget {
@@ -27,14 +28,40 @@ class StackPage extends StatelessWidget {
     if (ok == true) store.deleteProblem(p.id);
   }
 
+  Future<void> _editNotes(BuildContext context, Problem p) async {
+    final controller = TextEditingController(text: p.notes);
+    final notes = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Notes · ${p.name}'),
+        content: SizedBox(
+          width: 480,
+          child: TextField(
+            controller: controller,
+            autofocus: true,
+            minLines: 4,
+            maxLines: 10,
+            style: const TextStyle(fontFamily: 'monospace'),
+            decoration: const InputDecoration(hintText: 'Key idea, edge cases, complexity, code…', border: OutlineInputBorder()),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: const Text('Save')),
+        ],
+      ),
+    );
+    if (notes != null) store.setNotes(p.id, notes.isEmpty ? null : notes); // not awaited: saved locally at once
+  }
+
   @override
   Widget build(BuildContext context) {
     if (problems.isEmpty) {
       return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32),
-          child: Text('Your stack is empty.\nTick problems in the A2Z sheet as you solve them, '
-              'or add a problem you solved elsewhere.', textAlign: TextAlign.center),
+        child: EmptyState(
+          icon: Icons.layers_outlined,
+          title: 'Your stack is empty',
+          message: 'Tick problems in the A2Z sheet as you solve them, or add one you solved elsewhere.',
         ),
       );
     }
@@ -55,13 +82,16 @@ class StackPage extends StatelessWidget {
             foregroundColor: due ? colors.onPrimary : colors.onSurface,
             child: p.mastered ? const Icon(Icons.star) : Text('${p.stage + 1}'),
           ),
-          title: Text(p.name),
-          subtitle: Text('${p.topic} · ${p.difficulty} · '
-              '${overdue > 0 ? '$overdue days overdue' : due ? 'due today' : 'next ${prettyDay(p.nextDue)}'}'),
+          title: Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+          subtitle: Text('${p.topic} · ${p.difficulty} · ${due ? dueLabel(overdue) : 'next ${prettyDay(p.nextDue)}'}',
+              maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: overdue > 0 ? colors.error : null)),
           onTap: p.url == null ? null : () => openLink(context, p.url!),
           trailing: PopupMenuButton<String>(
-            onSelected: (_) => _confirmDelete(context, p),
-            itemBuilder: (_) => const [PopupMenuItem(value: 'delete', child: Text('Delete'))],
+            onSelected: (v) => v == 'notes' ? _editNotes(context, p) : _confirmDelete(context, p),
+            itemBuilder: (_) => [
+              PopupMenuItem(value: 'notes', child: Text(p.notes == null ? 'Add notes' : 'Edit notes')),
+              const PopupMenuItem(value: 'delete', child: Text('Delete')),
+            ],
           ),
         );
       },

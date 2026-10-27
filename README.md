@@ -2,6 +2,15 @@
 
 Spaced repetition app for DSA problems (Flutter, Android + web).
 
+- **Today**: problems due for revision, streak, what's coming up this week
+- **Review**: recall, check, then tap Remembered or Forgot. Reviews come back after 1, 3, 7, 14, 30 � 365 days.
+- **A2Z Sheet**: Striver's sheet step by step; ticking a problem adds it to your stack
+- **My stack**: every problem, with notes; add problems from LeetCode, Codeforces and other sites
+- **Stats**: recall rate, weakest topics, last 7 days
+- Daily reminder at 8 PM, works offline, Google and email login, account deletion
+
+Code layout: `lib/logic` (pure rules, no Firebase), `lib/data` (Firestore, sheet, reminder), `lib/screens` (UI).
+
 ## Run
 
 ```
@@ -30,3 +39,12 @@ flutter test
    ```
    Copy the `SHA1` of the `debug` variant → Firebase console → **Project settings → Your apps → Android app → Add fingerprint**.
    Add the release key's SHA-1 too before publishing.
+
+## Release build
+
+The release signing key is kept outside the repo, in `C:\Users\quant\MemoryStack-keys\`. `android/key.properties` points to it and is git-ignored.
+```
+flutter build apk --release        # to install directly on a phone
+flutter build appbundle --release  # to upload to Google Play
+```
+See [LAUNCH.md](LAUNCH.md) for the Play Store steps and [PRIVACY.md](PRIVACY.md) for the privacy policy.

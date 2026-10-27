@@ -17,6 +17,35 @@ Future<void> main() async {
 
 const brand = Color(0xFF6C4EF5);
 
+/// One look for every screen: flat rounded cards, rounded buttons and fields.
+ThemeData _theme(Brightness brightness) {
+  final colors = ColorScheme.fromSeed(seedColor: brand, brightness: brightness);
+  final rounded = RoundedRectangleBorder(borderRadius: BorderRadius.circular(14));
+  return ThemeData(
+    colorScheme: colors,
+    scaffoldBackgroundColor: colors.surface,
+    appBarTheme: AppBarTheme(
+      backgroundColor: colors.surface,
+      surfaceTintColor: Colors.transparent,
+      titleTextStyle: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: colors.onSurface),
+    ),
+    cardTheme: CardThemeData(
+      elevation: 0,
+      color: colors.surfaceContainerLow,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: colors.outlineVariant)),
+    ),
+    filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(shape: rounded, minimumSize: const Size(0, 48))),
+    outlinedButtonTheme: OutlinedButtonThemeData(style: OutlinedButton.styleFrom(shape: rounded, minimumSize: const Size(0, 48))),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: colors.surfaceContainerHighest.withValues(alpha: 0.5),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+    ),
+    snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
+    dividerTheme: DividerThemeData(color: colors.outlineVariant.withValues(alpha: 0.5)),
+  );
+}
+
 class MemoryStackApp extends StatelessWidget {
   const MemoryStackApp({super.key});
 
@@ -25,8 +54,8 @@ class MemoryStackApp extends StatelessWidget {
     return MaterialApp(
       title: 'Memory Stack',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(colorSchemeSeed: brand),
-      darkTheme: ThemeData(colorSchemeSeed: brand, brightness: Brightness.dark),
+      theme: _theme(Brightness.light),
+      darkTheme: _theme(Brightness.dark),
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {

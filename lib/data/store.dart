@@ -36,6 +36,8 @@ class Store {
         .commit();
   }
 
+  Future<void> setNotes(String id, String? notes) => _problems.doc(id).update({'notes': notes});
+
   /// Deletes a problem and its review history.
   Future<void> deleteProblem(String id) async {
     final history = await _reviews.where('problemId', isEqualTo: id).get();
@@ -44,5 +46,17 @@ class Store {
       batch.delete(d.reference);
     }
     await batch.commit();
+  }
+
+  /// Deletes every problem and review: used when the account is deleted.
+  Future<void> deleteEverything() async {
+    final docs = [...(await _problems.get()).docs, ...(await _reviews.get()).docs];
+    for (var i = 0; i < docs.length; i += 500) { // a Firestore batch holds at most 500 writes
+      final batch = FirebaseFirestore.instance.batch();
+      for (final d in docs.skip(i).take(500)) {
+        batch.delete(d.reference);
+      }
+      await batch.commit();
+    }
   }
 }

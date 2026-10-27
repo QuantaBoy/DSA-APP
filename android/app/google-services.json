@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "153577681363-4djckecr3gpgu6un8hth4jsmb0mne9oi.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.memorystack.memory_stack",
+            "certificate_hash": "28d8623f44068570dc387b6ab760caa74c3cb652"
+          }
+        },
+        {
           "client_id": "153577681363-c8ui915qqo4m0vaie74vo37pipi8otjj.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
