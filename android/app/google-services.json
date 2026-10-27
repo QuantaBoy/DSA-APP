@@ -12,7 +12,20 @@
           "package_name": "com.memorystack.memory_stack"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "153577681363-c8ui915qqo4m0vaie74vo37pipi8otjj.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.memorystack.memory_stack",
+            "certificate_hash": "994708765a7b85f3d878d5fabafa3afacfe399b7"
+          }
+        },
+        {
+          "client_id": "153577681363-g3gdo2gn53d42ef4h6l9f5q9dr8o3722.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCbWWmJxEMH5Fqwijdyo5YQnEk9EaRJxPo"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "153577681363-g3gdo2gn53d42ef4h6l9f5q9dr8o3722.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
