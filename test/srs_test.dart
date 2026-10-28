@@ -87,4 +87,13 @@ void main() {
     expect(s.recall, closeTo(2 / 3, 1e-9));
     expect(const Stats().recall, isNull);
   });
+
+  test('longest streak and when the current one started', () {
+    final days = [d(2026, 10, 1), d(2026, 10, 2), d(2026, 10, 3), d(2026, 10, 10), d(2026, 10, 11)];
+    expect(longestStreak(days), 3);
+    expect(longestStreak([]), 0);
+    expect(streakStart(days, d(2026, 10, 11)), d(2026, 10, 10));
+    expect(streakStart(days, d(2026, 10, 12)), d(2026, 10, 10), reason: 'not reviewed yet today, streak still alive');
+    expect(streakStart(days, d(2026, 10, 20)), isNull);
+  });
 }

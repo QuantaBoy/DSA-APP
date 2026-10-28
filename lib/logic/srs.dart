@@ -69,3 +69,30 @@ enum NextReason { reinforce, learn }
   final leastPracticed = roadmap.reduce((a, b) => (solved[b] ?? 0) < (solved[a] ?? 0) ? b : a);
   return (topic: leastPracticed, reason: NextReason.learn);
 }
+
+/// Longest run of consecutive review days ever.
+int longestStreak(Iterable<DateTime> reviewDays) {
+  final days = reviewDays.map(dateOnly).toSet();
+  var best = 0;
+  for (final d in days) {
+    if (days.contains(addDays(d, -1))) continue; // only count from the first day of each run
+    var length = 1;
+    while (days.contains(addDays(d, length))) {
+      length++;
+    }
+    best = best > length ? best : length;
+  }
+  return best;
+}
+
+/// The day the current streak began, or null when there is no streak.
+DateTime? streakStart(Iterable<DateTime> reviewDays, DateTime on) {
+  final n = streak(reviewDays, on);
+  if (n == 0) return null;
+  final days = reviewDays.map(dateOnly).toSet();
+  final end = days.contains(dateOnly(on)) ? dateOnly(on) : addDays(dateOnly(on), -1);
+  return addDays(end, -(n - 1));
+}
+
+/// Streak goals, in order. The challenge bar always aims at the next one.
+const streakMilestones = [3, 7, 14, 30, 60, 100, 200, 365];

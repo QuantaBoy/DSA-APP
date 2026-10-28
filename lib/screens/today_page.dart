@@ -5,6 +5,7 @@ import '../logic/models.dart';
 import '../logic/srs.dart';
 import 'motion.dart';
 import 'review_page.dart';
+import 'streak_page.dart';
 import 'widgets.dart';
 
 /// Home tab: today's review card, streak, what is due now, and what comes back soon.
@@ -28,7 +29,18 @@ class TodayPage extends StatelessWidget {
     final reviewedToday = stats.reviewsOn(now);
     final days = streak(stats.days.keys, now);
     final todayTotal = due.length + reviewedToday;
-    void review(List<Problem> queue) => Navigator.push(context, MaterialPageRoute(builder: (_) => ReviewPage(store: store, queue: queue)));
+    void review(List<Problem> queue) => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ReviewPage(
+              store: store,
+              queue: queue,
+              // First review of the day grows the streak: celebrate it when the session ends.
+              streakBefore: reviewedToday == 0 ? days : null,
+              reviewDays: {...stats.days.keys.map(dateOnly), now},
+            ),
+          ),
+        );
 
     final hero = HeroCard(
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -82,7 +94,13 @@ class TodayPage extends StatelessWidget {
     );
 
     final stats3 = StatRow(children: [
-      StatTile(icon: Icons.local_fire_department_rounded, value: '$days', label: 'Day streak', color: Accent.orange),
+      StatTile(
+        icon: Icons.local_fire_department_rounded,
+        value: '$days',
+        label: 'Day streak',
+        color: Accent.orange,
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => StreakPage(stats: stats))),
+      ),
       StatTile(icon: Icons.event_note_rounded, value: '${due.length}', label: 'Due now', color: Accent.red),
       StatTile(icon: Icons.check_circle_rounded, value: '$reviewedToday', label: 'Reviewed today', color: Accent.green),
     ]);

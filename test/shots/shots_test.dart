@@ -14,6 +14,7 @@ import 'package:memory_stack/screens/onboarding_page.dart';
 import 'package:memory_stack/screens/sheet_page.dart';
 import 'package:memory_stack/screens/stack_page.dart';
 import 'package:memory_stack/screens/stats_page.dart';
+import 'package:memory_stack/screens/streak_page.dart';
 import 'package:memory_stack/screens/today_page.dart';
 
 const fonts = r'C:/flutter/bin/cache/artifacts/material_fonts';
@@ -78,6 +79,8 @@ void main() {
   testWidgets('today dark', (t) => shot(t, 'today_dark', 'Hi, Three', TodayPage(store: Store('x'), problems: problems, stats: stats, onOpenSheet: () {}), brightness: Brightness.dark));
   testWidgets('stats dark', (t) => shot(t, 'stats_dark', 'Stats', StatsPage(problems: problems, stats: stats), tab: 3, brightness: Brightness.dark));
   testWidgets('onboarding', (t) => page(t, 'onboarding', OnboardingPage(onDone: () {})));
+  testWidgets('streak', (t) => page(t, 'streak', StreakPage(stats: Stats(days: {for (var i = 0; i < 5; i++) addDays(today(), -i): 1}))));
+  testWidgets('streak celebration', (t) => page(t, 'streak_celebration', StreakCelebration(before: 4, reviewDays: {for (var i = 0; i < 5; i++) addDays(today(), -i)})));
   testWidgets('login', (t) => page(t, 'login', const LoginPage()));
 }
 
@@ -89,5 +92,6 @@ Future<void> page(WidgetTester tester, String name, Widget home) async {
   await tester.pumpWidget(MaterialApp(debugShowCheckedModeBanner: false, theme: appTheme(Brightness.light), home: home));
   await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300))); // decode images
   await tester.pump(const Duration(seconds: 2));
+  await tester.pump(const Duration(seconds: 2)); // delayed pop-ins start, then finish
   await expectLater(find.byType(MaterialApp), matchesGoldenFile('$name.png'));
 }

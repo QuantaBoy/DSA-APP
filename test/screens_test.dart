@@ -5,6 +5,7 @@ import 'package:memory_stack/logic/models.dart';
 import 'package:memory_stack/logic/srs.dart';
 import 'package:memory_stack/screens/review_page.dart';
 import 'package:memory_stack/screens/stats_page.dart';
+import 'package:memory_stack/screens/streak_page.dart';
 import 'package:memory_stack/screens/today_page.dart';
 import 'package:memory_stack/screens/widgets.dart';
 
@@ -71,6 +72,29 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('return seen[target - x]'), findsOneWidget);
     expect(find.textContaining('Different code is fine'), findsOneWidget);
+  });
+
+  testWidgets('Streak page shows the streak, the next challenge and the record', (tester) async {
+    tall(tester);
+    final now = today();
+    final stats = Stats(days: {for (var i = 0; i < 5; i++) addDays(now, -i): 1, addDays(now, -30): 1});
+    await tester.pumpWidget(MaterialApp(home: StreakPage(stats: stats)));
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.text('5'), findsWidgets);
+    expect(find.text('7 days challenge'), findsOneWidget);
+    expect(find.text('Day 5 of 7'), findsOneWidget);
+    expect(find.text('5 days'), findsOneWidget); // record
+    expect(find.text('2 days to go'), findsOneWidget); // 7-day milestone
+  });
+
+  testWidgets('Streak celebration counts up by one and ticks today', (tester) async {
+    tall(tester);
+    final now = today();
+    await tester.pumpWidget(MaterialApp(home: StreakCelebration(before: 4, reviewDays: {now, addDays(now, -1)})));
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.text('5'), findsOneWidget);
+    expect(find.byIcon(Icons.check_rounded), findsWidgets);
+    expect(find.text('Continue'), findsOneWidget);
   });
 }
 

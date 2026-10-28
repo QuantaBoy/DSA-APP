@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../logic/models.dart';
 import '../logic/srs.dart';
 import 'motion.dart';
+import 'streak_page.dart';
 import 'widgets.dart';
 
 enum _Period { week, month, all }
@@ -63,7 +64,13 @@ class _StatsPageState extends State<StatsPage> {
           child: StatRow(children: [
             StatTile(icon: Icons.check_circle_rounded, value: '${problems.length}', label: 'Solved', color: Accent.green),
             StatTile(icon: Icons.star_rounded, value: '${problems.where((p) => p.mastered).length}', label: 'Mastered', color: Accent.amber),
-            StatTile(icon: Icons.local_fire_department_rounded, value: '${streak(stats.days.keys, now)}', label: 'Day streak', color: Accent.orange),
+            StatTile(
+              icon: Icons.local_fire_department_rounded,
+              value: '${streak(stats.days.keys, now)}',
+              label: 'Day streak',
+              color: Accent.orange,
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => StreakPage(stats: stats))),
+            ),
           ]),
         ),
         const SizedBox(height: 10),

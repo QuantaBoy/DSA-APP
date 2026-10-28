@@ -7,15 +7,18 @@ import '../logic/srs.dart';
 import 'code_pad.dart';
 import 'motion.dart';
 import 'open_link.dart';
+import 'streak_page.dart';
 import 'widgets.dart';
 
 /// One problem at a time: write the solution from memory, compare it with your saved one,
 /// then say if you remembered it.
 class ReviewPage extends StatefulWidget {
-  const ReviewPage({super.key, required this.store, required this.queue});
+  const ReviewPage({super.key, required this.store, required this.queue, this.streakBefore, this.reviewDays = const {}});
 
   final Store store;
   final List<Problem> queue; // fixed when the session starts, so answering does not reshuffle it
+  final int? streakBefore; // set when this is the first review of the day: show the streak celebration at the end
+  final Set<DateTime> reviewDays;
 
   @override
   State<ReviewPage> createState() => _ReviewPageState();
@@ -45,6 +48,19 @@ class _ReviewPageState extends State<ReviewPage> {
       _checked = false;
       _code.fullText = '';
     });
+    if (_index >= widget.queue.length && widget.streakBefore != null) {
+      // Session done: show the streak growing, then the summary underneath.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (_, _, _) => StreakCelebration(before: widget.streakBefore!, reviewDays: widget.reviewDays),
+            transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child),
+          ),
+        );
+      });
+    }
   }
 
   Future<void> _check(Problem p) async {
