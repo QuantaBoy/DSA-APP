@@ -6,6 +6,7 @@ import '../logic/models.dart';
 import '../logic/srs.dart';
 import 'open_link.dart';
 import 'solve_page.dart';
+import 'widgets.dart';
 
 /// Striver's A2Z sheet: continue where you left off, tick problems as solved.
 /// Ticking adds the problem to your review stack; unticking removes it.
@@ -112,27 +113,38 @@ class _ContinueCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
+    final ghost = OutlinedButton.styleFrom(foregroundColor: Colors.white, side: BorderSide(color: Colors.white.withValues(alpha: 0.5)));
+    return HeroCard(
       margin: const EdgeInsets.all(16),
-      color: theme.colorScheme.primaryContainer,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('CONTINUE', style: theme.textTheme.labelMedium?.copyWith(letterSpacing: 1.2)),
-          const SizedBox(height: 6),
-          Text(problem.title, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-          Text('Step ${problem.step} · ${sheet.steps[problem.step - 1]} · ${problem.section}'
-              '${problem.difficulty == null ? '' : ' · ${problem.difficulty}'}'),
-          const SizedBox(height: 12),
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            FilledButton.icon(onPressed: onSolveHere, icon: const Icon(Icons.terminal), label: const Text('Solve here')),
-            OutlinedButton.icon(onPressed: onOpen, icon: const Icon(Icons.open_in_new), label: Text(problem.platform)),
-            if (onVideo != null) OutlinedButton.icon(onPressed: onVideo, icon: const Icon(Icons.play_circle_outline), label: const Text('Video')),
-            OutlinedButton.icon(onPressed: onSolved, icon: const Icon(Icons.check), label: const Text('I solved it')),
-          ]),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('CONTINUE LEARNING', style: TextStyle(fontSize: 12, letterSpacing: 1.4, fontWeight: FontWeight.w700, color: Colors.white.withValues(alpha: 0.8))),
+        const SizedBox(height: 8),
+        Text(problem.title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -0.4)),
+        const SizedBox(height: 4),
+        Text('Step ${problem.step} · ${sheet.steps[problem.step - 1]} · ${problem.section}',
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.85))),
+        if (problem.difficulty != null) ...[
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
+            child: Text(problem.difficulty!, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+          ),
+        ],
+        const SizedBox(height: 16),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          FilledButton.icon(
+            style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: const Color(0xFF5B3FE0)),
+            onPressed: onSolveHere,
+            icon: const Icon(Icons.terminal_rounded),
+            label: const Text('Solve here'),
+          ),
+          OutlinedButton.icon(style: ghost, onPressed: onSolved, icon: const Icon(Icons.check_rounded), label: const Text('I solved it')),
+          OutlinedButton.icon(style: ghost, onPressed: onOpen, icon: const Icon(Icons.open_in_new_rounded), label: Text(problem.platform)),
+          if (onVideo != null)
+            OutlinedButton.icon(style: ghost, onPressed: onVideo, icon: const Icon(Icons.play_circle_outline_rounded), label: const Text('Video')),
         ]),
-      ),
+      ]),
     );
   }
 }

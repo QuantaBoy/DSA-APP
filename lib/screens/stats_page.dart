@@ -31,22 +31,84 @@ class StatsPage extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.only(top: 8, bottom: 24),
       children: [
+        _RecallCard(recall: stats.recall, label: recall, problems: problems),
+        const SizedBox(height: 12),
         StatRow(children: [
-          StatTile(icon: Icons.check_circle_outline, value: '${problems.length}', label: 'solved'),
-          StatTile(icon: Icons.star_outline, value: '${problems.where((p) => p.mastered).length}', label: 'mastered'),
-          StatTile(icon: Icons.local_fire_department_outlined, value: '${streak(stats.days.keys, now)}', label: 'day streak'),
+          StatTile(icon: Icons.check_circle_rounded, value: '${problems.length}', label: 'solved', color: Accent.green),
+          StatTile(icon: Icons.star_rounded, value: '${problems.where((p) => p.mastered).length}', label: 'mastered', color: Accent.amber),
+          StatTile(icon: Icons.local_fire_department_rounded, value: '${streak(stats.days.keys, now)}', label: 'day streak', color: Accent.orange),
         ]),
         const SizedBox(height: 10),
         StatRow(children: [
-          StatTile(icon: Icons.replay, value: '${stats.reviews}', label: 'reviews'),
-          StatTile(icon: Icons.psychology_outlined, value: recall, label: 'recall rate'),
-          StatTile(icon: Icons.event_outlined, value: '${problems.where((p) => p.isDue(now)).length}', label: 'due now'),
+          StatTile(icon: Icons.replay_rounded, value: '${stats.reviews}', label: 'reviews', color: Accent.sky),
+          StatTile(icon: Icons.event_rounded, value: '${problems.where((p) => p.isDue(now)).length}', label: 'due now', color: Accent.red),
         ]),
         const SectionTitle('Last 7 days'),
         _WeekChart(stats: stats, today: now),
         const SectionTitle('Topics, weakest first'),
         for (final t in topics) _TopicRow(topic: t, solved: solvedPerTopic[t]!, result: results[t]),
       ],
+    );
+  }
+}
+
+/// Recall rate as a big ring, with where your problems are in the schedule.
+class _RecallCard extends StatelessWidget {
+  const _RecallCard({required this.recall, required this.label, required this.problems});
+
+  final double? recall;
+  final String label;
+  final List<Problem> problems;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final mastered = problems.where((p) => p.mastered).length;
+    final learning = problems.where((p) => p.stage == 0).length;
+    final growing = problems.length - mastered - learning;
+    Widget legend(Color c, String name, int n) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(children: [
+            Container(width: 10, height: 10, decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
+            const SizedBox(width: 8),
+            Expanded(child: Text(name, style: theme.textTheme.bodyMedium)),
+            Text('$n', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+          ]),
+        );
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(children: [
+          SizedBox.square(
+            dimension: 120,
+            child: Stack(fit: StackFit.expand, children: [
+              CircularProgressIndicator(
+                value: recall ?? 0,
+                strokeWidth: 12,
+                strokeCap: StrokeCap.round,
+                backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.6),
+              ),
+              Center(
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Text(label, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+                  Text('recall', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                ]),
+              ),
+            ]),
+          ),
+          const SizedBox(width: 24),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Memory progress', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 8),
+              legend(Accent.sky, 'New', learning),
+              legend(theme.colorScheme.primary, 'Growing', growing),
+              legend(Accent.amber, 'Mastered', mastered),
+            ]),
+          ),
+        ]),
+      ),
     );
   }
 }

@@ -70,29 +70,54 @@ class StackPage extends StatelessWidget {
     final now = today();
     final colors = Theme.of(context).colorScheme;
     return ListView.separated(
-      padding: const EdgeInsets.only(bottom: 96),
+      padding: const EdgeInsets.only(top: 8, bottom: 96),
       itemCount: sorted.length,
-      separatorBuilder: (_, _) => const Divider(height: 1),
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (context, i) {
         final p = sorted[i];
         final overdue = p.daysOverdue(now);
         final due = p.isDue(now);
-        return ListTile(
-          leading: CircleAvatar(
-            backgroundColor: due ? colors.primary : colors.surfaceContainerHighest,
-            foregroundColor: due ? colors.onPrimary : colors.onSurface,
-            child: p.mastered ? const Icon(Icons.star) : Text('${p.stage + 1}'),
-          ),
-          title: Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-          subtitle: Text('${p.topic} · ${p.difficulty} · ${due ? dueLabel(overdue) : 'next ${prettyDay(p.nextDue)}'}',
-              maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: overdue > 0 ? colors.error : null)),
-          onTap: p.url == null ? null : () => openLink(context, p.url!),
-          trailing: PopupMenuButton<String>(
-            onSelected: (v) => v == 'notes' ? _editNotes(context, p) : _confirmDelete(context, p),
-            itemBuilder: (_) => [
-              const PopupMenuItem(value: 'notes', child: Text('Notes')),
-              const PopupMenuItem(value: 'delete', child: Text('Delete')),
-            ],
+        final stageColor = p.mastered ? Accent.amber : due ? colors.primary : colors.outline;
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: p.url == null ? null : () => openLink(context, p.url!),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 4, 12),
+              child: Row(children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(color: stageColor.withValues(alpha: 0.13), borderRadius: BorderRadius.circular(14)),
+                  alignment: Alignment.center,
+                  child: p.mastered
+                      ? const Icon(Icons.star_rounded, color: Accent.amber)
+                      : Text('${p.stage + 1}', style: TextStyle(color: stageColor, fontWeight: FontWeight.w800, fontSize: 16)),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 6),
+                    Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                      Pill.difficulty(p.difficulty),
+                      Text(due ? dueLabel(overdue) : 'next ${prettyDay(p.nextDue)}',
+                          style: TextStyle(fontSize: 12, color: overdue > 0 ? Accent.red : colors.onSurfaceVariant, fontWeight: overdue > 0 ? FontWeight.w700 : null)),
+                    ]),
+                    const SizedBox(height: 2),
+                    Text(p.topic, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant)),
+                  ]),
+                ),
+                PopupMenuButton<String>(
+                  onSelected: (v) => v == 'notes' ? _editNotes(context, p) : _confirmDelete(context, p),
+                  itemBuilder: (_) => [
+                    const PopupMenuItem(value: 'notes', child: Text('Notes')),
+                    const PopupMenuItem(value: 'delete', child: Text('Delete')),
+                  ],
+                ),
+              ]),
+            ),
           ),
         );
       },

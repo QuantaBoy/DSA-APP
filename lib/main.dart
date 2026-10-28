@@ -17,32 +17,61 @@ Future<void> main() async {
 
 const brand = Color(0xFF6C4EF5);
 
-/// One look for every screen: flat rounded cards, rounded buttons and fields.
+/// One look for every screen: soft lavender background, white cards with soft shadows, pill buttons.
 ThemeData _theme(Brightness brightness) {
-  final colors = ColorScheme.fromSeed(seedColor: brand, brightness: brightness);
-  final rounded = RoundedRectangleBorder(borderRadius: BorderRadius.circular(14));
+  final dark = brightness == Brightness.dark;
+  final colors = ColorScheme.fromSeed(
+    seedColor: brand,
+    brightness: brightness,
+    primary: dark ? const Color(0xFFA996FF) : brand,
+    surface: dark ? const Color(0xFF121218) : const Color(0xFFF6F5FB),
+    surfaceContainerLowest: dark ? const Color(0xFF1C1B24) : Colors.white,
+  );
+  const pill = StadiumBorder();
   return ThemeData(
     colorScheme: colors,
     scaffoldBackgroundColor: colors.surface,
     appBarTheme: AppBarTheme(
       backgroundColor: colors.surface,
       surfaceTintColor: Colors.transparent,
-      titleTextStyle: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: colors.onSurface),
+      titleTextStyle: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -0.5, color: colors.onSurface),
     ),
     cardTheme: CardThemeData(
-      elevation: 0,
-      color: colors.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: colors.outlineVariant)),
+      elevation: dark ? 0 : 6,
+      shadowColor: brand.withValues(alpha: 0.10),
+      color: colors.surfaceContainerLowest,
+      surfaceTintColor: Colors.transparent,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(22),
+        side: dark ? BorderSide(color: colors.outlineVariant.withValues(alpha: 0.4)) : BorderSide.none,
+      ),
     ),
-    filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(shape: rounded, minimumSize: const Size(0, 48))),
-    outlinedButtonTheme: OutlinedButtonThemeData(style: OutlinedButton.styleFrom(shape: rounded, minimumSize: const Size(0, 48))),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(shape: pill, minimumSize: const Size(0, 50), textStyle: const TextStyle(fontWeight: FontWeight.w700)),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(shape: pill, minimumSize: const Size(0, 46), side: BorderSide(color: colors.outlineVariant)),
+    ),
+    chipTheme: ChipThemeData(shape: const StadiumBorder(), side: BorderSide.none, backgroundColor: colors.primaryContainer.withValues(alpha: 0.5)),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: colors.surfaceContainerHighest.withValues(alpha: 0.5),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+      fillColor: colors.surfaceContainerLowest,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.6))),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.6))),
     ),
-    snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
-    dividerTheme: DividerThemeData(color: colors.outlineVariant.withValues(alpha: 0.5)),
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: colors.surfaceContainerLowest,
+      indicatorColor: colors.primaryContainer,
+      indicatorShape: const StadiumBorder(),
+      elevation: 8,
+      shadowColor: brand.withValues(alpha: 0.15),
+      labelTextStyle: WidgetStatePropertyAll(TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colors.onSurfaceVariant)),
+    ),
+    floatingActionButtonTheme: const FloatingActionButtonThemeData(shape: StadiumBorder()),
+    snackBarTheme: SnackBarThemeData(behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+    dividerTheme: DividerThemeData(color: colors.outlineVariant.withValues(alpha: 0.35)),
+    listTileTheme: const ListTileThemeData(shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16)))),
   );
 }
 

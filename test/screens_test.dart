@@ -13,6 +13,13 @@ Problem solved(String id, int daysAgo, {String topic = 'Arrays'}) => Problem.sol
 
 Widget app(Widget child) => MaterialApp(home: Scaffold(body: child));
 
+/// A tall screen, so every list item is built without scrolling.
+void tall(WidgetTester tester) {
+  tester.view.physicalSize = const Size(1080, 3200);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+}
+
 void main() {
   test('due labels read naturally', () {
     expect(dueLabel(0), 'due today');
@@ -23,9 +30,10 @@ void main() {
   });
 
   testWidgets('Today lists due problems with a start button, and upcoming ones', (tester) async {
+    tall(tester);
     final problems = [solved('a', 3), solved('b', 1), solved('c', 0)]; // a overdue, b due today, c due tomorrow
     await tester.pumpWidget(app(TodayPage(store: Store('test'), problems: problems, stats: const Stats(), onOpenSheet: () {})));
-    expect(find.text('Start review · 2 problems'), findsOneWidget);
+    expect(find.text('2 problems to review'), findsOneWidget);
     expect(find.text('2 days overdue'), findsOneWidget);
     expect(find.text('due today'), findsOneWidget);
     expect(find.text('COMING UP THIS WEEK'), findsOneWidget);
@@ -34,12 +42,13 @@ void main() {
   testWidgets('Today with an empty stack points to the sheet', (tester) async {
     var opened = false;
     await tester.pumpWidget(app(TodayPage(store: Store('test'), problems: const [], stats: const Stats(), onOpenSheet: () => opened = true)));
-    expect(find.text('Start your stack'), findsOneWidget);
+    expect(find.text('All caught up'), findsOneWidget);
     await tester.tap(find.text('Open A2Z sheet'));
     expect(opened, isTrue);
   });
 
   testWidgets('Stats shows totals, recall rate and the weakest topic first', (tester) async {
+    tall(tester);
     final problems = [solved('a', 10, topic: 'Arrays'), solved('b', 10, topic: 'Graphs')];
     final stats = Stats(days: {today(): 4}, topics: {'Graphs': (remembered: 0, total: 3), 'Arrays': (remembered: 1, total: 1)});
     await tester.pumpWidget(app(StatsPage(problems: problems, stats: stats)));
