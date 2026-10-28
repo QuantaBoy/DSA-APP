@@ -182,7 +182,7 @@ class _ContinueCard extends StatelessWidget {
             runSpacing: 8,
             children: [
               FilledButton.icon(
-                style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: const Color(0xFF5B3FE0)),
+                style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: HeroCard.ink(context)),
                 onPressed: onSolveHere,
                 icon: const Icon(Icons.terminal_rounded),
                 label: const Text('Solve here'),

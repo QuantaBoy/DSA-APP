@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../data/reminder.dart';
 import '../data/store.dart';
+import '../main.dart' show themeMode, setThemeMode;
 
 import 'add_problem_page.dart';
 import 'sheet_page.dart';
@@ -110,6 +111,26 @@ class _AccountMenu extends StatelessWidget {
   final User user;
   final Store store;
 
+  Future<void> _chooseTheme(BuildContext context) => showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Appearance'),
+          content: ValueListenableBuilder(
+            valueListenable: themeMode,
+            builder: (context, mode, _) => SegmentedButton<ThemeMode>(
+              segments: const [
+                ButtonSegment(value: ThemeMode.light, icon: Icon(Icons.light_mode_outlined), label: Text('Light')),
+                ButtonSegment(value: ThemeMode.dark, icon: Icon(Icons.dark_mode_outlined), label: Text('Dark')),
+                ButtonSegment(value: ThemeMode.system, icon: Icon(Icons.phone_android_outlined), label: Text('System')),
+              ],
+              selected: {mode},
+              onSelectionChanged: (m) => setThemeMode(m.single),
+            ),
+          ),
+          actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Done'))],
+        ),
+      );
+
   Future<void> _deleteAccount(BuildContext context) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -149,13 +170,18 @@ class _AccountMenu extends StatelessWidget {
     final initial = _firstName(user).characters.first.toUpperCase();
     return PopupMenuButton<String>(
       tooltip: 'Account',
-      onSelected: (v) => v == 'out' ? FirebaseAuth.instance.signOut() : _deleteAccount(context),
+      onSelected: (v) => switch (v) {
+        'theme' => _chooseTheme(context),
+        'out' => FirebaseAuth.instance.signOut(),
+        _ => _deleteAccount(context),
+      },
       itemBuilder: (_) => [
         PopupMenuItem(
           enabled: false,
           child: Text('${user.email ?? ''}\nMemory Stack v$appVersion', style: TextStyle(color: colors.onSurfaceVariant)),
         ),
         const PopupMenuDivider(),
+        const PopupMenuItem(value: 'theme', child: ListTile(leading: Icon(Icons.palette_outlined), title: Text('Appearance'), contentPadding: EdgeInsets.zero)),
         const PopupMenuItem(value: 'out', child: ListTile(leading: Icon(Icons.logout), title: Text('Sign out'), contentPadding: EdgeInsets.zero)),
         PopupMenuItem(
           value: 'delete',

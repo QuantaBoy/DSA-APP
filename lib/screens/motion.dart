@@ -2,6 +2,8 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import 'widgets.dart';
+
 /// Small animation building blocks used across the app.
 /// All of them show the final state at once when the phone's "remove animations" setting is on.
 
@@ -161,7 +163,7 @@ class StackIllustration extends StatelessWidget {
         SizedBox(height: size * 0.05),
         Bob(height: 3.5, period: const Duration(milliseconds: 2300), child: card(0.86, 0.6)),
         SizedBox(height: size * 0.05),
-        card(1, 1, child: Icon(Icons.check_rounded, size: size * 0.2, color: const Color(0xFF5B3FE0))),
+        card(1, 1, child: Icon(Icons.check_rounded, size: size * 0.2, color: HeroCard.ink(context))),
       ]),
     );
   }

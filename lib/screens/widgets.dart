@@ -97,25 +97,35 @@ abstract final class Accent {
   static const sky = Color(0xFF0EA5E9);
 }
 
-/// Big purple gradient card at the top of a screen (the "Continue learning" look).
+/// Big gradient card at the top of a screen (the "Continue learning" look):
+/// violet in light mode, deep cobalt in dark mode.
 class HeroCard extends StatelessWidget {
-  const HeroCard({super.key, required this.child, this.colors = const [Color(0xFF7C5CFF), Color(0xFF5B3FE0)], this.margin = const EdgeInsets.symmetric(horizontal: 16)});
+  const HeroCard({super.key, required this.child, this.margin = const EdgeInsets.symmetric(horizontal: 16)});
 
   final Widget child;
-  final List<Color> colors;
   final EdgeInsetsGeometry margin;
 
+  static bool _dark(BuildContext context) => Theme.of(context).brightness == Brightness.dark;
+
+  /// The card's deep colour: use it for text on the white buttons inside the card.
+  static Color ink(BuildContext context) => _dark(context) ? const Color(0xFF2C3480) : const Color(0xFF5B3FE0);
+
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) {
+    final dark = _dark(context);
+    final colors = dark ? const [Color(0xFF2C3480), Color(0xFF1A1F5C)] : const [Color(0xFF7C5CFF), Color(0xFF5B3FE0)];
+    return Container(
         margin: margin,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           gradient: LinearGradient(colors: colors, begin: Alignment.topLeft, end: Alignment.bottomRight),
           borderRadius: BorderRadius.circular(26),
-          boxShadow: [BoxShadow(color: colors.last.withValues(alpha: 0.35), blurRadius: 24, offset: const Offset(0, 10))],
+          border: dark ? Border.all(color: const Color(0xFF6B7BFF).withValues(alpha: 0.25)) : null,
+          boxShadow: [BoxShadow(color: (dark ? const Color(0xFF2C3480) : colors.last).withValues(alpha: dark ? 0.55 : 0.35), blurRadius: 28, offset: const Offset(0, 10))],
         ),
         child: DefaultTextStyle.merge(style: const TextStyle(color: Colors.white), child: IconTheme.merge(data: const IconThemeData(color: Colors.white), child: child)),
       );
+  }
 }
 
 /// Small coloured pill: difficulty, platform, status.

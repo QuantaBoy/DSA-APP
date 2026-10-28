@@ -73,4 +73,6 @@ void main() {
   testWidgets('stack', (t) => shot(t, 'stack', 'My stack', StackPage(store: Store('x'), problems: problems), tab: 2));
   testWidgets('stats', (t) => shot(t, 'stats', 'Stats', StatsPage(problems: problems, stats: stats), tab: 3));
   testWidgets('sheet dark', (t) => shot(t, 'sheet_dark', 'A2Z Sheet', SheetPage(store: Store('x'), problems: problems), tab: 1, brightness: Brightness.dark));
+  testWidgets('today dark', (t) => shot(t, 'today_dark', 'Hi, Three', TodayPage(store: Store('x'), problems: problems, stats: stats, onOpenSheet: () {}), brightness: Brightness.dark));
+  testWidgets('stats dark', (t) => shot(t, 'stats_dark', 'Stats', StatsPage(problems: problems, stats: stats), tab: 3, brightness: Brightness.dark));
 }

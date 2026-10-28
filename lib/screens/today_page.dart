@@ -77,7 +77,7 @@ class TodayPage extends StatelessWidget {
             Text('$reviewedToday of $todayTotal done today', style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.8))),
             const SizedBox(height: 16),
             FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: const Color(0xFF5B3FE0)),
+              style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: HeroCard.ink(context)),
               onPressed: due.isEmpty ? onOpenSheet : () => review(due),
               icon: Icon(due.isEmpty ? Icons.menu_book_rounded : Icons.play_arrow_rounded),
               label: Text(due.isEmpty ? 'Open A2Z sheet' : 'Start review'),
