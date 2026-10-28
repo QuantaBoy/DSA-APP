@@ -95,35 +95,29 @@ class _LoginPageState extends State<LoginPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Center(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(30),
-                            boxShadow: [BoxShadow(color: colors.primary.withValues(alpha: 0.35), blurRadius: 30, offset: const Offset(0, 12))],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(30),
-                            child: Image.asset('assets/illustrations/logo.png', width: 120, height: 120),
-                          ),
+                      Row(children: [
+                        ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.asset('assets/illustrations/logo.png', width: 44, height: 44)),
+                        const SizedBox(width: 10),
+                        Text('Memory Stack', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                      ]),
+                      const SizedBox(height: 36),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 250),
+                        child: Column(
+                          key: ValueKey(_signUp),
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(_signUp ? 'Create account' : 'Welcome back',
+                                style: theme.textTheme.headlineLarge?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -0.8, color: colors.primary)),
+                            const SizedBox(height: 6),
+                            Text(
+                              _signUp ? 'Sign up to start remembering every problem you solve.' : "We've missed you. Sign in to keep your streak going.",
+                              style: theme.textTheme.bodyLarge?.copyWith(color: colors.onSurfaceVariant),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 20),
-                      Text('Memory Stack', textAlign: TextAlign.center, style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -0.5)),
-                      const SizedBox(height: 4),
-                      Text('Solve once. Review on schedule. Never forget.', textAlign: TextAlign.center, style: theme.textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant)),
                       const SizedBox(height: 28),
-                      SegmentedButton<bool>(
-                        segments: const [
-                          ButtonSegment(value: false, label: Text('Sign in'), icon: Icon(Icons.login)),
-                          ButtonSegment(value: true, label: Text('Create account'), icon: Icon(Icons.person_add_alt)),
-                        ],
-                        selected: {_signUp},
-                        onSelectionChanged: _busy ? null : (s) => setState(() {
-                          _signUp = s.first;
-                          _error = null;
-                        }),
-                      ),
-                      const SizedBox(height: 20),
                       if (_signUp) ...[
                         TextFormField(
                           controller: _name,
@@ -183,7 +177,7 @@ class _LoginPageState extends State<LoginPage> {
                         style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
                         child: _busy
                             ? const SizedBox.square(dimension: 22, child: CircularProgressIndicator(strokeWidth: 2.5))
-                            : Text(_signUp ? 'Create account' : 'Sign in'),
+                            : Text(_signUp ? 'Sign up' : 'Sign in'),
                       ),
                       const SizedBox(height: 20),
                       Row(children: [
@@ -196,8 +190,21 @@ class _LoginPageState extends State<LoginPage> {
                         onPressed: _busy ? null : _google,
                         style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(52)),
                         icon: const Icon(Icons.g_mobiledata, size: 30),
-                        label: const Text('Continue with Google'),
+                        label: Text(_signUp ? 'Sign up with Google' : 'Sign in with Google'),
                       ),
+                      const SizedBox(height: 24),
+                      Wrap(alignment: WrapAlignment.center, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                        Text(_signUp ? 'Already have an account?' : "Don't have an account?", style: TextStyle(color: colors.onSurfaceVariant)),
+                        TextButton(
+                          onPressed: _busy
+                              ? null
+                              : () => setState(() {
+                                    _signUp = !_signUp;
+                                    _error = null;
+                                  }),
+                          child: Text(_signUp ? 'Sign in' : 'Sign up', style: const TextStyle(fontWeight: FontWeight.w800)),
+                        ),
+                      ]),
                     ],
                   ),
                 ),

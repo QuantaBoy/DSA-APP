@@ -7,13 +7,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
 import 'screens/home_page.dart';
 import 'screens/login_page.dart';
+import 'screens/onboarding_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   // Keep a device copy of the data so the app works offline (already the default on Android, not on web).
   FirebaseFirestore.instance.settings = const Settings(persistenceEnabled: true);
-  await loadThemeMode();
+  await loadPreferences();
   runApp(const MemoryStackApp());
 }
 
@@ -22,11 +23,22 @@ const brand = Color(0xFF6C4EF5);
 /// Light, dark or follow the phone. Chosen in the account menu and remembered on this device.
 final themeMode = ValueNotifier(ThemeMode.light);
 
-Future<void> loadThemeMode() async {
+/// Whether the first-launch intro slides were already shown on this device.
+final seenOnboarding = ValueNotifier(false);
+
+Future<void> loadPreferences() async {
   try {
-    final saved = (await SharedPreferences.getInstance()).getString('themeMode');
-    themeMode.value = ThemeMode.values.firstWhere((m) => m.name == saved, orElse: () => ThemeMode.light);
-  } catch (_) {} // no saved choice (or storage unavailable): stay light
+    final prefs = await SharedPreferences.getInstance();
+    themeMode.value = ThemeMode.values.firstWhere((m) => m.name == prefs.getString('themeMode'), orElse: () => ThemeMode.light);
+    seenOnboarding.value = prefs.getBool('seenOnboarding') ?? false;
+  } catch (_) {} // storage unavailable: light theme, show the intro
+}
+
+Future<void> finishOnboarding() async {
+  seenOnboarding.value = true;
+  try {
+    await (await SharedPreferences.getInstance()).setBool('seenOnboarding', true);
+  } catch (_) {}
 }
 
 Future<void> setThemeMode(ThemeMode mode) async {
@@ -160,7 +172,11 @@ class MemoryStackApp extends StatelessWidget {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Scaffold(body: Center(child: CircularProgressIndicator()));
             }
-            return snapshot.data == null ? const LoginPage() : HomePage(user: snapshot.data!);
+            if (snapshot.data != null) return HomePage(user: snapshot.data!);
+            return ValueListenableBuilder(
+              valueListenable: seenOnboarding,
+              builder: (context, seen, _) => seen ? const LoginPage() : const OnboardingPage(onDone: finishOnboarding),
+            );
           },
         ),
       ),

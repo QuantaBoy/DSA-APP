@@ -13,7 +13,7 @@ import 'motion.dart';
 import 'today_page.dart';
 
 /// Shown in the account menu. Keep in step with `version:` in pubspec.yaml.
-const appVersion = '1.4.0';
+const appVersion = '1.5.0';
 
 /// Signed-in shell: bottom tabs for today's reviews, the A2Z sheet, your stack and stats.
 class HomePage extends StatefulWidget {

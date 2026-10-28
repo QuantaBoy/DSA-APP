@@ -9,6 +9,8 @@ import 'package:memory_stack/data/store.dart';
 import 'package:memory_stack/logic/models.dart';
 import 'package:memory_stack/logic/srs.dart';
 import 'package:memory_stack/main.dart';
+import 'package:memory_stack/screens/login_page.dart';
+import 'package:memory_stack/screens/onboarding_page.dart';
 import 'package:memory_stack/screens/sheet_page.dart';
 import 'package:memory_stack/screens/stack_page.dart';
 import 'package:memory_stack/screens/stats_page.dart';
@@ -75,4 +77,17 @@ void main() {
   testWidgets('sheet dark', (t) => shot(t, 'sheet_dark', 'A2Z Sheet', SheetPage(store: Store('x'), problems: problems), tab: 1, brightness: Brightness.dark));
   testWidgets('today dark', (t) => shot(t, 'today_dark', 'Hi, Three', TodayPage(store: Store('x'), problems: problems, stats: stats, onOpenSheet: () {}), brightness: Brightness.dark));
   testWidgets('stats dark', (t) => shot(t, 'stats_dark', 'Stats', StatsPage(problems: problems, stats: stats), tab: 3, brightness: Brightness.dark));
+  testWidgets('onboarding', (t) => page(t, 'onboarding', OnboardingPage(onDone: () {})));
+  testWidgets('login', (t) => page(t, 'login', const LoginPage()));
+}
+
+/// A full screen with no app bar or tabs (intro, login).
+Future<void> page(WidgetTester tester, String name, Widget home) async {
+  tester.view.physicalSize = const Size(1170, 2532);
+  tester.view.devicePixelRatio = 3;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(MaterialApp(debugShowCheckedModeBanner: false, theme: appTheme(Brightness.light), home: home));
+  await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300))); // decode images
+  await tester.pump(const Duration(seconds: 2));
+  await expectLater(find.byType(MaterialApp), matchesGoldenFile('$name.png'));
 }
