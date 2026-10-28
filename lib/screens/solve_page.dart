@@ -8,6 +8,7 @@ import '../logic/models.dart';
 import '../logic/srs.dart';
 import 'code_pad.dart';
 import 'open_link.dart';
+import 'widgets.dart';
 
 /// Solve one sheet problem in the app: read it on its site, code and run it here,
 /// then mark it solved, which saves your code as the solution you will review later.
@@ -62,14 +63,14 @@ class _SolvePageState extends State<SolvePage> {
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Expanded(
             child: ListView(padding: const EdgeInsets.all(20), children: [
-              Wrap(spacing: 8, runSpacing: 8, children: [
-                Chip(label: Text('Step ${p.step} · ${widget.sheet.steps[p.step - 1]}'), visualDensity: VisualDensity.compact),
-                if (p.difficulty != null) Chip(label: Text(p.difficulty!), visualDensity: VisualDensity.compact),
-                if (widget.solved) const Chip(avatar: Icon(Icons.check, size: 16), label: Text('Solved'), visualDensity: VisualDensity.compact),
+              Text(p.title, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.4)),
+              const SizedBox(height: 10),
+              Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                if (p.difficulty != null) Pill.difficulty(p.difficulty!),
+                Text(widget.sheet.steps[p.step - 1], style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500)),
+                Text('·  ${p.platform}', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+                if (widget.solved) const Pill('Solved', color: Accent.green),
               ]),
-              const SizedBox(height: 12),
-              Text(p.title, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
-              Text(p.section, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
               const SizedBox(height: 16),
               Wrap(spacing: 8, runSpacing: 8, children: [
                 OutlinedButton.icon(onPressed: () => openLink(context, p.url), icon: const Icon(Icons.description_outlined), label: Text('Read on ${p.platform}')),
@@ -77,18 +78,26 @@ class _SolvePageState extends State<SolvePage> {
                   OutlinedButton.icon(onPressed: () => openLink(context, p.video!), icon: const Icon(Icons.play_circle_outline), label: const Text('Video')),
               ]),
               const SizedBox(height: 16),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Icon(Icons.terminal, color: theme.colorScheme.primary),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Text('Read the problem, write a full program that reads the input, then Run it with the '
-                          'examples and your own edge cases. When it is right, tap I solved it.'),
-                    ),
-                  ]),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Color.alphaBlend(Accent.amber.withValues(alpha: theme.brightness == Brightness.dark ? 0.14 : 0.1), theme.colorScheme.surfaceContainerLowest),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: Accent.amber.withValues(alpha: 0.3)),
                 ),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Icon(Icons.lightbulb_rounded, color: Accent.amber),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      const Text('Tip', style: TextStyle(fontWeight: FontWeight.w800, color: Accent.amber)),
+                      const SizedBox(height: 2),
+                      Text('Read the problem, write a full program that reads the input, then Run it with the examples '
+                          'and your own edge cases. When it is right, tap I solved it.',
+                          style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+                    ]),
+                  ),
+                ]),
               ),
               const SizedBox(height: 20),
               CodePad(controller: _code, title: 'Your solution'),

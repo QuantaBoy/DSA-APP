@@ -13,7 +13,7 @@ import 'motion.dart';
 import 'today_page.dart';
 
 /// Shown in the account menu. Keep in step with `version:` in pubspec.yaml.
-const appVersion = '1.3.0';
+const appVersion = '1.4.0';
 
 /// Signed-in shell: bottom tabs for today's reviews, the A2Z sheet, your stack and stats.
 class HomePage extends StatefulWidget {
@@ -62,7 +62,13 @@ class _HomePageState extends State<HomePage> {
           body = const Skeleton();
         } else {
           body = switch (_tab) {
-            0 => TodayPage(store: store, problems: data.problems, stats: data.stats, onOpenSheet: () => setState(() => _tab = 1)),
+            0 => TodayPage(
+              store: store,
+              problems: data.problems,
+              stats: data.stats,
+              onOpenSheet: () => setState(() => _tab = 1),
+              onSeeAll: () => setState(() => _tab = 2),
+            ),
             1 => SheetPage(store: store, problems: data.problems),
             2 => StackPage(store: store, problems: data.problems),
             _ => StatsPage(problems: data.problems, stats: data.stats),
@@ -82,34 +88,31 @@ class _HomePageState extends State<HomePage> {
           ),
           child: KeyedSubtree(key: ValueKey(data == null ? -1 : _tab), child: body),
         );
+        final title = Text(switch (_tab) { 0 => 'Hi, ${_firstName(widget.user)} 👋', 1 => 'A2Z DSA Sheet', _ => _tabs[_tab].title });
+        if (wide) {
+          // Tablet / PC: full-height sidebar, page header, content centred.
+          return Scaffold(
+            body: Row(children: [
+              _Sidebar(user: widget.user, tab: _tab, onTab: (i) => setState(() => _tab = i)),
+              Expanded(
+                child: Column(children: [
+                  AppBar(title: title, automaticallyImplyLeading: false, actions: [_AccountMenu(user: widget.user, store: store)]),
+                  Expanded(child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 900), child: switcher))),
+                ]),
+              ),
+            ]),
+            floatingActionButton: _tab == 2
+                ? FloatingActionButton.extended(
+                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AddProblemPage(store: store))),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add problem'),
+                  )
+                : null,
+          );
+        }
         return Scaffold(
-          appBar: AppBar(
-            title: Text(_tab == 0 ? 'Hi, ${_firstName(widget.user)}' : _tabs[_tab].title),
-            actions: [_AccountMenu(user: widget.user, store: store)],
-          ),
-          body: !wide
-              ? switcher
-              : Row(
-                  children: [
-                    NavigationRail(
-                      selectedIndex: _tab,
-                      onDestinationSelected: (i) => setState(() => _tab = i),
-                      labelType: NavigationRailLabelType.all,
-                      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
-                      indicatorShape: const StadiumBorder(),
-                      groupAlignment: -0.85,
-                      destinations: [
-                        for (final t in _tabs)
-                          NavigationRailDestination(icon: Icon(t.icon), selectedIcon: Icon(t.selected), label: Text(t.title)),
-                      ],
-                    ),
-                    Expanded(
-                      child: Center(
-                        child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 820), child: switcher),
-                      ),
-                    ),
-                  ],
-                ),
+          appBar: AppBar(title: title, actions: [_AccountMenu(user: widget.user, store: store)]),
+          body: switcher,
           floatingActionButton: _tab == 2
               ? FloatingActionButton.extended(
                   onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AddProblemPage(store: store))),
@@ -117,9 +120,7 @@ class _HomePageState extends State<HomePage> {
                   label: const Text('Add problem'),
                 )
               : null,
-          bottomNavigationBar: wide
-              ? null
-              : NavigationBar(
+          bottomNavigationBar: NavigationBar(
                   selectedIndex: _tab,
                   onDestinationSelected: (i) => setState(() => _tab = i),
                   destinations: [
@@ -242,6 +243,81 @@ class _AccountMenu extends StatelessWidget {
           child: Text(initial, style: TextStyle(color: colors.onPrimaryContainer)),
         ),
       ),
+    );
+  }
+}
+
+/// Desktop sidebar: logo, the four sections, dark mode switch and who is signed in.
+class _Sidebar extends StatelessWidget {
+  const _Sidebar({required this.user, required this.tab, required this.onTab});
+
+  final User user;
+  final int tab;
+  final ValueChanged<int> onTab;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Container(
+      width: 240,
+      decoration: BoxDecoration(color: colors.surfaceContainerLowest, border: Border(right: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.5)))),
+      padding: const EdgeInsets.fromLTRB(14, 20, 14, 16),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.asset('assets/illustrations/logo.png', width: 36, height: 36)),
+          const SizedBox(width: 10),
+          Text('Memory Stack', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+        ]),
+        const SizedBox(height: 28),
+        for (final (i, t) in _tabs.indexed)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Material(
+              color: i == tab ? colors.primaryContainer.withValues(alpha: theme.brightness == Brightness.dark ? 1 : 0.6) : Colors.transparent,
+              borderRadius: BorderRadius.circular(14),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () => onTab(i),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  child: Row(children: [
+                    Icon(i == tab ? t.selected : t.icon, size: 22, color: i == tab ? colors.primary : colors.onSurfaceVariant),
+                    const SizedBox(width: 12),
+                    Text(t.title, style: TextStyle(fontWeight: i == tab ? FontWeight.w700 : FontWeight.w500, color: i == tab ? colors.onSurface : colors.onSurfaceVariant)),
+                  ]),
+                ),
+              ),
+            ),
+          ),
+        const Spacer(),
+        ValueListenableBuilder(
+          valueListenable: themeMode,
+          builder: (context, mode, _) {
+            final isDark = mode == ThemeMode.dark || (mode == ThemeMode.system && MediaQuery.platformBrightnessOf(context) == Brightness.dark);
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Row(children: [
+                Icon(Icons.dark_mode_outlined, size: 20, color: colors.onSurfaceVariant),
+                const SizedBox(width: 12),
+                Expanded(child: Text('Dark mode', style: TextStyle(color: colors.onSurfaceVariant, fontWeight: FontWeight.w500))),
+                Switch(value: isDark, onChanged: (v) => setThemeMode(v ? ThemeMode.dark : ThemeMode.light)),
+              ]),
+            );
+          },
+        ),
+        const Divider(height: 24),
+        Row(children: [
+          CircleAvatar(radius: 18, backgroundColor: colors.primary, foregroundColor: colors.onPrimary, child: Text(_firstName(user).characters.first.toUpperCase())),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(_firstName(user), style: const TextStyle(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
+              Text(user.email ?? '', style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
+            ]),
+          ),
+        ]),
+      ]),
     );
   }
 }

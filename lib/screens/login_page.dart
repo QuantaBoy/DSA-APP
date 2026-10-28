@@ -95,13 +95,20 @@ class _LoginPageState extends State<LoginPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      CircleAvatar(
-                        radius: 32,
-                        backgroundColor: colors.primary,
-                        child: Text('MS', style: TextStyle(color: colors.onPrimary, fontSize: 22, fontWeight: FontWeight.w800)),
+                      Center(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(30),
+                            boxShadow: [BoxShadow(color: colors.primary.withValues(alpha: 0.35), blurRadius: 30, offset: const Offset(0, 12))],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(30),
+                            child: Image.asset('assets/illustrations/logo.png', width: 120, height: 120),
+                          ),
+                        ),
                       ),
-                      const SizedBox(height: 16),
-                      Text('Memory Stack', textAlign: TextAlign.center, style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 20),
+                      Text('Memory Stack', textAlign: TextAlign.center, style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -0.5)),
                       const SizedBox(height: 4),
                       Text('Solve once. Review on schedule. Never forget.', textAlign: TextAlign.center, style: theme.textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant)),
                       const SizedBox(height: 28),

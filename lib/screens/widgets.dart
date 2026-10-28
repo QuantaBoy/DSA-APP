@@ -34,17 +34,26 @@ class EmptyState extends StatelessWidget {
 
 /// Small uppercase heading above a group of items.
 class SectionTitle extends StatelessWidget {
-  const SectionTitle(this.text, {super.key});
+  const SectionTitle(this.text, {super.key, this.action, this.onAction});
 
   final String text;
+  final String? action; // e.g. "See all"
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-      child: Text(text.toUpperCase(),
-          style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.primary, letterSpacing: 1.2, fontWeight: FontWeight.w700)),
+      padding: const EdgeInsets.fromLTRB(20, 22, 12, 6),
+      child: Row(children: [
+        Expanded(child: Text(text, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.2))),
+        if (action != null)
+          TextButton(
+            onPressed: onAction,
+            style: TextButton.styleFrom(visualDensity: VisualDensity.compact, textStyle: const TextStyle(fontWeight: FontWeight.w700)),
+            child: Text(action!),
+          ),
+      ]),
     );
   }
 }
@@ -56,35 +65,39 @@ class StatTile extends StatelessWidget {
   final IconData icon;
   final String value;
   final String label;
-  final Color? color; // icon tint; defaults to the brand colour
+  final Color? color; // tile tint; defaults to the brand colour
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
     final tint = color ?? theme.colorScheme.primary;
     return Expanded(
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: tint.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
-              child: Icon(icon, size: 20, color: tint),
-            ),
-            const SizedBox(height: 12),
-            Builder(builder: (context) {
-              final style = theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5);
-              final n = int.tryParse(value);
-              return n == null ? Text(value, style: style) : CountUp(n, style: style);
-            }),
-            Text(label, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-          ]),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
+        decoration: BoxDecoration(
+          // Softly tinted tile in the stat's colour, like the mockup.
+          color: Color.alphaBlend(tint.withValues(alpha: dark ? 0.14 : 0.08), theme.colorScheme.surfaceContainerLowest),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: tint.withValues(alpha: dark ? 0.28 : 0.14)),
         ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Icon(icon, size: 26, color: tint),
+          const SizedBox(height: 10),
+          Builder(builder: (context) {
+            final style = theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5);
+            final n = int.tryParse(value);
+            return n == null ? Text(value, style: style) : CountUp(n, style: style);
+          }),
+          Text(label, maxLines: 2, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500)),
+        ]),
       ),
     );
   }
 }
+
+/// Difficulty colour: green / amber / red.
+Color difficultyColor(String? difficulty) => switch (difficulty) { 'Easy' => Accent.green, 'Hard' => Accent.red, _ => Accent.amber };
 
 /// Colours used for accents across the app.
 abstract final class Accent {
@@ -134,7 +147,7 @@ class Pill extends StatelessWidget {
 
   /// Green / amber / red by difficulty.
   factory Pill.difficulty(String difficulty) =>
-      Pill(difficulty, color: switch (difficulty) { 'Easy' => Accent.green, 'Hard' => Accent.red, _ => Accent.amber });
+      Pill(difficulty, color: difficultyColor(difficulty));
 
   final String text;
   final Color color;

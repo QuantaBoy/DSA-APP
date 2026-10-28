@@ -35,8 +35,8 @@ void main() {
     await tester.pumpWidget(app(TodayPage(store: Store('test'), problems: problems, stats: const Stats(), onOpenSheet: () {})));
     expect(find.text('2 problems to review'), findsOneWidget);
     expect(find.text('2 days overdue'), findsOneWidget);
-    expect(find.text('due today'), findsOneWidget);
-    expect(find.text('COMING UP THIS WEEK'), findsOneWidget);
+    expect(find.text('Due today'), findsOneWidget);
+    expect(find.text('Coming up this week'), findsOneWidget);
   });
 
   testWidgets('Today with an empty stack points to the sheet', (tester) async {
@@ -52,6 +52,7 @@ void main() {
     final problems = [solved('a', 10, topic: 'Arrays'), solved('b', 10, topic: 'Graphs')];
     final stats = Stats(days: {today(): 4}, topics: {'Graphs': (remembered: 0, total: 3), 'Arrays': (remembered: 1, total: 1)});
     await tester.pumpWidget(app(StatsPage(problems: problems, stats: stats)));
+    await tester.pumpAndSettle(); // let the ring count up
     expect(find.text('25%'), findsOneWidget); // 1 of 4 remembered
     expect(find.text('0% · 1 solved'), findsOneWidget);
     final graphs = tester.getTopLeft(find.text('Graphs')).dy, arrays = tester.getTopLeft(find.text('Arrays')).dy;

@@ -34,7 +34,10 @@ class _ReviewPageState extends State<ReviewPage> {
     super.dispose();
   }
 
+  final _nextDue = <DateTime>[]; // when each reviewed problem comes back
+
   void _answer(bool remembered) {
+    _nextDue.add(widget.queue[_index].review(remembered: remembered, on: today()).nextDue);
     widget.store.review(widget.queue[_index], remembered: remembered); // not awaited: saved locally at once
     setState(() {
       if (remembered) _remembered++;
@@ -87,41 +90,81 @@ class _ReviewPageState extends State<ReviewPage> {
 
   Widget _summary(BuildContext context, int total) {
     final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final next = _nextDue.isEmpty ? null : _nextDue.reduce((a, b) => a.isBefore(b) ? a : b);
+    final nextCount = next == null ? 0 : _nextDue.where((d) => d == next).length;
+    final days = next?.difference(today()).inDays;
+    final when = days == null ? '' : days <= 1 ? 'Tomorrow' : prettyDay(next!);
     return Stack(children: [
       Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: 1),
-              duration: const Duration(milliseconds: 900),
-              curve: Curves.elasticOut,
-              builder: (context, t, child) => Transform.scale(scale: t, child: child),
-              child: Container(
-                padding: const EdgeInsets.all(28),
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(colors: [Color(0xFFFFD36B), Color(0xFFF59E0B)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                  boxShadow: [BoxShadow(color: Color(0x55F59E0B), blurRadius: 30, offset: Offset(0, 12))],
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 440),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 900),
+                curve: Curves.elasticOut,
+                builder: (context, t, child) => Transform.scale(scale: t, child: child),
+                child: Image.asset('assets/illustrations/trophy.png', width: 190, height: 190),
+              ),
+              Rise(index: 2, child: Text('Nice work!', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -0.5))),
+              const SizedBox(height: 6),
+              Rise(
+                index: 3,
+                child: Text("You've completed today's revisions.",
+                    textAlign: TextAlign.center, style: theme.textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant)),
+              ),
+              const SizedBox(height: 22),
+              Rise(
+                index: 4,
+                child: Row(children: [
+                  StatTile(icon: Icons.check_circle_rounded, value: '$total', label: 'Reviewed', color: Accent.green),
+                  const SizedBox(width: 10),
+                  StatTile(icon: Icons.psychology_rounded, value: '$_remembered', label: 'Remembered', color: Accent.orange),
+                  const SizedBox(width: 10),
+                  StatTile(icon: Icons.bar_chart_rounded, value: '${(_remembered * 100 / total).round()}%', label: 'Recall rate', color: Accent.violet),
+                ]),
+              ),
+              if (next != null) ...[
+                const SizedBox(height: 14),
+                Rise(
+                  index: 5,
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(color: colors.primary.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
+                          child: Icon(Icons.event_rounded, color: colors.primary),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text('Next review', style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
+                            Text(when, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                            Text('$nextCount ${nextCount == 1 ? 'problem' : 'problems'}',
+                                style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
+                          ]),
+                        ),
+                      ]),
+                    ),
+                  ),
                 ),
-                child: const Icon(Icons.emoji_events_rounded, size: 64, color: Colors.white),
+              ],
+              const SizedBox(height: 22),
+              Rise(
+                index: 6,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Done'),
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            Rise(index: 2, child: Text('Nice work!', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800))),
-            const SizedBox(height: 8),
-            Rise(
-              index: 3,
-              child: Text(
-                'You reviewed $total ${total == 1 ? 'problem' : 'problems'} and remembered $_remembered. '
-                'Each one is scheduled for its next review.',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Rise(index: 4, child: FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Done'))),
-          ]),
+            ]),
+          ),
         ),
       ),
       const Positioned.fill(child: Confetti()),
@@ -234,7 +277,11 @@ class _AnswerButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final label = Column(mainAxisSize: MainAxisSize.min, children: [
-      Text(remembered ? 'Remembered' : 'Forgot', style: const TextStyle(fontWeight: FontWeight.w700)),
+      Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(remembered ? Icons.check_rounded : Icons.replay_rounded, size: 18),
+        const SizedBox(width: 6),
+        Text(remembered ? 'Remembered' : 'Forgot', style: const TextStyle(fontWeight: FontWeight.w800)),
+      ]),
       Text(hint, style: const TextStyle(fontSize: 12)),
     ]);
     final style = ButtonStyle(minimumSize: const WidgetStatePropertyAll(Size.fromHeight(64)));

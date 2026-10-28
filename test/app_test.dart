@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:memory_stack/screens/login_page.dart';
 
-Future<void> pumpLogin(WidgetTester tester) => tester.pumpWidget(const MaterialApp(home: LoginPage()));
+Future<void> pumpLogin(WidgetTester tester) {
+  tester.view.physicalSize = const Size(1170, 2532); // phone-sized, so the whole form fits
+  tester.view.devicePixelRatio = 3;
+  addTearDown(tester.view.reset);
+  return tester.pumpWidget(const MaterialApp(home: LoginPage()));
+}
 
 void main() {
   testWidgets('sign in with empty fields shows validation errors', (tester) async {

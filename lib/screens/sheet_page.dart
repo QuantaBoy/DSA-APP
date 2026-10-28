@@ -23,6 +23,7 @@ class SheetPage extends StatefulWidget {
 
 class _SheetPageState extends State<SheetPage> {
   late final Future<Sheet> _sheet = loadA2zSheet();
+  int? _step; // topic filter chip: null = all steps
 
   void _markSolved(Sheet sheet, SheetProblem p) {
     final problem = sheet.toProblem(p, today());
@@ -74,11 +75,22 @@ class _SheetPageState extends State<SheetPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('$done / ${sheet.problems.length} solved', style: theme.textTheme.titleMedium),
+                  Row(children: [
+                    Text.rich(
+                      TextSpan(children: [
+                        TextSpan(text: '$done', style: const TextStyle(fontWeight: FontWeight.w800)),
+                        TextSpan(text: ' / ${sheet.problems.length} solved', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+                      ]),
+                      style: theme.textTheme.titleSmall,
+                    ),
+                    const Spacer(),
+                    Text('${(done * 100 / sheet.problems.length).round()}%',
+                        style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w800)),
+                  ]),
                   const SizedBox(height: 8),
                   Grow(
                     value: done / sheet.problems.length,
-                    builder: (context, v) => LinearProgressIndicator(value: v, minHeight: 8, borderRadius: BorderRadius.circular(4)),
+                    builder: (context, v) => LinearProgressIndicator(value: v, minHeight: 6, borderRadius: BorderRadius.circular(4)),
                   ),
                 ],
               ),
@@ -105,12 +117,32 @@ class _SheetPageState extends State<SheetPage> {
               )
             else
               const Padding(padding: EdgeInsets.all(16), child: Text('You finished the whole sheet. Keep up your reviews!')),
+            SizedBox(
+              height: 52,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                children: [
+                  for (final (i, label) in ['All', ...sheet.steps].indexed)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(label),
+                        selected: (i == 0 ? null : i) == _step,
+                        showCheckmark: false,
+                        onSelected: (_) => setState(() => _step = i == 0 ? null : i),
+                      ),
+                    ),
+                ],
+              ),
+            ),
             for (var step = 1; step <= sheet.steps.length; step++)
+              if (_step == null || _step == step)
               _StepTile(
                 step: step,
                 sheet: sheet,
                 solved: solved,
-                initiallyExpanded: next?.step == step,
+                initiallyExpanded: _step == step || (_step == null && next?.step == step),
                 onToggle: (p, isSolved) => isSolved ? _unmark(p) : _markSolved(sheet, p),
                 onOpen: (p) => _solve(sheet, p, solved.contains(p.id)),
               ),
@@ -250,12 +282,12 @@ class _StepTile extends StatelessWidget {
         initiallyExpanded: initiallyExpanded,
         shape: const Border(), // no lines above and below when open
         collapsedShape: const Border(),
-        title: Text('Step $step · ${sheet.steps[step - 1]}', style: const TextStyle(fontWeight: FontWeight.w700)),
+        title: Text('Step $step · ${sheet.steps[step - 1]}', style: TextStyle(fontWeight: FontWeight.w800, color: theme.colorScheme.primary)),
         subtitle: Grow(
           value: done / problems.length,
           builder: (context, v) => LinearProgressIndicator(value: v, borderRadius: BorderRadius.circular(3)),
         ),
-        trailing: Text('$done/${problems.length}', style: theme.textTheme.labelLarge),
+        trailing: Text('$done/${problems.length}', style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
         children: [
           for (final (i, p) in problems.indexed) ...[
             if (i == 0 || problems[i - 1].section != p.section)
@@ -266,28 +298,25 @@ class _StepTile extends StatelessWidget {
                   child: Text(p.section, style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.primary)),
                 ),
               ),
-            ListTile(
-              leading: Checkbox(value: solved.contains(p.id), onChanged: (_) => onToggle(p, solved.contains(p.id))),
-              title: Text(p.title),
-              subtitle: Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Wrap(
-                  spacing: 6,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    if (p.difficulty != null) Pill.difficulty(p.difficulty!),
-                    Text(p.platform, style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant)),
-                  ],
-                ),
-              ),
-              trailing: p.video == null
-                  ? null
-                  : IconButton(
-                      tooltip: 'Watch video',
-                      icon: const Icon(Icons.play_circle_outline),
-                      onPressed: () => openLink(context, p.video!),
-                    ),
+            InkWell(
               onTap: () => onOpen(p),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(6, 2, 10, 2),
+                child: Row(children: [
+                  Checkbox(value: solved.contains(p.id), onChanged: (_) => onToggle(p, solved.contains(p.id))),
+                  Expanded(
+                    child: Text(p.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w500)),
+                  ),
+                  if (p.difficulty != null) ...[const SizedBox(width: 8), Pill.difficulty(p.difficulty!)],
+                  const SizedBox(width: 6),
+                  IconButton.filledTonal(
+                    visualDensity: VisualDensity.compact,
+                    tooltip: p.video == null ? 'Solve' : 'Watch video',
+                    icon: Icon(p.video == null ? Icons.chevron_right_rounded : Icons.play_arrow_rounded, size: 18),
+                    onPressed: p.video == null ? () => onOpen(p) : () => openLink(context, p.video!),
+                  ),
+                ]),
+              ),
             ),
           ],
         ],
