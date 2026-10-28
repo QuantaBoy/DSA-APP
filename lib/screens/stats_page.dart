@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../logic/models.dart';
 import '../logic/srs.dart';
+import 'motion.dart';
 import 'widgets.dart';
 
 /// Progress at a glance: totals, the last 7 days, and how well you remember each topic.
@@ -24,29 +25,29 @@ class StatsPage extends StatelessWidget {
     for (final p in problems) {
       solvedPerTopic[p.topic] = (solvedPerTopic[p.topic] ?? 0) + 1;
     }
-    final results = stats.topics;
+    final results = {for (final e in stats.topics.entries) if (e.value.total > 0) e.key: e.value}; // deleted problems can leave 0
     double rate(String t) => results[t] == null ? 2 : results[t]!.remembered / results[t]!.total; // unreviewed last
     final topics = solvedPerTopic.keys.toList()..sort((a, b) => rate(a).compareTo(rate(b)));
 
     return ListView(
       padding: const EdgeInsets.only(top: 8, bottom: 24),
       children: [
-        _RecallCard(recall: stats.recall, label: recall, problems: problems),
+        Rise(child: _RecallCard(recall: stats.recall, label: recall, problems: problems)),
         const SizedBox(height: 12),
-        StatRow(children: [
+        Rise(index: 1, child: StatRow(children: [
           StatTile(icon: Icons.check_circle_rounded, value: '${problems.length}', label: 'solved', color: Accent.green),
           StatTile(icon: Icons.star_rounded, value: '${problems.where((p) => p.mastered).length}', label: 'mastered', color: Accent.amber),
           StatTile(icon: Icons.local_fire_department_rounded, value: '${streak(stats.days.keys, now)}', label: 'day streak', color: Accent.orange),
-        ]),
+        ])),
         const SizedBox(height: 10),
-        StatRow(children: [
+        Rise(index: 2, child: StatRow(children: [
           StatTile(icon: Icons.replay_rounded, value: '${stats.reviews}', label: 'reviews', color: Accent.sky),
           StatTile(icon: Icons.event_rounded, value: '${problems.where((p) => p.isDue(now)).length}', label: 'due now', color: Accent.red),
-        ]),
+        ])),
         const SectionTitle('Last 7 days'),
-        _WeekChart(stats: stats, today: now),
+        Rise(index: 3, child: _WeekChart(stats: stats, today: now)),
         const SectionTitle('Topics, weakest first'),
-        for (final t in topics) _TopicRow(topic: t, solved: solvedPerTopic[t]!, result: results[t]),
+        for (final (i, t) in topics.indexed) Rise(index: 4 + i, child: _TopicRow(topic: t, solved: solvedPerTopic[t]!, result: results[t])),
       ],
     );
   }
@@ -83,11 +84,15 @@ class _RecallCard extends StatelessWidget {
           SizedBox.square(
             dimension: 120,
             child: Stack(fit: StackFit.expand, children: [
-              CircularProgressIndicator(
+              Grow(
                 value: recall ?? 0,
-                strokeWidth: 12,
-                strokeCap: StrokeCap.round,
-                backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.6),
+                duration: const Duration(milliseconds: 1200),
+                builder: (context, v) => CircularProgressIndicator(
+                  value: v,
+                  strokeWidth: 12,
+                  strokeCap: StrokeCap.round,
+                  backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.6),
+                ),
               ),
               Center(
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -138,12 +143,16 @@ class _WeekChart extends StatelessWidget {
                 child: Column(mainAxisAlignment: MainAxisAlignment.end, children: [
                   Text('${counts[i]}', style: theme.textTheme.labelSmall),
                   const SizedBox(height: 4),
-                  Container(
-                    height: 90 * counts[i] / most + 2,
-                    margin: const EdgeInsets.symmetric(horizontal: 8),
-                    decoration: BoxDecoration(
-                      color: i == 6 ? theme.colorScheme.primary : theme.colorScheme.primary.withValues(alpha: 0.45),
-                      borderRadius: BorderRadius.circular(6),
+                  Grow(
+                    value: counts[i] / most,
+                    duration: Duration(milliseconds: 700 + 80 * i), // bars grow left to right
+                    builder: (context, v) => Container(
+                      height: 90 * v + 2,
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        color: i == 6 ? theme.colorScheme.primary : theme.colorScheme.primary.withValues(alpha: 0.45),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -176,11 +185,14 @@ class _TopicRow extends StatelessWidget {
       title: Text(topic),
       subtitle: Padding(
         padding: const EdgeInsets.only(top: 6),
-        child: LinearProgressIndicator(
+        child: Grow(
           value: rate ?? 0,
-          minHeight: 6,
-          borderRadius: BorderRadius.circular(3),
-          color: weak ? theme.colorScheme.error : null,
+          builder: (context, v) => LinearProgressIndicator(
+            value: v,
+            minHeight: 6,
+            borderRadius: BorderRadius.circular(3),
+            color: weak ? theme.colorScheme.error : null,
+          ),
         ),
       ),
       trailing: Text(

@@ -8,10 +8,11 @@ import 'add_problem_page.dart';
 import 'sheet_page.dart';
 import 'stack_page.dart';
 import 'stats_page.dart';
+import 'motion.dart';
 import 'today_page.dart';
 
 /// Shown in the account menu. Keep in step with `version:` in pubspec.yaml.
-const appVersion = '1.2.0';
+const appVersion = '1.3.0';
 
 /// Signed-in shell: bottom tabs for today's reviews, the A2Z sheet, your stack and stats.
 class HomePage extends StatefulWidget {
@@ -52,7 +53,7 @@ class _HomePageState extends State<HomePage> {
           if (snapshot.hasError) {
             body = Center(child: Padding(padding: const EdgeInsets.all(32), child: Text('Could not load your data.\n${snapshot.error}', textAlign: TextAlign.center)));
           } else if (data == null) {
-            body = const Center(child: CircularProgressIndicator());
+            body = const Skeleton();
           } else {
             body = switch (_tab) {
               0 => TodayPage(store: store, problems: data.problems, stats: data.stats, onOpenSheet: () => setState(() => _tab = 1)),
@@ -66,7 +67,16 @@ class _HomePageState extends State<HomePage> {
               title: Text(_tab == 0 ? 'Hi, ${_firstName(widget.user)}' : _tabs[_tab].title),
               actions: [_AccountMenu(user: widget.user, store: store)],
             ),
-            body: body,
+            body: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 280),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeIn,
+              transitionBuilder: (child, a) => FadeTransition(
+                opacity: a,
+                child: SlideTransition(position: Tween(begin: const Offset(0, 0.02), end: Offset.zero).animate(a), child: child),
+              ),
+              child: KeyedSubtree(key: ValueKey(data == null ? -1 : _tab), child: body),
+            ),
             floatingActionButton: _tab == 2
                 ? FloatingActionButton.extended(
                     onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AddProblemPage(store: store))),

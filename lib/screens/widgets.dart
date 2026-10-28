@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'motion.dart';
+
 /// Centered icon, title and message for screens with nothing to show yet.
 class EmptyState extends StatelessWidget {
   const EmptyState({super.key, required this.icon, required this.title, required this.message, this.action});
@@ -71,7 +73,11 @@ class StatTile extends StatelessWidget {
               child: Icon(icon, size: 20, color: tint),
             ),
             const SizedBox(height: 12),
-            Text(value, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5)),
+            Builder(builder: (context) {
+              final style = theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5);
+              final n = int.tryParse(value);
+              return n == null ? Text(value, style: style) : CountUp(n, style: style);
+            }),
             Text(label, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
           ]),
         ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/store.dart';
 import '../logic/models.dart';
 import '../logic/srs.dart';
+import 'motion.dart';
 import 'review_page.dart';
 import 'widgets.dart';
 
@@ -26,7 +27,8 @@ class TodayPage extends StatelessWidget {
     final reviewedToday = stats.reviewsOn(now);
     final days = streak(stats.days.keys, now);
     final todayTotal = due.length + reviewedToday;
-    void startReview() => Navigator.push(context, MaterialPageRoute(builder: (_) => ReviewPage(store: store, queue: due)));
+    void review(List<Problem> queue) => Navigator.push(context, MaterialPageRoute(builder: (_) => ReviewPage(store: store, queue: queue)));
+    var i = 0; // stagger order for cards rising in
 
     return ListView(
       padding: const EdgeInsets.only(top: 4, bottom: 32),
@@ -38,36 +40,37 @@ class TodayPage extends StatelessWidget {
             style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
         ),
-        HeroCard(
+        Rise(index: i++, child: HeroCard(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Expanded(
-                child: Text("TODAY'S REVISION", style: TextStyle(fontSize: 12, letterSpacing: 1.4, fontWeight: FontWeight.w700, color: Colors.white.withValues(alpha: 0.8))),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text("TODAY'S REVISION", style: TextStyle(fontSize: 12, letterSpacing: 1.4, fontWeight: FontWeight.w700, color: Colors.white.withValues(alpha: 0.8))),
+                  const SizedBox(height: 10),
+                  Text(
+                    due.isEmpty ? 'All caught up' : '${due.length} ${due.length == 1 ? 'problem' : 'problems'} to review',
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -0.5),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    due.isEmpty
+                        ? (problems.isEmpty ? 'Solve a sheet problem and it comes back here tomorrow.' : 'Nothing due. Solve the next sheet problem.')
+                        : '${due.first.name}${due.length > 1 ? ' and ${due.length - 1} more' : ''}',
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.85)),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ]),
               ),
-              const Icon(Icons.auto_awesome, size: 20),
+              const SizedBox(width: 12),
+              const StackIllustration(),
             ]),
-            const SizedBox(height: 10),
-            Text(
-              due.isEmpty ? 'All caught up' : '${due.length} ${due.length == 1 ? 'problem' : 'problems'} to review',
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -0.5),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              due.isEmpty
-                  ? (problems.isEmpty ? 'Solve a sheet problem and it comes back here tomorrow.' : 'Nothing due. Solve the next sheet problem.')
-                  : '${due.first.name}${due.length > 1 ? ' and ${due.length - 1} more' : ''}',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.85)),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
             const SizedBox(height: 16),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: todayTotal == 0 ? 1 : reviewedToday / todayTotal,
-                minHeight: 8,
-                color: Colors.white,
-                backgroundColor: Colors.white.withValues(alpha: 0.25),
+            Grow(
+              value: todayTotal == 0 ? 1 : reviewedToday / todayTotal,
+              builder: (context, v) => ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(value: v, minHeight: 8, color: Colors.white, backgroundColor: Colors.white.withValues(alpha: 0.25)),
               ),
             ),
             const SizedBox(height: 6),
@@ -75,25 +78,26 @@ class TodayPage extends StatelessWidget {
             const SizedBox(height: 16),
             FilledButton.icon(
               style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: const Color(0xFF5B3FE0)),
-              onPressed: due.isEmpty ? onOpenSheet : startReview,
+              onPressed: due.isEmpty ? onOpenSheet : () => review(due),
               icon: Icon(due.isEmpty ? Icons.menu_book_rounded : Icons.play_arrow_rounded),
               label: Text(due.isEmpty ? 'Open A2Z sheet' : 'Start review'),
             ),
           ]),
-        ),
+        )),
         const SizedBox(height: 16),
-        StatRow(children: [
+        Rise(index: i++, child: StatRow(children: [
           StatTile(icon: Icons.local_fire_department_rounded, value: '$days', label: 'day streak', color: Accent.orange),
           StatTile(icon: Icons.schedule_rounded, value: '${due.length}', label: 'due now', color: Accent.red),
           StatTile(icon: Icons.task_alt_rounded, value: '$reviewedToday', label: 'reviewed today', color: Accent.green),
-        ]),
+        ])),
         if (due.isNotEmpty) ...[
           const SectionTitle('Due now'),
-          for (final p in due) _ProblemCard(problem: p, trailing: dueLabel(p.daysOverdue(now)), overdue: p.daysOverdue(now) > 0),
+          for (final p in due)
+            Rise(index: i++, child: _ProblemCard(problem: p, trailing: dueLabel(p.daysOverdue(now)), overdue: p.daysOverdue(now) > 0, onTap: () => review([p]))),
         ],
         if (upcoming.isNotEmpty) ...[
           const SectionTitle('Coming up this week'),
-          for (final p in upcoming) _ProblemCard(problem: p, trailing: prettyDay(p.nextDue)),
+          for (final p in upcoming) Rise(index: i++, child: _ProblemCard(problem: p, trailing: prettyDay(p.nextDue))),
         ],
       ],
     );
@@ -101,16 +105,17 @@ class TodayPage extends StatelessWidget {
 }
 
 class _ProblemCard extends StatelessWidget {
-  const _ProblemCard({required this.problem, required this.trailing, this.overdue = false});
+  const _ProblemCard({required this.problem, required this.trailing, this.overdue = false, this.onTap});
 
   final Problem problem;
   final String trailing;
   final bool overdue;
+  final VoidCallback? onTap; // due problems open a review of just that one
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
+    return Pressable(onTap: onTap, child: Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
@@ -136,6 +141,6 @@ class _ProblemCard extends StatelessWidget {
           ]),
         ]),
       ),
-    );
+    ));
   }
 }

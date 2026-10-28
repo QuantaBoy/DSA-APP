@@ -56,7 +56,7 @@ Future<void> shot(WidgetTester tester, String name, String title, Widget body, {
       ]),
     ),
   ));
-  await tester.pumpAndSettle();
+  await tester.pump(const Duration(seconds: 2)); // let entrance animations finish (the illustration floats forever)
   await expectLater(find.byType(MaterialApp), matchesGoldenFile('$name.png'));
 }
 

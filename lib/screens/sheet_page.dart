@@ -5,6 +5,7 @@ import '../data/store.dart';
 import '../logic/models.dart';
 import '../logic/srs.dart';
 import 'open_link.dart';
+import 'motion.dart';
 import 'solve_page.dart';
 import 'widgets.dart';
 
@@ -26,13 +27,16 @@ class _SheetPageState extends State<SheetPage> {
   void _markSolved(Sheet sheet, SheetProblem p) {
     final problem = sheet.toProblem(p, today());
     widget.store.addProblem(problem); // not awaited: saved locally at once, syncs when online
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${p.title} added to your stack. First review on ${prettyDay(problem.nextDue)}.')),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('${p.title} added to your stack. First review on ${prettyDay(problem.nextDue)}.')));
   }
 
   void _solve(Sheet sheet, SheetProblem p, bool solved) => Navigator.push(
-      context, MaterialPageRoute(builder: (_) => SolvePage(store: widget.store, sheet: sheet, problem: p, solved: solved)));
+    context,
+    MaterialPageRoute(
+      builder: (_) => SolvePage(store: widget.store, sheet: sheet, problem: p, solved: solved),
+    ),
+  );
 
   Future<void> _unmark(SheetProblem p) async {
     final ok = await showDialog<bool>(
@@ -67,32 +71,53 @@ class _SheetPageState extends State<SheetPage> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('$done / ${sheet.problems.length} solved', style: theme.textTheme.titleMedium),
-                const SizedBox(height: 8),
-                LinearProgressIndicator(value: done / sheet.problems.length, minHeight: 8, borderRadius: BorderRadius.circular(4)),
-              ]),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('$done / ${sheet.problems.length} solved', style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  Grow(
+                    value: done / sheet.problems.length,
+                    builder: (context, v) => LinearProgressIndicator(value: v, minHeight: 8, borderRadius: BorderRadius.circular(4)),
+                  ),
+                ],
+              ),
             ),
             if (next != null)
-              _ContinueCard(
-                sheet: sheet, problem: next,
-                onSolveHere: () => _solve(sheet, next, false),
-                onOpen: () => openLink(context, next.url),
-                onVideo: next.video == null ? null : () => openLink(context, next.video!),
-                onSolved: () => _markSolved(sheet, next),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 420),
+                switchInCurve: Curves.easeOutBack,
+                transitionBuilder: (child, a) => FadeTransition(
+                  opacity: a,
+                  child: ScaleTransition(scale: Tween(begin: 0.92, end: 1.0).animate(a), child: child),
+                ),
+                child: _ContinueCard(
+                  key: ValueKey(next.id), // the next problem pops in after you tick one
+                  sheet: sheet,
+                  problem: next,
+                  onSolveHere: () => _solve(sheet, next, false),
+                  onOpen: () => openLink(context, next.url),
+                  onVideo: next.video == null ? null : () => openLink(context, next.video!),
+                  onSolved: () => _markSolved(sheet, next),
+                ),
               )
             else
               const Padding(padding: EdgeInsets.all(16), child: Text('You finished the whole sheet. Keep up your reviews!')),
             for (var step = 1; step <= sheet.steps.length; step++)
               _StepTile(
-                step: step, sheet: sheet, solved: solved, initiallyExpanded: next?.step == step,
+                step: step,
+                sheet: sheet,
+                solved: solved,
+                initiallyExpanded: next?.step == step,
                 onToggle: (p, isSolved) => isSolved ? _unmark(p) : _markSolved(sheet, p),
                 onOpen: (p) => _solve(sheet, p, solved.contains(p.id)),
               ),
             Padding(
               padding: const EdgeInsets.all(16),
-              child: Text('Problem list from ${sheet.title} by takeUforward (Striver).',
-                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline)),
+              child: Text(
+                'Problem list from ${sheet.title} by takeUforward (Striver).',
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+              ),
             ),
           ],
         );
@@ -102,7 +127,15 @@ class _SheetPageState extends State<SheetPage> {
 }
 
 class _ContinueCard extends StatelessWidget {
-  const _ContinueCard({required this.sheet, required this.problem, required this.onSolveHere, required this.onOpen, required this.onVideo, required this.onSolved});
+  const _ContinueCard({
+    super.key,
+    required this.sheet,
+    required this.problem,
+    required this.onSolveHere,
+    required this.onOpen,
+    required this.onVideo,
+    required this.onSolved,
+  });
 
   final Sheet sheet;
   final SheetProblem problem;
@@ -113,44 +146,81 @@ class _ContinueCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ghost = OutlinedButton.styleFrom(foregroundColor: Colors.white, side: BorderSide(color: Colors.white.withValues(alpha: 0.5)));
+    final ghost = OutlinedButton.styleFrom(
+      foregroundColor: Colors.white,
+      side: BorderSide(color: Colors.white.withValues(alpha: 0.5)),
+    );
     return HeroCard(
       margin: const EdgeInsets.all(16),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('CONTINUE LEARNING', style: TextStyle(fontSize: 12, letterSpacing: 1.4, fontWeight: FontWeight.w700, color: Colors.white.withValues(alpha: 0.8))),
-        const SizedBox(height: 8),
-        Text(problem.title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -0.4)),
-        const SizedBox(height: 4),
-        Text('Step ${problem.step} · ${sheet.steps[problem.step - 1]} · ${problem.section}',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.85))),
-        if (problem.difficulty != null) ...[
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
-            child: Text(problem.difficulty!, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'CONTINUE LEARNING',
+            style: TextStyle(fontSize: 12, letterSpacing: 1.4, fontWeight: FontWeight.w700, color: Colors.white.withValues(alpha: 0.8)),
+          ),
+          const SizedBox(height: 8),
+          Text(problem.title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -0.4)),
+          const SizedBox(height: 4),
+          Text(
+            'Step ${problem.step} · ${sheet.steps[problem.step - 1]} · ${problem.section}',
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.85)),
+          ),
+          if (problem.difficulty != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
+              child: Text(problem.difficulty!, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+            ),
+          ],
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              FilledButton.icon(
+                style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: const Color(0xFF5B3FE0)),
+                onPressed: onSolveHere,
+                icon: const Icon(Icons.terminal_rounded),
+                label: const Text('Solve here'),
+              ),
+              OutlinedButton.icon(
+                style: ghost,
+                onPressed: onSolved,
+                icon: const Icon(Icons.check_rounded),
+                label: const Text('I solved it'),
+              ),
+              OutlinedButton.icon(
+                style: ghost,
+                onPressed: onOpen,
+                icon: const Icon(Icons.open_in_new_rounded),
+                label: Text(problem.platform),
+              ),
+              if (onVideo != null)
+                OutlinedButton.icon(
+                  style: ghost,
+                  onPressed: onVideo,
+                  icon: const Icon(Icons.play_circle_outline_rounded),
+                  label: const Text('Video'),
+                ),
+            ],
           ),
         ],
-        const SizedBox(height: 16),
-        Wrap(spacing: 8, runSpacing: 8, children: [
-          FilledButton.icon(
-            style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: const Color(0xFF5B3FE0)),
-            onPressed: onSolveHere,
-            icon: const Icon(Icons.terminal_rounded),
-            label: const Text('Solve here'),
-          ),
-          OutlinedButton.icon(style: ghost, onPressed: onSolved, icon: const Icon(Icons.check_rounded), label: const Text('I solved it')),
-          OutlinedButton.icon(style: ghost, onPressed: onOpen, icon: const Icon(Icons.open_in_new_rounded), label: Text(problem.platform)),
-          if (onVideo != null)
-            OutlinedButton.icon(style: ghost, onPressed: onVideo, icon: const Icon(Icons.play_circle_outline_rounded), label: const Text('Video')),
-        ]),
-      ]),
+      ),
     );
   }
 }
 
 class _StepTile extends StatelessWidget {
-  const _StepTile({required this.step, required this.sheet, required this.solved, required this.initiallyExpanded, required this.onToggle, required this.onOpen});
+  const _StepTile({
+    required this.step,
+    required this.sheet,
+    required this.solved,
+    required this.initiallyExpanded,
+    required this.onToggle,
+    required this.onOpen,
+  });
 
   final int step;
   final Sheet sheet;
@@ -168,14 +238,20 @@ class _StepTile extends StatelessWidget {
       key: PageStorageKey('step-$step'),
       initiallyExpanded: initiallyExpanded,
       title: Text('Step $step · ${sheet.steps[step - 1]}'),
-      subtitle: LinearProgressIndicator(value: done / problems.length),
+      subtitle: Grow(
+        value: done / problems.length,
+        builder: (context, v) => LinearProgressIndicator(value: v, borderRadius: BorderRadius.circular(3)),
+      ),
       trailing: Text('$done/${problems.length}', style: theme.textTheme.labelLarge),
       children: [
         for (final (i, p) in problems.indexed) ...[
           if (i == 0 || problems[i - 1].section != p.section)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-              child: Align(alignment: Alignment.centerLeft, child: Text(p.section, style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.primary))),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(p.section, style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.primary)),
+              ),
             ),
           ListTile(
             leading: Checkbox(value: solved.contains(p.id), onChanged: (_) => onToggle(p, solved.contains(p.id))),
@@ -183,7 +259,11 @@ class _StepTile extends StatelessWidget {
             subtitle: Text([if (p.difficulty != null) p.difficulty!, p.platform].join(' · ')),
             trailing: p.video == null
                 ? null
-                : IconButton(tooltip: 'Watch video', icon: const Icon(Icons.play_circle_outline), onPressed: () => openLink(context, p.video!)),
+                : IconButton(
+                    tooltip: 'Watch video',
+                    icon: const Icon(Icons.play_circle_outline),
+                    onPressed: () => openLink(context, p.video!),
+                  ),
             onTap: () => onOpen(p),
           ),
         ],

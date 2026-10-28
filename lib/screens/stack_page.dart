@@ -4,6 +4,7 @@ import '../data/store.dart';
 import '../logic/models.dart';
 import '../logic/srs.dart';
 import 'open_link.dart';
+import 'motion.dart';
 import 'widgets.dart';
 
 /// Every problem in your review stack, soonest review first.
@@ -78,7 +79,7 @@ class StackPage extends StatelessWidget {
         final overdue = p.daysOverdue(now);
         final due = p.isDue(now);
         final stageColor = p.mastered ? Accent.amber : due ? colors.primary : colors.outline;
-        return Card(
+        return Rise(index: i, child: Card(
           margin: const EdgeInsets.symmetric(horizontal: 16),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
@@ -119,7 +120,7 @@ class StackPage extends StatelessWidget {
               ]),
             ),
           ),
-        );
+        ));
       },
     );
   }

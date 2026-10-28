@@ -5,6 +5,7 @@ import '../data/store.dart';
 import '../logic/models.dart';
 import '../logic/srs.dart';
 import 'code_pad.dart';
+import 'motion.dart';
 import 'open_link.dart';
 import 'widgets.dart';
 
@@ -69,19 +70,63 @@ class _ReviewPageState extends State<ReviewPage> {
           child: LinearProgressIndicator(value: _index / total),
         ),
       ),
-      body: SafeArea(child: done ? _summary(context, total) : _card(context, widget.queue[_index])),
+      body: SafeArea(
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 380),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, a) => FadeTransition(
+            opacity: a,
+            child: SlideTransition(position: Tween(begin: const Offset(0.12, 0), end: Offset.zero).animate(a), child: child),
+          ),
+          child: KeyedSubtree(key: ValueKey(_index), child: done ? _summary(context, total) : _card(context, widget.queue[_index])),
+        ),
+      ),
     );
   }
 
-  Widget _summary(BuildContext context, int total) => Center(
-        child: EmptyState(
-          icon: Icons.emoji_events_outlined,
-          title: 'Nice work!',
-          message: 'You reviewed $total ${total == 1 ? 'problem' : 'problems'} and remembered $_remembered. '
-              'Each one is scheduled for its next review.',
-          action: FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Done')),
+  Widget _summary(BuildContext context, int total) {
+    final theme = Theme.of(context);
+    return Stack(children: [
+      Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: 1),
+              duration: const Duration(milliseconds: 900),
+              curve: Curves.elasticOut,
+              builder: (context, t, child) => Transform.scale(scale: t, child: child),
+              child: Container(
+                padding: const EdgeInsets.all(28),
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(colors: [Color(0xFFFFD36B), Color(0xFFF59E0B)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                  boxShadow: [BoxShadow(color: Color(0x55F59E0B), blurRadius: 30, offset: Offset(0, 12))],
+                ),
+                child: const Icon(Icons.emoji_events_rounded, size: 64, color: Colors.white),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Rise(index: 2, child: Text('Nice work!', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800))),
+            const SizedBox(height: 8),
+            Rise(
+              index: 3,
+              child: Text(
+                'You reviewed $total ${total == 1 ? 'problem' : 'problems'} and remembered $_remembered. '
+                'Each one is scheduled for its next review.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Rise(index: 4, child: FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Done'))),
+          ]),
         ),
-      );
+      ),
+      const Positioned.fill(child: Confetti()),
+    ]);
+  }
 
   Widget _card(BuildContext context, Problem p) {
     final theme = Theme.of(context);

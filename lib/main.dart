@@ -72,6 +72,9 @@ ThemeData appTheme(Brightness brightness) {
     floatingActionButtonTheme: const FloatingActionButtonThemeData(shape: StadiumBorder()),
     snackBarTheme: SnackBarThemeData(behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
     dividerTheme: DividerThemeData(color: colors.outlineVariant.withValues(alpha: 0.35)),
+    pageTransitionsTheme: const PageTransitionsTheme(builders: {
+      TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
+    }),
     listTileTheme: const ListTileThemeData(shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16)))),
   );
 }
