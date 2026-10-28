@@ -7,7 +7,7 @@ Spaced repetition app for DSA problems (Flutter, Android + web).
 - **A2Z Sheet**: Striver's sheet step by step; ticking a problem adds it to your stack
 - **My stack**: every problem, with notes; add problems from LeetCode, Codeforces and other sites
 - **Stats**: recall rate, weakest topics, last 7 days
-- Daily reminder at 8 PM, works offline, Google and email login, account deletion
+- Daily reminder at 10 AM, works offline, Google and email login, account deletion
 
 Code layout: `lib/logic` (pure rules, no Firebase), `lib/data` (Firestore, sheet, reminder), `lib/screens` (UI).
 

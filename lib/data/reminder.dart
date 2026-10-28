@@ -4,7 +4,7 @@ import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
 /// Hour (24h, phone's local time) of the daily "time to review" notification.
-const reminderHour = 20;
+const reminderHour = 10;
 
 final _notifications = FlutterLocalNotificationsPlugin();
 
