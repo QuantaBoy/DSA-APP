@@ -1,4 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_code_editor/flutter_code_editor.dart';
+import 'package:flutter_highlight/themes/atom-one-dark.dart';
+import 'package:flutter_highlight/themes/atom-one-light.dart';
+import 'package:highlight/languages/cpp.dart';
+import 'package:highlight/languages/java.dart';
+import 'package:highlight/languages/javascript.dart';
+import 'package:highlight/languages/python.dart';
 
 import '../data/store.dart';
 import '../logic/models.dart';
@@ -6,7 +13,10 @@ import '../logic/srs.dart';
 import 'open_link.dart';
 import 'widgets.dart';
 
-/// One problem at a time: recall the approach, check yourself, then say if you remembered it.
+final _languages = {'C++': cpp, 'Java': java, 'Python': python, 'JavaScript': javascript};
+
+/// One problem at a time: write the solution from memory, compare it with your saved one,
+/// then say if you remembered it.
 class ReviewPage extends StatefulWidget {
   const ReviewPage({super.key, required this.store, required this.queue});
 
@@ -20,15 +30,32 @@ class ReviewPage extends StatefulWidget {
 class _ReviewPageState extends State<ReviewPage> {
   int _index = 0;
   int _remembered = 0;
-  bool _revealed = false;
+  bool _checked = false;
+  String _language = 'C++';
+  final _code = CodeController(language: cpp);
+  final _saved = <String, String>{}; // solutions saved during this session, shown at once
+
+  @override
+  void dispose() {
+    _code.dispose();
+    super.dispose();
+  }
 
   void _answer(bool remembered) {
     widget.store.review(widget.queue[_index], remembered: remembered); // not awaited: saved locally at once
     setState(() {
       if (remembered) _remembered++;
       _index++;
-      _revealed = false;
+      _checked = false;
+      _code.fullText = '';
     });
+  }
+
+  void _saveAsSolution(Problem p) {
+    final code = _code.fullText.trim();
+    widget.store.setNotes(p.id, code); // not awaited: saved locally at once
+    setState(() => _saved[p.id] = code);
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Saved as your solution for next time.')));
   }
 
   @override
@@ -95,19 +122,30 @@ class _ReviewPageState extends State<ReviewPage> {
           const SizedBox(height: 16),
           if (p.url != null)
             OutlinedButton.icon(onPressed: () => openLink(context, p.url!), icon: const Icon(Icons.open_in_new), label: Text('Open on ${p.platform}')),
-          if (p.notes != null && p.notes!.trim().isNotEmpty) ...[
-            const SizedBox(height: 8),
-            if (_revealed)
-              Card(
-                color: theme.colorScheme.surfaceContainerHighest,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: SelectableText(p.notes!, style: const TextStyle(fontFamily: 'monospace')),
-                ),
-              )
-            else
-              TextButton.icon(onPressed: () => setState(() => _revealed = true), icon: const Icon(Icons.visibility_outlined), label: const Text('Show my notes')),
-          ],
+          const SizedBox(height: 24),
+          _editorHeader(theme),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: CodeTheme(
+              data: CodeThemeData(styles: theme.brightness == Brightness.dark ? atomOneDarkTheme : atomOneLightTheme),
+              child: CodeField(
+                controller: _code,
+                minLines: 12,
+                textStyle: const TextStyle(fontFamily: 'monospace', fontSize: 13, height: 1.4),
+                gutterStyle: const GutterStyle(showErrors: false, showFoldingHandles: false, margin: 8, width: 48),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (!_checked)
+            FilledButton.tonalIcon(
+              onPressed: () => setState(() => _checked = true),
+              icon: const Icon(Icons.compare_arrows),
+              label: const Text('Check against my solution'),
+            )
+          else
+            _savedSolution(theme, p),
         ]),
       ),
       Padding(
@@ -119,6 +157,50 @@ class _ReviewPageState extends State<ReviewPage> {
         ]),
       ),
     ]);
+  }
+  Widget _editorHeader(ThemeData theme) => Row(children: [
+        Expanded(child: Text('Write it from memory', style: theme.textTheme.titleMedium)),
+        DropdownButton<String>(
+          value: _language,
+          underline: const SizedBox(),
+          borderRadius: BorderRadius.circular(12),
+          items: [for (final l in _languages.keys) DropdownMenuItem(value: l, child: Text(l))],
+          onChanged: (l) => setState(() {
+            _language = l!;
+            _code.setLanguage(_languages[l], analyzer: const DefaultLocalAnalyzer());
+          }),
+        ),
+      ]);
+
+  Widget _savedSolution(ThemeData theme, Problem p) {
+    final saved = _saved[p.id] ?? p.notes?.trim() ?? '';
+    final canSave = _code.fullText.trim().isNotEmpty && _code.fullText.trim() != saved;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Your saved solution', style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary)),
+          const SizedBox(height: 8),
+          if (saved.isEmpty)
+            Text('Nothing saved yet. Save the code you just wrote, so next time you can compare.',
+                style: TextStyle(color: theme.colorScheme.onSurfaceVariant))
+          else
+            SelectableText(saved, style: const TextStyle(fontFamily: 'monospace', fontSize: 13, height: 1.4)),
+          const SizedBox(height: 12),
+          Text('Different code is fine. Judge the idea, not the lines: if your approach is correct with the same '
+              'or better complexity, tap Remembered. Found a better way? Save it as your new solution.',
+              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+          if (canSave) ...[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => _saveAsSolution(p),
+              icon: const Icon(Icons.save_outlined),
+              label: Text(saved.isEmpty ? 'Save my code as the solution' : 'Replace with my new code'),
+            ),
+          ],
+        ]),
+      ),
+    );
   }
 }
 

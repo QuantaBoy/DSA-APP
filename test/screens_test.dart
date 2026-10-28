@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:memory_stack/data/store.dart';
 import 'package:memory_stack/logic/models.dart';
 import 'package:memory_stack/logic/srs.dart';
+import 'package:memory_stack/screens/review_page.dart';
 import 'package:memory_stack/screens/stats_page.dart';
 import 'package:memory_stack/screens/today_page.dart';
 import 'package:memory_stack/screens/widgets.dart';
@@ -50,5 +51,22 @@ void main() {
     expect(find.text('0% · 1 solved'), findsOneWidget);
     final graphs = tester.getTopLeft(find.text('Graphs')).dy, arrays = tester.getTopLeft(find.text('Arrays')).dy;
     expect(graphs, lessThan(arrays));
+  });
+
+  testWidgets('Review shows a code pad, and checking reveals the saved solution', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1; // tall screen: everything visible without scrolling
+    addTearDown(tester.view.reset);
+    final p = solved('a', 3);
+    final withNotes = Problem(
+        id: p.id, name: p.name, platform: p.platform, difficulty: p.difficulty, topic: p.topic,
+        notes: 'return seen[target - x]', solvedOn: p.solvedOn, stage: 0, nextDue: p.nextDue);
+    await tester.pumpWidget(MaterialApp(home: ReviewPage(store: Store('test'), queue: [withNotes])));
+    expect(find.text('Write it from memory'), findsOneWidget);
+    expect(find.text('return seen[target - x]'), findsNothing); // hidden until you check
+    await tester.tap(find.text('Check against my solution'));
+    await tester.pump();
+    expect(find.text('return seen[target - x]'), findsOneWidget);
+    expect(find.textContaining('Different code is fine'), findsOneWidget);
   });
 }

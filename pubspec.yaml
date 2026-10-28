@@ -12,7 +12,10 @@ dependencies:
   firebase_core: ^5.1.0
   flutter:
     sdk: flutter
+  flutter_code_editor: ^0.3.5
+  flutter_highlight: ^0.7.0
   flutter_local_notifications: ^22.3.3
+  highlight: ^0.7.0
   timezone: ^0.11.2
   url_launcher: ^6.3.3
 
