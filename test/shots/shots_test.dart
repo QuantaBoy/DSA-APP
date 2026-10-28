@@ -4,10 +4,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:memory_stack/data/sheet.dart';
 import 'package:memory_stack/data/store.dart';
 import 'package:memory_stack/logic/models.dart';
 import 'package:memory_stack/logic/srs.dart';
 import 'package:memory_stack/main.dart';
+import 'package:memory_stack/screens/sheet_page.dart';
 import 'package:memory_stack/screens/stack_page.dart';
 import 'package:memory_stack/screens/stats_page.dart';
 import 'package:memory_stack/screens/today_page.dart';
@@ -38,13 +40,13 @@ final stats = Stats(
   topics: {'Arrays': (remembered: 4, total: 5), 'Sliding Window': (remembered: 1, total: 4), 'Stack': (remembered: 3, total: 3)},
 );
 
-Future<void> shot(WidgetTester tester, String name, String title, Widget body, {int tab = 0}) async {
+Future<void> shot(WidgetTester tester, String name, String title, Widget body, {int tab = 0, Brightness brightness = Brightness.light}) async {
   tester.view.physicalSize = const Size(1170, 2532);
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(MaterialApp(
     debugShowCheckedModeBanner: false,
-    theme: appTheme(Brightness.light),
+    theme: appTheme(brightness),
     home: Scaffold(
       appBar: AppBar(title: Text(title), actions: const [Padding(padding: EdgeInsets.only(right: 12), child: CircleAvatar(radius: 17, child: Text('T')))]),
       body: body,
@@ -64,9 +66,11 @@ void main() {
   setUpAll(() async {
     await load('Roboto', ['roboto-regular.ttf', 'roboto-medium.ttf', 'roboto-bold.ttf', 'roboto-black.ttf']);
     await load('MaterialIcons', ['materialicons-regular.otf']);
+    await loadA2zSheet(); // cached, so the sheet screen has it at once
   });
 
   testWidgets('today', (t) => shot(t, 'today', 'Hi, Three', TodayPage(store: Store('x'), problems: problems, stats: stats, onOpenSheet: () {})));
   testWidgets('stack', (t) => shot(t, 'stack', 'My stack', StackPage(store: Store('x'), problems: problems), tab: 2));
   testWidgets('stats', (t) => shot(t, 'stats', 'Stats', StatsPage(problems: problems, stats: stats), tab: 3));
+  testWidgets('sheet dark', (t) => shot(t, 'sheet_dark', 'A2Z Sheet', SheetPage(store: Store('x'), problems: problems), tab: 1, brightness: Brightness.dark));
 }

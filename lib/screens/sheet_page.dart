@@ -87,6 +87,8 @@ class _SheetPageState extends State<SheetPage> {
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 420),
                 switchInCurve: Curves.easeOutBack,
+                // Stretch the card to full width (the default layout centres and shrinks it).
+                layoutBuilder: (current, previous) => Stack(fit: StackFit.passthrough, children: [...previous, ?current]),
                 transitionBuilder: (child, a) => FadeTransition(
                   opacity: a,
                   child: ScaleTransition(scale: Tween(begin: 0.92, end: 1.0).animate(a), child: child),
@@ -191,18 +193,24 @@ class _ContinueCard extends StatelessWidget {
                 icon: const Icon(Icons.check_rounded),
                 label: const Text('I solved it'),
               ),
-              OutlinedButton.icon(
-                style: ghost,
+              IconButton.outlined(
+                style: IconButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: BorderSide(color: Colors.white.withValues(alpha: 0.5)),
+                ),
+                tooltip: 'Open on ${problem.platform}',
                 onPressed: onOpen,
                 icon: const Icon(Icons.open_in_new_rounded),
-                label: Text(problem.platform),
               ),
               if (onVideo != null)
-                OutlinedButton.icon(
-                  style: ghost,
+                IconButton.outlined(
+                  style: IconButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: BorderSide(color: Colors.white.withValues(alpha: 0.5)),
+                  ),
+                  tooltip: 'Watch video',
                   onPressed: onVideo,
-                  icon: const Icon(Icons.play_circle_outline_rounded),
-                  label: const Text('Video'),
+                  icon: const Icon(Icons.play_arrow_rounded),
                 ),
             ],
           ),
@@ -234,40 +242,56 @@ class _StepTile extends StatelessWidget {
     final problems = sheet.inStep(step);
     final done = problems.where((p) => solved.contains(p.id)).length;
     final theme = Theme.of(context);
-    return ExpansionTile(
-      key: PageStorageKey('step-$step'),
-      initiallyExpanded: initiallyExpanded,
-      title: Text('Step $step · ${sheet.steps[step - 1]}'),
-      subtitle: Grow(
-        value: done / problems.length,
-        builder: (context, v) => LinearProgressIndicator(value: v, borderRadius: BorderRadius.circular(3)),
-      ),
-      trailing: Text('$done/${problems.length}', style: theme.textTheme.labelLarge),
-      children: [
-        for (final (i, p) in problems.indexed) ...[
-          if (i == 0 || problems[i - 1].section != p.section)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(p.section, style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.primary)),
+    return Card(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        key: PageStorageKey('step-$step'),
+        initiallyExpanded: initiallyExpanded,
+        shape: const Border(), // no lines above and below when open
+        collapsedShape: const Border(),
+        title: Text('Step $step · ${sheet.steps[step - 1]}', style: const TextStyle(fontWeight: FontWeight.w700)),
+        subtitle: Grow(
+          value: done / problems.length,
+          builder: (context, v) => LinearProgressIndicator(value: v, borderRadius: BorderRadius.circular(3)),
+        ),
+        trailing: Text('$done/${problems.length}', style: theme.textTheme.labelLarge),
+        children: [
+          for (final (i, p) in problems.indexed) ...[
+            if (i == 0 || problems[i - 1].section != p.section)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(p.section, style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.primary)),
+                ),
               ),
+            ListTile(
+              leading: Checkbox(value: solved.contains(p.id), onChanged: (_) => onToggle(p, solved.contains(p.id))),
+              title: Text(p.title),
+              subtitle: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Wrap(
+                  spacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    if (p.difficulty != null) Pill.difficulty(p.difficulty!),
+                    Text(p.platform, style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant)),
+                  ],
+                ),
+              ),
+              trailing: p.video == null
+                  ? null
+                  : IconButton(
+                      tooltip: 'Watch video',
+                      icon: const Icon(Icons.play_circle_outline),
+                      onPressed: () => openLink(context, p.video!),
+                    ),
+              onTap: () => onOpen(p),
             ),
-          ListTile(
-            leading: Checkbox(value: solved.contains(p.id), onChanged: (_) => onToggle(p, solved.contains(p.id))),
-            title: Text(p.title),
-            subtitle: Text([if (p.difficulty != null) p.difficulty!, p.platform].join(' · ')),
-            trailing: p.video == null
-                ? null
-                : IconButton(
-                    tooltip: 'Watch video',
-                    icon: const Icon(Icons.play_circle_outline),
-                    onPressed: () => openLink(context, p.video!),
-                  ),
-            onTap: () => onOpen(p),
-          ),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
