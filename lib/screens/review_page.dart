@@ -33,7 +33,7 @@ class _ReviewPageState extends State<ReviewPage> {
   bool _checked = false;
   String _language = 'C++';
   final _code = CodeController(language: cpp);
-  final _saved = <String, String>{}; // solutions saved during this session, shown at once
+  final _saved = <String, String>{}; // saved solutions, loaded on Check (one read) and updated on save
 
   @override
   void dispose() {
@@ -49,6 +49,13 @@ class _ReviewPageState extends State<ReviewPage> {
       _checked = false;
       _code.fullText = '';
     });
+  }
+
+  Future<void> _check(Problem p) async {
+    setState(() => _checked = true);
+    if (_saved.containsKey(p.id)) return;
+    final notes = await widget.store.notes(p.id);
+    if (mounted) setState(() => _saved[p.id] = notes?.trim() ?? '');
   }
 
   void _saveAsSolution(Problem p) {
@@ -140,7 +147,7 @@ class _ReviewPageState extends State<ReviewPage> {
           const SizedBox(height: 12),
           if (!_checked)
             FilledButton.tonalIcon(
-              onPressed: () => setState(() => _checked = true),
+              onPressed: () => _check(p),
               icon: const Icon(Icons.compare_arrows),
               label: const Text('Check against my solution'),
             )
@@ -158,6 +165,7 @@ class _ReviewPageState extends State<ReviewPage> {
       ),
     ]);
   }
+
   Widget _editorHeader(ThemeData theme) => Row(children: [
         Expanded(child: Text('Write it from memory', style: theme.textTheme.titleMedium)),
         DropdownButton<String>(
@@ -173,7 +181,8 @@ class _ReviewPageState extends State<ReviewPage> {
       ]);
 
   Widget _savedSolution(ThemeData theme, Problem p) {
-    final saved = _saved[p.id] ?? p.notes?.trim() ?? '';
+    final saved = _saved[p.id];
+    if (saved == null) return const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()));
     final canSave = _code.fullText.trim().isNotEmpty && _code.fullText.trim() != saved;
     return Card(
       child: Padding(

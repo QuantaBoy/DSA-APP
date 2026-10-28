@@ -18,18 +18,19 @@ class StackPage extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Delete ${p.name}?'),
-        content: const Text('Its review history is deleted too. This cannot be undone.'),
+        content: const Text('Its notes are deleted too. This cannot be undone.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
           FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
         ],
       ),
     );
-    if (ok == true) store.deleteProblem(p.id);
+    if (ok == true) store.deleteProblem(p);
   }
 
   Future<void> _editNotes(BuildContext context, Problem p) async {
-    final controller = TextEditingController(text: p.notes);
+    final controller = TextEditingController(text: await store.notes(p.id));
+    if (!context.mounted) return;
     final notes = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
@@ -89,7 +90,7 @@ class StackPage extends StatelessWidget {
           trailing: PopupMenuButton<String>(
             onSelected: (v) => v == 'notes' ? _editNotes(context, p) : _confirmDelete(context, p),
             itemBuilder: (_) => [
-              PopupMenuItem(value: 'notes', child: Text(p.notes == null ? 'Add notes' : 'Edit notes')),
+              const PopupMenuItem(value: 'notes', child: Text('Notes')),
               const PopupMenuItem(value: 'delete', child: Text('Delete')),
             ],
           ),

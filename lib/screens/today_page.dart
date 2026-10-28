@@ -8,11 +8,11 @@ import 'widgets.dart';
 
 /// Home tab: streak, what is due now, and what comes back soon.
 class TodayPage extends StatelessWidget {
-  const TodayPage({super.key, required this.store, required this.problems, required this.reviews, required this.onOpenSheet});
+  const TodayPage({super.key, required this.store, required this.problems, required this.stats, required this.onOpenSheet});
 
   final Store store;
   final List<Problem> problems;
-  final List<Review> reviews;
+  final Stats stats;
   final VoidCallback onOpenSheet;
 
   @override
@@ -22,8 +22,8 @@ class TodayPage extends StatelessWidget {
     final week = addDays(now, 7);
     final upcoming = problems.where((p) => !p.isDue(now) && !p.nextDue.isAfter(week)).toList()
       ..sort((a, b) => a.nextDue.compareTo(b.nextDue));
-    final reviewedToday = reviews.where((r) => r.reviewedOn == now).length;
-    final days = streak(reviews.map((r) => r.reviewedOn), now);
+    final reviewedToday = stats.reviewsOn(now);
+    final days = streak(stats.days.keys, now);
 
     return ListView(
       padding: const EdgeInsets.only(top: 8, bottom: 24),

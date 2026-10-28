@@ -54,9 +54,9 @@ class _AddProblemPageState extends State<AddProblemPage> {
     String? optional(TextEditingController c) => c.text.trim().isEmpty ? null : c.text.trim();
     final problem = Problem.solved(
       id: widget.store.newProblemId(), name: _name!.text.trim(), platform: _platform, difficulty: _difficulty,
-      topic: _topic!.text.trim(), url: optional(_url), notes: optional(_notes), solvedOn: _solvedOn,
+      topic: _topic!.text.trim(), url: optional(_url), solvedOn: _solvedOn,
     );
-    widget.store.addProblem(problem); // not awaited: saves locally at once, syncs when online
+    widget.store.addProblem(problem, notes: optional(_notes)); // not awaited: saves locally at once, syncs when online
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Added ${problem.name}. First review on ${prettyDay(problem.nextDue)}.')),
     );

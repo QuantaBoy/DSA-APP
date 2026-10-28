@@ -7,9 +7,6 @@ DateTime d(int y, int m, int day) => DateTime.utc(y, m, day);
 Problem problem(String id, String topic) => Problem.solved(
       id: id, name: 'P$id', platform: 'LeetCode', difficulty: 'Easy', topic: topic, solvedOn: d(2026, 10, 1));
 
-Review review(String id, bool remembered) =>
-    Review(problemId: id, reviewedOn: d(2026, 10, 5), remembered: remembered, stageBefore: 0);
-
 void main() {
   test('new problem is due the day after it was solved', () {
     final p = Problem.solved(id: '1', name: 'Two Sum', platform: 'LeetCode', difficulty: 'Easy', topic: 'Array',
@@ -31,18 +28,19 @@ void main() {
     expect(afterReview(1, false, d(2026, 10, 25)), (0, d(2026, 10, 26)));
   });
 
-  test('review returns the rescheduled problem and a log entry', () {
-    final (updated, log) = problem('1', 'Array').review(remembered: true, on: DateTime(2026, 10, 2, 8));
+  test('review reschedules and counts the review', () {
+    final updated = problem('1', 'Array').review(remembered: true, on: DateTime(2026, 10, 2, 8));
     expect(updated.stage, 1);
     expect(updated.nextDue, d(2026, 10, 5));
-    expect(log.stageBefore, 0);
-    expect(log.reviewedOn, d(2026, 10, 2));
+    expect([updated.reviews, updated.remembered], [1, 1]);
+    final forgot = updated.review(remembered: false, on: d(2026, 10, 5));
+    expect([forgot.reviews, forgot.remembered], [2, 1]);
   });
 
   test('ten remembered reviews reach mastered', () {
     var p = problem('1', 'Array');
     for (var i = 0; i < 10; i++) {
-      p = p.review(remembered: true, on: p.nextDue).$1;
+      p = p.review(remembered: true, on: p.nextDue);
     }
     expect(p.mastered, isTrue);
   });
@@ -56,37 +54,37 @@ void main() {
   });
 
   test('next topic follows the roadmap', () {
-    expect(nextTopic([], []), (topic: 'Array', reason: NextReason.learn));
+    expect(nextTopic([], {}), (topic: 'Array', reason: NextReason.learn));
     final fiveArrays = [for (var i = 0; i < 5; i++) problem('$i', 'Array')];
-    expect(nextTopic(fiveArrays, []).topic, 'String');
+    expect(nextTopic(fiveArrays, {}).topic, 'String');
   });
 
   test('next topic reinforces the weakest topic first', () {
     final problems = [problem('a', 'Array'), problem('g', 'Graph')];
-    final reviews = [
-      review('a', true), review('a', false), review('a', true), // Array 67%: fine
-      review('g', true), review('g', false), review('g', false), review('g', false), // Graph 25%: weak
-    ];
-    expect(nextTopic(problems, reviews), (topic: 'Graph', reason: NextReason.reinforce));
+    final results = {'Array': (remembered: 2, total: 3), 'Graph': (remembered: 1, total: 4)}; // 67% fine, 25% weak
+    expect(nextTopic(problems, results), (topic: 'Graph', reason: NextReason.reinforce));
     // Two bad reviews are not enough evidence yet.
-    expect(nextTopic(problems, [review('g', false), review('g', false)]).reason, NextReason.learn);
+    expect(nextTopic(problems, {'Graph': (remembered: 0, total: 2)}).reason, NextReason.learn);
   });
 
-  test('problem and review survive a save and load', () {
+  test('problem survives a save and load', () {
     final p = Problem.solved(id: 'x', name: 'Two Sum', platform: 'LeetCode', difficulty: 'Easy', topic: 'Array',
-        url: 'https://leetcode.com/problems/two-sum', notes: 'hash map', solvedOn: DateTime(2026, 1, 9, 23, 59));
+            url: 'https://leetcode.com/problems/two-sum', solvedOn: DateTime(2026, 1, 9, 23, 59))
+        .review(remembered: true, on: d(2026, 1, 10));
     final map = p.toMap();
     expect(map['solvedOn'], '2026-01-09');
-    expect(map['nextDue'], '2026-01-10');
     final back = Problem.fromMap('x', map);
-    expect([back.name, back.url, back.notes, back.stage], [p.name, p.url, p.notes, 0]);
+    expect([back.name, back.url, back.stage, back.reviews, back.remembered], [p.name, p.url, 1, 1, 1]);
     expect([back.solvedOn, back.nextDue], [p.solvedOn, p.nextDue]);
-
-    final r = Review.fromMap(review('x', true).toMap());
-    expect([r.problemId, r.reviewedOn, r.remembered, r.stageBefore], ['x', d(2026, 10, 5), true, 0]);
   });
 
-  test('reviews of deleted problems are ignored', () {
-    expect(topicResults([problem('a', 'Array')], [review('gone', true)]), isEmpty);
+  test('stats read from the stored totals', () {
+    final s = Stats.fromMap({
+      'days': {'2026-10-27': 2, '2026-10-28': 1},
+      'topics': {'Array': {'remembered': 2, 'total': 3}},
+    });
+    expect([s.reviews, s.reviewsOn(d(2026, 10, 27)), s.reviewsOn(d(2026, 10, 1))], [3, 2, 0]);
+    expect(s.recall, closeTo(2 / 3, 1e-9));
+    expect(const Stats().recall, isNull);
   });
 }

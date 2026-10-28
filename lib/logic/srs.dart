@@ -44,24 +44,10 @@ int streak(Iterable<DateTime> reviewDays, DateTime on) {
   return count;
 }
 
-/// Per topic: how many reviews you remembered out of how many you did.
-Map<String, ({int remembered, int total})> topicResults(List<Problem> problems, List<Review> reviews) {
-  final topicOf = {for (final p in problems) p.id: p.topic};
-  final results = <String, ({int remembered, int total})>{};
-  for (final r in reviews) {
-    final topic = topicOf[r.problemId];
-    if (topic == null) continue; // review of a deleted problem
-    final old = results[topic] ?? (remembered: 0, total: 0);
-    results[topic] = (remembered: old.remembered + (r.remembered ? 1 : 0), total: old.total + 1);
-  }
-  return results;
-}
-
 enum NextReason { reinforce, learn }
 
 /// What to study next: a weak topic first, otherwise the next roadmap topic you have not covered.
-({String topic, NextReason reason}) nextTopic(List<Problem> problems, List<Review> reviews) {
-  final results = topicResults(problems, reviews);
+({String topic, NextReason reason}) nextTopic(List<Problem> problems, Map<String, ({int remembered, int total})> results) {
   String? weakest;
   var weakestRate = 1.0;
   results.forEach((topic, r) {

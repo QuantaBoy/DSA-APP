@@ -3,12 +3,15 @@ import 'package:flutter/material.dart';
 
 import '../data/reminder.dart';
 import '../data/store.dart';
-import '../logic/models.dart';
+
 import 'add_problem_page.dart';
 import 'sheet_page.dart';
 import 'stack_page.dart';
 import 'stats_page.dart';
 import 'today_page.dart';
+
+/// Shown in the account menu. Keep in step with `version:` in pubspec.yaml.
+const appVersion = '1.0.0';
 
 /// Signed-in shell: bottom tabs for today's reviews, the A2Z sheet, your stack and stats.
 class HomePage extends StatefulWidget {
@@ -29,36 +32,33 @@ const _tabs = [
 
 class _HomePageState extends State<HomePage> {
   late final store = Store(widget.user.uid);
-  late final Stream<List<Problem>> _problems = store.problems();
-  late final Stream<List<Review>> _reviews = store.reviews();
+  late final Stream<UserData> _data = store.data();
   int _tab = 0;
 
   @override
   void initState() {
     super.initState();
     scheduleDailyReminder().catchError((_) {}); // a missing reminder must never break the app
+    store.upgrade().catchError((_) {}); // moves old-layout data once; retried next launch if it fails
   }
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<List<Problem>>(
-      stream: _problems,
-      builder: (context, problemsSnap) => StreamBuilder<List<Review>>(
-        stream: _reviews,
-        builder: (context, reviewsSnap) {
-          final problems = problemsSnap.data, reviews = reviewsSnap.data;
-          final error = problemsSnap.error ?? reviewsSnap.error;
+    return StreamBuilder<UserData>(
+      stream: _data,
+      builder: (context, snapshot) {
+          final data = snapshot.data;
           final Widget body;
-          if (error != null) {
-            body = Center(child: Padding(padding: const EdgeInsets.all(32), child: Text('Could not load your data.\n$error', textAlign: TextAlign.center)));
-          } else if (problems == null || reviews == null) {
+          if (snapshot.hasError) {
+            body = Center(child: Padding(padding: const EdgeInsets.all(32), child: Text('Could not load your data.\n${snapshot.error}', textAlign: TextAlign.center)));
+          } else if (data == null) {
             body = const Center(child: CircularProgressIndicator());
           } else {
             body = switch (_tab) {
-              0 => TodayPage(store: store, problems: problems, reviews: reviews, onOpenSheet: () => setState(() => _tab = 1)),
-              1 => SheetPage(store: store, problems: problems),
-              2 => StackPage(store: store, problems: problems),
-              _ => StatsPage(problems: problems, reviews: reviews),
+              0 => TodayPage(store: store, problems: data.problems, stats: data.stats, onOpenSheet: () => setState(() => _tab = 1)),
+              1 => SheetPage(store: store, problems: data.problems),
+              2 => StackPage(store: store, problems: data.problems),
+              _ => StatsPage(problems: data.problems, stats: data.stats),
             };
           }
           return Scaffold(
@@ -82,8 +82,7 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           );
-        },
-      ),
+      },
     );
   }
 }
@@ -142,7 +141,10 @@ class _AccountMenu extends StatelessWidget {
       tooltip: 'Account',
       onSelected: (v) => v == 'out' ? FirebaseAuth.instance.signOut() : _deleteAccount(context),
       itemBuilder: (_) => [
-        PopupMenuItem(enabled: false, child: Text(user.email ?? '', style: TextStyle(color: colors.onSurfaceVariant))),
+        PopupMenuItem(
+          enabled: false,
+          child: Text('${user.email ?? ''}\nMemory Stack v$appVersion', style: TextStyle(color: colors.onSurfaceVariant)),
+        ),
         const PopupMenuDivider(),
         const PopupMenuItem(value: 'out', child: ListTile(leading: Icon(Icons.logout), title: Text('Sign out'), contentPadding: EdgeInsets.zero)),
         PopupMenuItem(

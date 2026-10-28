@@ -4,6 +4,7 @@ const platforms = ['LeetCode', 'Codeforces', 'CodeChef', 'Other'];
 const difficulties = ['Easy', 'Medium', 'Hard'];
 
 /// A problem you solved, plus where it is in the review schedule.
+/// Notes are stored separately (see Store.notes) so loading the stack stays one small read.
 class Problem {
   const Problem({
     required this.id,
@@ -12,10 +13,11 @@ class Problem {
     required this.difficulty,
     required this.topic,
     this.url,
-    this.notes,
     required this.solvedOn,
     required this.stage,
     required this.nextDue,
+    this.reviews = 0,
+    this.remembered = 0,
   });
 
   /// A newly added problem: stage 0, first review the day after it was solved.
@@ -26,13 +28,12 @@ class Problem {
     required String difficulty,
     required String topic,
     String? url,
-    String? notes,
     required DateTime solvedOn,
   }) {
     final day = dateOnly(solvedOn);
     return Problem(
       id: id, name: name, platform: platform, difficulty: difficulty, topic: topic,
-      url: url, notes: notes, solvedOn: day, stage: 0, nextDue: firstDue(day),
+      url: url, solvedOn: day, stage: 0, nextDue: firstDue(day),
     );
   }
 
@@ -42,55 +43,60 @@ class Problem {
   final String difficulty;
   final String topic;
   final String? url;
-  final String? notes; // your solution, key idea, complexity: whatever helps you recall
   final DateTime solvedOn;
   final int stage; // 0..9, index into reviewIntervals
   final DateTime nextDue;
+  final int reviews; // how many times reviewed, and how many of those remembered:
+  final int remembered; // kept so deleting the problem can take it out of the topic totals
 
   bool get mastered => stage == reviewIntervals.length - 1;
   bool isDue(DateTime today) => !nextDue.isAfter(dateOnly(today));
   int daysOverdue(DateTime today) => dateOnly(today).difference(nextDue).inDays;
 
   Map<String, Object?> toMap() => {
-        'name': name, 'platform': platform, 'difficulty': difficulty, 'topic': topic, 'url': url, 'notes': notes,
-        'solvedOn': dayKey(solvedOn), 'stage': stage, 'nextDue': dayKey(nextDue),
+        'name': name, 'platform': platform, 'difficulty': difficulty, 'topic': topic, 'url': url,
+        'solvedOn': dayKey(solvedOn), 'stage': stage, 'nextDue': dayKey(nextDue), 'reviews': reviews, 'remembered': remembered,
       };
 
   factory Problem.fromMap(String id, Map<String, dynamic> m) => Problem(
         id: id, name: m['name'] as String, platform: m['platform'] as String, difficulty: m['difficulty'] as String,
-        topic: m['topic'] as String, url: m['url'] as String?, notes: m['notes'] as String?,
+        topic: m['topic'] as String, url: m['url'] as String?,
         solvedOn: parseDay(m['solvedOn'] as String), stage: m['stage'] as int, nextDue: parseDay(m['nextDue'] as String),
+        reviews: m['reviews'] as int? ?? 0, remembered: m['remembered'] as int? ?? 0,
       );
 
-  /// Records one review: returns the rescheduled problem and the log entry to save.
-  (Problem, Review) review({required bool remembered, required DateTime on}) {
-    final day = dateOnly(on);
-    final (newStage, due) = afterReview(stage, remembered, day);
-    return (
-      Problem(
-        id: id, name: name, platform: platform, difficulty: difficulty, topic: topic,
-        url: url, notes: notes, solvedOn: solvedOn, stage: newStage, nextDue: due,
-      ),
-      Review(problemId: id, reviewedOn: day, remembered: remembered, stageBefore: stage),
+  /// The problem after one review: rescheduled, with its counts updated.
+  Problem review({required bool remembered, required DateTime on}) {
+    final (newStage, due) = afterReview(stage, remembered, dateOnly(on));
+    return Problem(
+      id: id, name: name, platform: platform, difficulty: difficulty, topic: topic, url: url, solvedOn: solvedOn,
+      stage: newStage, nextDue: due, reviews: reviews + 1, remembered: this.remembered + (remembered ? 1 : 0),
     );
   }
 }
 
-/// One review you did: kept forever for streaks and topic strength.
-class Review {
-  const Review({required this.problemId, required this.reviewedOn, required this.remembered, required this.stageBefore});
+/// Running review totals, stored next to the problems so no screen ever reads a review history.
+class Stats {
+  const Stats({this.days = const {}, this.topics = const {}});
 
-  final String problemId;
-  final DateTime reviewedOn;
-  final bool remembered;
-  final int stageBefore;
+  final Map<DateTime, int> days; // reviews done per day
+  final Map<String, ({int remembered, int total})> topics; // only problems still in the stack count
 
-  Map<String, Object?> toMap() =>
-      {'problemId': problemId, 'reviewedOn': dayKey(reviewedOn), 'remembered': remembered, 'stageBefore': stageBefore};
+  int get reviews => days.values.fold(0, (a, b) => a + b);
+  int reviewsOn(DateTime day) => days[dateOnly(day)] ?? 0;
 
-  factory Review.fromMap(Map<String, dynamic> m) => Review(
-        problemId: m['problemId'] as String, reviewedOn: parseDay(m['reviewedOn'] as String),
-        remembered: m['remembered'] as bool, stageBefore: m['stageBefore'] as int,
+  /// Share of reviews remembered, or null before the first review.
+  double? get recall {
+    final total = topics.values.fold(0, (a, t) => a + t.total);
+    return total == 0 ? null : topics.values.fold(0, (a, t) => a + t.remembered) / total;
+  }
+
+  factory Stats.fromMap(Map<String, dynamic> m) => Stats(
+        days: {for (final e in (m['days'] as Map? ?? {}).entries) parseDay(e.key as String): e.value as int},
+        topics: {
+          for (final e in (m['topics'] as Map? ?? {}).entries)
+            e.key as String: (remembered: (e.value as Map)['remembered'] as int? ?? 0, total: (e.value as Map)['total'] as int? ?? 0),
+        },
       );
 }
 

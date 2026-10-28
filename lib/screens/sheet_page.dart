@@ -34,14 +34,14 @@ class _SheetPageState extends State<SheetPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Mark ${p.title} as not solved?'),
-        content: const Text('It is removed from your review stack, with its review history.'),
+        content: const Text('It is removed from your review stack, with its notes.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
           FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Remove')),
         ],
       ),
     );
-    if (ok == true) widget.store.deleteProblem(p.id);
+    if (ok == true) widget.store.deleteProblem(widget.problems.firstWhere((x) => x.id == p.id));
   }
 
   @override

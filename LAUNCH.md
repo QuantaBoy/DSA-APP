@@ -4,8 +4,7 @@
 
 - [ ] **Sheet permission.** The A2Z problem list belongs to takeUforward (Striver). Get written permission to use it in a published app, or replace `assets/sheets/a2z.json` with a list you are allowed to use.
 - [ ] **Back up the signing key.** Copy `C:\Users\quant\MemoryStack-keys\` (the `upload-keystore.jks` and `key.properties` with its password) to a USB drive or private cloud. If you lose it, you can't publish updates without asking Google to reset the key.
-- [ ] **Privacy policy URL.** Put your support email in `PRIVACY.md` and push. The policy is then available at
-  `https://github.com/QuantaBoy/DSA-APP/blob/main/PRIVACY.md`. The repo must be public, or you can host the page on GitHub Pages or Google Sites.
+- [x] **Privacy policy URL:** https://memory-stack-e6990.web.app/privacy.html (Firebase Hosting; redeploy with `flutter build web && firebase deploy --only hosting`).
 - [ ] **Bump the version** in `pubspec.yaml` for every upload (for example `1.0.1+2`; the number after `+` must always go up).
 
 ## 2. Build
@@ -20,7 +19,7 @@ Upload `build/app/outputs/bundle/release/app-release.aab`. The build is signed w
 1. Create a developer account. There is a one-time USD 25 fee and an ID check.
 2. **Create app:** name *Memory Stack*, type App, Free.
 3. **App content**, fill in each section:
-   - Privacy policy: the URL above.
+   - Privacy policy: https://memory-stack-e6990.web.app/privacy.html
    - App access: "All functionality available without special access", or give test login details.
    - Ads: No ads.
    - Content rating: fill in the questionnaire (Education, no violence and so on).

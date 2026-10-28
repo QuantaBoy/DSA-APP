@@ -24,7 +24,7 @@ void main() {
 
   testWidgets('Today lists due problems with a start button, and upcoming ones', (tester) async {
     final problems = [solved('a', 3), solved('b', 1), solved('c', 0)]; // a overdue, b due today, c due tomorrow
-    await tester.pumpWidget(app(TodayPage(store: Store('test'), problems: problems, reviews: const [], onOpenSheet: () {})));
+    await tester.pumpWidget(app(TodayPage(store: Store('test'), problems: problems, stats: const Stats(), onOpenSheet: () {})));
     expect(find.text('Start review · 2 problems'), findsOneWidget);
     expect(find.text('2 days overdue'), findsOneWidget);
     expect(find.text('due today'), findsOneWidget);
@@ -33,7 +33,7 @@ void main() {
 
   testWidgets('Today with an empty stack points to the sheet', (tester) async {
     var opened = false;
-    await tester.pumpWidget(app(TodayPage(store: Store('test'), problems: const [], reviews: const [], onOpenSheet: () => opened = true)));
+    await tester.pumpWidget(app(TodayPage(store: Store('test'), problems: const [], stats: const Stats(), onOpenSheet: () => opened = true)));
     expect(find.text('Start your stack'), findsOneWidget);
     await tester.tap(find.text('Open A2Z sheet'));
     expect(opened, isTrue);
@@ -41,12 +41,8 @@ void main() {
 
   testWidgets('Stats shows totals, recall rate and the weakest topic first', (tester) async {
     final problems = [solved('a', 10, topic: 'Arrays'), solved('b', 10, topic: 'Graphs')];
-    final now = today();
-    final reviews = [
-      for (var i = 0; i < 3; i++) Review(problemId: 'b', reviewedOn: now, remembered: false, stageBefore: 0),
-      Review(problemId: 'a', reviewedOn: now, remembered: true, stageBefore: 0),
-    ];
-    await tester.pumpWidget(app(StatsPage(problems: problems, reviews: reviews)));
+    final stats = Stats(days: {today(): 4}, topics: {'Graphs': (remembered: 0, total: 3), 'Arrays': (remembered: 1, total: 1)});
+    await tester.pumpWidget(app(StatsPage(problems: problems, stats: stats)));
     expect(find.text('25%'), findsOneWidget); // 1 of 4 remembered
     expect(find.text('0% · 1 solved'), findsOneWidget);
     final graphs = tester.getTopLeft(find.text('Graphs')).dy, arrays = tester.getTopLeft(find.text('Arrays')).dy;
@@ -58,15 +54,22 @@ void main() {
     tester.view.devicePixelRatio = 1; // tall screen: everything visible without scrolling
     addTearDown(tester.view.reset);
     final p = solved('a', 3);
-    final withNotes = Problem(
-        id: p.id, name: p.name, platform: p.platform, difficulty: p.difficulty, topic: p.topic,
-        notes: 'return seen[target - x]', solvedOn: p.solvedOn, stage: 0, nextDue: p.nextDue);
-    await tester.pumpWidget(MaterialApp(home: ReviewPage(store: Store('test'), queue: [withNotes])));
+    await tester.pumpWidget(MaterialApp(home: ReviewPage(store: _NotesStore('return seen[target - x]'), queue: [p])));
     expect(find.text('Write it from memory'), findsOneWidget);
     expect(find.text('return seen[target - x]'), findsNothing); // hidden until you check
     await tester.tap(find.text('Check against my solution'));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.text('return seen[target - x]'), findsOneWidget);
     expect(find.textContaining('Different code is fine'), findsOneWidget);
   });
+}
+
+/// A store whose saved solution is fixed, so the review screen can be tested without Firebase.
+class _NotesStore extends Store {
+  _NotesStore(this.saved) : super('test');
+
+  final String saved;
+
+  @override
+  Future<String?> notes(String id) async => saved;
 }

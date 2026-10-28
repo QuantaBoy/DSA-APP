@@ -1,13 +1,15 @@
 # Privacy Policy: Memory Stack
 
-_Last updated: 27 October 2026_
+_Last updated: 28 October 2026_
+
+Online version: https://memory-stack-e6990.web.app/privacy.html
 
 Memory Stack helps you revise data-structures and algorithms problems with spaced repetition. This policy explains what the app stores and why.
 
 ## What we collect
 
 - **Account details:** your email address and, if you give one, your name. If you sign in with Google, we receive your name and email from Google.
-- **Your study data:** the problems you mark as solved, your notes, review dates and review results (remembered or forgot).
+- **Your study data:** the problems you mark as solved, your notes and code, your review dates, and how many reviews you remembered.
 
 We do not collect your location or contacts, and we do not use advertising or analytics trackers.
 
@@ -33,4 +35,4 @@ The app is not directed at children under 13.
 
 ## Contact
 
-Questions or deletion requests: SUPPORT_EMAIL (replace with the support email you set in Play Console)
+Questions or deletion requests: use the developer email shown on the app's Google Play page.

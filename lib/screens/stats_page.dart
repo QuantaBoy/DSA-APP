@@ -6,10 +6,10 @@ import 'widgets.dart';
 
 /// Progress at a glance: totals, the last 7 days, and how well you remember each topic.
 class StatsPage extends StatelessWidget {
-  const StatsPage({super.key, required this.problems, required this.reviews});
+  const StatsPage({super.key, required this.problems, required this.stats});
 
   final List<Problem> problems;
-  final List<Review> reviews;
+  final Stats stats;
 
   @override
   Widget build(BuildContext context) {
@@ -19,13 +19,12 @@ class StatsPage extends StatelessWidget {
       );
     }
     final now = today();
-    final remembered = reviews.where((r) => r.remembered).length;
-    final recall = reviews.isEmpty ? '–' : '${(remembered * 100 / reviews.length).round()}%';
+    final recall = stats.recall == null ? '–' : '${(stats.recall! * 100).round()}%';
     final solvedPerTopic = <String, int>{};
     for (final p in problems) {
       solvedPerTopic[p.topic] = (solvedPerTopic[p.topic] ?? 0) + 1;
     }
-    final results = topicResults(problems, reviews);
+    final results = stats.topics;
     double rate(String t) => results[t] == null ? 2 : results[t]!.remembered / results[t]!.total; // unreviewed last
     final topics = solvedPerTopic.keys.toList()..sort((a, b) => rate(a).compareTo(rate(b)));
 
@@ -35,16 +34,16 @@ class StatsPage extends StatelessWidget {
         StatRow(children: [
           StatTile(icon: Icons.check_circle_outline, value: '${problems.length}', label: 'solved'),
           StatTile(icon: Icons.star_outline, value: '${problems.where((p) => p.mastered).length}', label: 'mastered'),
-          StatTile(icon: Icons.local_fire_department_outlined, value: '${streak(reviews.map((r) => r.reviewedOn), now)}', label: 'day streak'),
+          StatTile(icon: Icons.local_fire_department_outlined, value: '${streak(stats.days.keys, now)}', label: 'day streak'),
         ]),
         const SizedBox(height: 10),
         StatRow(children: [
-          StatTile(icon: Icons.replay, value: '${reviews.length}', label: 'reviews'),
+          StatTile(icon: Icons.replay, value: '${stats.reviews}', label: 'reviews'),
           StatTile(icon: Icons.psychology_outlined, value: recall, label: 'recall rate'),
           StatTile(icon: Icons.event_outlined, value: '${problems.where((p) => p.isDue(now)).length}', label: 'due now'),
         ]),
         const SectionTitle('Last 7 days'),
-        _WeekChart(reviews: reviews, today: now),
+        _WeekChart(stats: stats, today: now),
         const SectionTitle('Topics, weakest first'),
         for (final t in topics) _TopicRow(topic: t, solved: solvedPerTopic[t]!, result: results[t]),
       ],
@@ -54,16 +53,16 @@ class StatsPage extends StatelessWidget {
 
 /// Reviews per day as simple bars.
 class _WeekChart extends StatelessWidget {
-  const _WeekChart({required this.reviews, required this.today});
+  const _WeekChart({required this.stats, required this.today});
 
-  final List<Review> reviews;
+  final Stats stats;
   final DateTime today;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final days = [for (var i = 6; i >= 0; i--) addDays(today, -i)];
-    final counts = [for (final d in days) reviews.where((r) => r.reviewedOn == d).length];
+    final counts = [for (final d in days) stats.reviewsOn(d)];
     final most = counts.fold(1, (a, b) => a > b ? a : b);
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16),
