@@ -94,6 +94,7 @@ class MemoryStackApp extends StatelessWidget {
       ),
       theme: appTheme(Brightness.light),
       darkTheme: appTheme(Brightness.dark),
+      themeMode: ThemeMode.light, // the light design is the main look; dark stays ready for a future toggle
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
