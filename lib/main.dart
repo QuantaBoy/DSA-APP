@@ -144,11 +144,11 @@ class MemoryStackApp extends StatelessWidget {
       builder: (context, mode, _) => MaterialApp(
         title: 'Memory Stack',
         debugShowCheckedModeBanner: false,
-        // On wide screens (web on a PC) keep the app a readable column instead of stretching edge to edge.
+        // On very wide screens stop stretching at 1280px; the home screen switches to a side rail from 840px.
         builder: (context, child) => ColoredBox(
           color: Theme.of(context).colorScheme.surfaceContainerHighest,
           child: Center(
-            child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 560), child: child),
+            child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 1280), child: child),
           ),
         ),
         theme: appTheme(Brightness.light),
