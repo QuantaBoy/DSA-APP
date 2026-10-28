@@ -90,7 +90,7 @@ class _CodePadState extends State<CodePad> {
             controller: widget.controller,
             minLines: 12,
             textStyle: mono,
-            gutterStyle: const GutterStyle(showErrors: false, showFoldingHandles: false, margin: 8, width: 48),
+            gutterStyle: const GutterStyle(showErrors: false, showFoldingHandles: false, margin: 6, width: 64), // room for 3-digit line numbers
           ),
         ),
       ),
