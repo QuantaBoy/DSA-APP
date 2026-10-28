@@ -18,7 +18,7 @@ Future<void> main() async {
 const brand = Color(0xFF6C4EF5);
 
 /// One look for every screen: soft lavender background, white cards with soft shadows, pill buttons.
-ThemeData _theme(Brightness brightness) {
+ThemeData appTheme(Brightness brightness) {
   final dark = brightness == Brightness.dark;
   final colors = ColorScheme.fromSeed(
     seedColor: brand,
@@ -29,6 +29,7 @@ ThemeData _theme(Brightness brightness) {
   );
   const pill = StadiumBorder();
   return ThemeData(
+    fontFamily: 'Roboto',
     colorScheme: colors,
     scaffoldBackgroundColor: colors.surface,
     appBarTheme: AppBarTheme(
@@ -37,8 +38,8 @@ ThemeData _theme(Brightness brightness) {
       titleTextStyle: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -0.5, color: colors.onSurface),
     ),
     cardTheme: CardThemeData(
-      elevation: dark ? 0 : 6,
-      shadowColor: brand.withValues(alpha: 0.10),
+      elevation: dark ? 0 : 1.5,
+      shadowColor: brand.withValues(alpha: 0.18),
       color: colors.surfaceContainerLowest,
       surfaceTintColor: Colors.transparent,
       margin: EdgeInsets.zero,
@@ -83,8 +84,8 @@ class MemoryStackApp extends StatelessWidget {
     return MaterialApp(
       title: 'Memory Stack',
       debugShowCheckedModeBanner: false,
-      theme: _theme(Brightness.light),
-      darkTheme: _theme(Brightness.dark),
+      theme: appTheme(Brightness.light),
+      darkTheme: appTheme(Brightness.dark),
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
