@@ -5,6 +5,7 @@
 - [ ] **Sheet permission.** The A2Z problem list belongs to takeUforward (Striver). Get written permission to use it in a published app, or replace `assets/sheets/a2z.json` with a list you are allowed to use.
 - [ ] **Back up the signing key.** Copy `C:\Users\quant\MemoryStack-keys\` (the `upload-keystore.jks` and `key.properties` with its password) to a USB drive or private cloud. If you lose it, you can't publish updates without asking Google to reset the key.
 - [x] **Privacy policy URL:** https://memory-stack-e6990.web.app/privacy.html (Firebase Hosting; redeploy with `flutter build web && firebase deploy --only hosting`).
+- [ ] **Your own code runner.** The Run button uses the free public Judge0 (`https://ce.judge0.com`), which is rate-limited and not meant for production apps. Before launch, run your own Judge0 server (its Docker image on a small cloud machine, about USD 5–10 a month) or buy a Judge0 plan on RapidAPI, then build with `--dart-define=JUDGE0_URL=...` (and `JUDGE0_KEY=...` for RapidAPI). See `lib/data/runner.dart`.
 - [ ] **Bump the version** in `pubspec.yaml` for every upload (for example `1.0.1+2`; the number after `+` must always go up).
 
 ## 2. Build
@@ -24,7 +25,7 @@ Upload `build/app/outputs/bundle/release/app-release.aab`. The build is signed w
    - Ads: No ads.
    - Content rating: fill in the questionnaire (Education, no violence and so on).
    - Target audience: 18+ (or 13+).
-   - Data safety: you collect **email address and name** (account management) and **app activity / other user-generated content** (app functionality). Data is encrypted in transit, users can request deletion, and it is not shared.
+   - Data safety: you collect **email address and name** (account management) and **app activity / other user-generated content** (app functionality). Code you Run is shared with the code-execution service (Judge0) only to run it. Data is encrypted in transit, users can request deletion, and it is not shared.
    - Account deletion: in-app (profile menu → Delete account), plus the policy URL.
 4. **Store listing:** use the text below and the screenshots.
 5. **Testing → Closed testing:** upload the `.aab` and add at least **12 testers** (their Gmail addresses). They must stay opted in for **14 days**. New personal accounts need this before production.

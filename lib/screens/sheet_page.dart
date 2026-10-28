@@ -5,6 +5,7 @@ import '../data/store.dart';
 import '../logic/models.dart';
 import '../logic/srs.dart';
 import 'open_link.dart';
+import 'solve_page.dart';
 
 /// Striver's A2Z sheet: continue where you left off, tick problems as solved.
 /// Ticking adds the problem to your review stack; unticking removes it.
@@ -28,6 +29,9 @@ class _SheetPageState extends State<SheetPage> {
       SnackBar(content: Text('${p.title} added to your stack. First review on ${prettyDay(problem.nextDue)}.')),
     );
   }
+
+  void _solve(Sheet sheet, SheetProblem p, bool solved) => Navigator.push(
+      context, MaterialPageRoute(builder: (_) => SolvePage(store: widget.store, sheet: sheet, problem: p, solved: solved)));
 
   Future<void> _unmark(SheetProblem p) async {
     final ok = await showDialog<bool>(
@@ -71,6 +75,7 @@ class _SheetPageState extends State<SheetPage> {
             if (next != null)
               _ContinueCard(
                 sheet: sheet, problem: next,
+                onSolveHere: () => _solve(sheet, next, false),
                 onOpen: () => openLink(context, next.url),
                 onVideo: next.video == null ? null : () => openLink(context, next.video!),
                 onSolved: () => _markSolved(sheet, next),
@@ -81,6 +86,7 @@ class _SheetPageState extends State<SheetPage> {
               _StepTile(
                 step: step, sheet: sheet, solved: solved, initiallyExpanded: next?.step == step,
                 onToggle: (p, isSolved) => isSolved ? _unmark(p) : _markSolved(sheet, p),
+                onOpen: (p) => _solve(sheet, p, solved.contains(p.id)),
               ),
             Padding(
               padding: const EdgeInsets.all(16),
@@ -95,10 +101,11 @@ class _SheetPageState extends State<SheetPage> {
 }
 
 class _ContinueCard extends StatelessWidget {
-  const _ContinueCard({required this.sheet, required this.problem, required this.onOpen, required this.onVideo, required this.onSolved});
+  const _ContinueCard({required this.sheet, required this.problem, required this.onSolveHere, required this.onOpen, required this.onVideo, required this.onSolved});
 
   final Sheet sheet;
   final SheetProblem problem;
+  final VoidCallback onSolveHere;
   final VoidCallback onOpen;
   final VoidCallback? onVideo;
   final VoidCallback onSolved;
@@ -119,7 +126,8 @@ class _ContinueCard extends StatelessWidget {
               '${problem.difficulty == null ? '' : ' · ${problem.difficulty}'}'),
           const SizedBox(height: 12),
           Wrap(spacing: 8, runSpacing: 8, children: [
-            FilledButton.icon(onPressed: onOpen, icon: const Icon(Icons.open_in_new), label: Text('Solve on ${problem.platform}')),
+            FilledButton.icon(onPressed: onSolveHere, icon: const Icon(Icons.terminal), label: const Text('Solve here')),
+            OutlinedButton.icon(onPressed: onOpen, icon: const Icon(Icons.open_in_new), label: Text(problem.platform)),
             if (onVideo != null) OutlinedButton.icon(onPressed: onVideo, icon: const Icon(Icons.play_circle_outline), label: const Text('Video')),
             OutlinedButton.icon(onPressed: onSolved, icon: const Icon(Icons.check), label: const Text('I solved it')),
           ]),
@@ -130,13 +138,14 @@ class _ContinueCard extends StatelessWidget {
 }
 
 class _StepTile extends StatelessWidget {
-  const _StepTile({required this.step, required this.sheet, required this.solved, required this.initiallyExpanded, required this.onToggle});
+  const _StepTile({required this.step, required this.sheet, required this.solved, required this.initiallyExpanded, required this.onToggle, required this.onOpen});
 
   final int step;
   final Sheet sheet;
   final Set<String> solved;
   final bool initiallyExpanded;
   final void Function(SheetProblem p, bool isSolved) onToggle;
+  final void Function(SheetProblem p) onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -163,7 +172,7 @@ class _StepTile extends StatelessWidget {
             trailing: p.video == null
                 ? null
                 : IconButton(tooltip: 'Watch video', icon: const Icon(Icons.play_circle_outline), onPressed: () => openLink(context, p.video!)),
-            onTap: () => openLink(context, p.url),
+            onTap: () => onOpen(p),
           ),
         ],
       ],

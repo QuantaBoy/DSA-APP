@@ -1,19 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_code_editor/flutter_code_editor.dart';
-import 'package:flutter_highlight/themes/atom-one-dark.dart';
-import 'package:flutter_highlight/themes/atom-one-light.dart';
-import 'package:highlight/languages/cpp.dart';
-import 'package:highlight/languages/java.dart';
-import 'package:highlight/languages/javascript.dart';
-import 'package:highlight/languages/python.dart';
 
 import '../data/store.dart';
 import '../logic/models.dart';
 import '../logic/srs.dart';
+import 'code_pad.dart';
 import 'open_link.dart';
 import 'widgets.dart';
-
-final _languages = {'C++': cpp, 'Java': java, 'Python': python, 'JavaScript': javascript};
 
 /// One problem at a time: write the solution from memory, compare it with your saved one,
 /// then say if you remembered it.
@@ -31,8 +24,7 @@ class _ReviewPageState extends State<ReviewPage> {
   int _index = 0;
   int _remembered = 0;
   bool _checked = false;
-  String _language = 'C++';
-  final _code = CodeController(language: cpp);
+  final _code = CodeController();
   final _saved = <String, String>{}; // saved solutions, loaded on Check (one read) and updated on save
 
   @override
@@ -130,20 +122,7 @@ class _ReviewPageState extends State<ReviewPage> {
           if (p.url != null)
             OutlinedButton.icon(onPressed: () => openLink(context, p.url!), icon: const Icon(Icons.open_in_new), label: Text('Open on ${p.platform}')),
           const SizedBox(height: 24),
-          _editorHeader(theme),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: CodeTheme(
-              data: CodeThemeData(styles: theme.brightness == Brightness.dark ? atomOneDarkTheme : atomOneLightTheme),
-              child: CodeField(
-                controller: _code,
-                minLines: 12,
-                textStyle: const TextStyle(fontFamily: 'monospace', fontSize: 13, height: 1.4),
-                gutterStyle: const GutterStyle(showErrors: false, showFoldingHandles: false, margin: 8, width: 48),
-              ),
-            ),
-          ),
+          CodePad(controller: _code, title: 'Write it from memory'),
           const SizedBox(height: 12),
           if (!_checked)
             FilledButton.tonalIcon(
@@ -165,20 +144,6 @@ class _ReviewPageState extends State<ReviewPage> {
       ),
     ]);
   }
-
-  Widget _editorHeader(ThemeData theme) => Row(children: [
-        Expanded(child: Text('Write it from memory', style: theme.textTheme.titleMedium)),
-        DropdownButton<String>(
-          value: _language,
-          underline: const SizedBox(),
-          borderRadius: BorderRadius.circular(12),
-          items: [for (final l in _languages.keys) DropdownMenuItem(value: l, child: Text(l))],
-          onChanged: (l) => setState(() {
-            _language = l!;
-            _code.setLanguage(_languages[l], analyzer: const DefaultLocalAnalyzer());
-          }),
-        ),
-      ]);
 
   Widget _savedSolution(ThemeData theme, Problem p) {
     final saved = _saved[p.id];

@@ -21,6 +21,10 @@ Your data is used only to run the app: to sign you in, to show your problems and
 
 Data is stored in Google Firebase (Authentication and Cloud Firestore), and a copy is kept on your device so the app works offline. Firebase security rules allow only your signed-in account to read or write your data. Data is encrypted in transit and at rest by Google.
 
+## Running code
+
+When you tap **Run**, the code and input you typed are sent to a code-execution service (Judge0) so they can be compiled and run, and the output is sent back. Nothing else about you is sent, and we do not keep the code you run unless you save it as your solution.
+
 ## Notifications
 
 The app schedules one local reminder a day on your phone. No data is sent for this. You can turn it off in your phone's notification settings.
