@@ -8,6 +8,7 @@ import 'package:flutter_code_editor/flutter_code_editor.dart';
 import '../data/store.dart';
 import '../logic/models.dart';
 import '../logic/srs.dart';
+import 'coach.dart';
 import 'code_pad.dart';
 import 'motion.dart';
 import 'open_link.dart';
@@ -36,12 +37,33 @@ class _ReviewPageState extends State<ReviewPage> {
   final _solutions = <String, Solution>{}; // loaded when a card is flipped (one read each)
   late final _patterns = {for (final p in widget.queue) p.id: p.patterns}; // edits during the session show at once
 
+  final _showKey = GlobalKey(), _gradeKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    showTipsOnce(context, 'review', [
+      (
+        target: _showKey,
+        title: 'Recall first',
+        text: 'Think of the approach, then tap to flip the card and compare with your solution card.',
+      ),
+    ]);
+  }
+
   Problem get _current => widget.queue[_index];
   bool get _done => _index >= widget.queue.length;
 
   Future<void> _flip() async {
     unawaited(HapticFeedback.selectionClick());
     setState(() => _flipped = true);
+    showTipsOnce(context, 'review-grade', [
+      (
+        target: _gradeKey,
+        title: 'Grade honestly',
+        text: 'Again brings it back tomorrow; Easy pushes it far out. Or swipe the card: right Good, left Again.',
+      ),
+    ]);
     final id = _current.id;
     if (_solutions.containsKey(id)) return;
     final s = await widget.store.solution(id);
@@ -242,14 +264,14 @@ class _ReviewPageState extends State<ReviewPage> {
                 duration: const Duration(milliseconds: 250),
                 child: !_flipped
                     ? FilledButton.icon(
-                        key: const ValueKey('show'),
+                        key: _showKey,
                         style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56)),
                         onPressed: _flip,
                         icon: const Icon(Icons.flip_rounded),
                         label: const Text('Show my solution'),
                       )
                     : Column(
-                        key: const ValueKey('grade'),
+                        key: _gradeKey,
                         children: [
                           Text(
                             'How well did you remember it?  Swipe → Good · ← Again',

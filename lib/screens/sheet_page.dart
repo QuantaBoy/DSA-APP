@@ -7,6 +7,7 @@ import '../data/sheet.dart';
 import '../data/store.dart';
 import '../logic/models.dart';
 import '../logic/srs.dart';
+import 'coach.dart';
 import 'motion.dart';
 import 'open_link.dart';
 import 'solution_sheet.dart';
@@ -28,6 +29,20 @@ class SheetPage extends StatefulWidget {
 class _SheetPageState extends State<SheetPage> {
   late final Future<Sheet> _sheet = loadA2zSheet();
   int? _step; // topic filter chip: null = all steps
+  final _continueKey = GlobalKey(), _chipsKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    showTipsOnce(context, 'sheet', [
+      (
+        target: _continueKey,
+        title: 'Continue where you left off',
+        text: 'Solve here opens the editor. I solved it adds the problem to your reviews.',
+      ),
+      (target: _chipsKey, title: 'Jump to a topic', text: 'Filter the 402 problems by step: Arrays, Strings, Graphs and more.'),
+    ]);
+  }
 
   /// Adds the problem to the stack (with Undo). With [askForCard], also opens the solution card editor.
   Future<void> _markSolved(Sheet sheet, SheetProblem p, {bool askForCard = false}) async {
@@ -128,28 +143,32 @@ class _SheetPageState extends State<SheetPage> {
               ),
             ),
             if (next != null)
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 420),
-                switchInCurve: Curves.easeOutBack,
-                // Stretch the card to full width (the default layout centres and shrinks it).
-                layoutBuilder: (current, previous) => Stack(fit: StackFit.passthrough, children: [...previous, ?current]),
-                transitionBuilder: (child, a) => FadeTransition(
-                  opacity: a,
-                  child: ScaleTransition(scale: Tween(begin: 0.92, end: 1.0).animate(a), child: child),
-                ),
-                child: _ContinueCard(
-                  key: ValueKey(next.id), // the next problem pops in after you tick one
-                  sheet: sheet,
-                  problem: next,
-                  onSolveHere: () => _solve(sheet, next, false),
-                  onOpen: () => openLink(context, next.url),
-                  onVideo: next.video == null ? null : () => openLink(context, next.video!),
-                  onSolved: () => _markSolved(sheet, next, askForCard: true),
+              KeyedSubtree(
+                key: _continueKey,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 420),
+                  switchInCurve: Curves.easeOutBack,
+                  // Stretch the card to full width (the default layout centres and shrinks it).
+                  layoutBuilder: (current, previous) => Stack(fit: StackFit.passthrough, children: [...previous, ?current]),
+                  transitionBuilder: (child, a) => FadeTransition(
+                    opacity: a,
+                    child: ScaleTransition(scale: Tween(begin: 0.92, end: 1.0).animate(a), child: child),
+                  ),
+                  child: _ContinueCard(
+                    key: ValueKey(next.id), // the next problem pops in after you tick one
+                    sheet: sheet,
+                    problem: next,
+                    onSolveHere: () => _solve(sheet, next, false),
+                    onOpen: () => openLink(context, next.url),
+                    onVideo: next.video == null ? null : () => openLink(context, next.video!),
+                    onSolved: () => _markSolved(sheet, next, askForCard: true),
+                  ),
                 ),
               )
             else
               const Padding(padding: EdgeInsets.all(16), child: Text('You finished the whole sheet. Keep up your reviews!')),
             SizedBox(
+              key: _chipsKey,
               height: 52,
               child: ListView(
                 scrollDirection: Axis.horizontal,

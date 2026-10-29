@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import 'motion.dart';
@@ -230,3 +231,18 @@ String dueLabel(int daysOverdue) => switch (daysOverdue) {
   -1 => 'tomorrow',
   _ => 'in ${-daysOverdue} days',
 };
+
+/// A dialog button that looks native on each platform (Cupertino on iOS, Material elsewhere).
+Widget adaptiveAction(BuildContext context, String label, VoidCallback onPressed, {bool primary = false, bool destructive = false}) {
+  if (Theme.of(context).platform == TargetPlatform.iOS) {
+    return CupertinoDialogAction(onPressed: onPressed, isDefaultAction: primary, isDestructiveAction: destructive, child: Text(label));
+  }
+  if (destructive) {
+    return FilledButton(
+      style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
+      onPressed: onPressed,
+      child: Text(label),
+    );
+  }
+  return primary ? FilledButton(onPressed: onPressed, child: Text(label)) : TextButton(onPressed: onPressed, child: Text(label));
+}

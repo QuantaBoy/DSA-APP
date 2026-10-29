@@ -104,4 +104,21 @@ void main() {
     expect(streakStart(days, d(2026, 10, 12)), d(2026, 10, 10), reason: 'not reviewed yet today, streak still alive');
     expect(streakStart(days, d(2026, 10, 20)), isNull);
   });
+
+  test('one missed day a week is forgiven by a streak freeze', () {
+    // Reviewed 1-5 Oct, missed 6 Oct, reviewed 7-10 Oct.
+    final days = [
+      for (var i = 1; i <= 10; i++)
+        if (i != 6) d(2026, 10, i),
+    ];
+    final info = streakInfo(days, d(2026, 10, 10));
+    expect(info.days, 9);
+    expect(info.frozen, [d(2026, 10, 6)]);
+    expect(streak(days, d(2026, 10, 10)), 4, reason: 'plain streak still breaks');
+    // Two gaps within a week: only the later one is forgiven.
+    final twoGaps = [d(2026, 10, 1), d(2026, 10, 3), d(2026, 10, 5), d(2026, 10, 6)];
+    expect(streakInfo(twoGaps, d(2026, 10, 6)).days, 3);
+    // A two-day gap is never forgiven.
+    expect(streakInfo([d(2026, 10, 1), d(2026, 10, 4)], d(2026, 10, 4)).days, 1);
+  });
 }

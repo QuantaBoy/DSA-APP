@@ -63,9 +63,10 @@ class _LiveFlameState extends State<_LiveFlame> with SingleTickerProviderStateMi
 
 /// Seven day chips for this week: flames on review days, today ringed.
 class _WeekRow extends StatelessWidget {
-  const _WeekRow({required this.days, required this.today});
+  const _WeekRow({required this.days, required this.today, this.frozen = const {}});
 
   final Set<DateTime> days;
+  final Set<DateTime> frozen; // missed days saved by a streak freeze
   final DateTime today;
 
   @override
@@ -107,6 +108,11 @@ class _WeekRow extends StatelessWidget {
                       alignment: Alignment.center,
                       child: days.contains(d)
                           ? Image.asset('assets/illustrations/flame.png', width: 30, height: 30)
+                          : frozen.contains(d)
+                          ? const Tooltip(
+                              message: 'Streak freeze',
+                              child: Icon(Icons.ac_unit_rounded, size: 22, color: Accent.sky),
+                            )
                           : d.isAfter(today)
                           ? null
                           : Icon(Icons.close_rounded, size: 16, color: theme.colorScheme.outline),
@@ -172,9 +178,11 @@ class StreakPage extends StatelessWidget {
     final dark = theme.brightness == Brightness.dark;
     final now = today();
     final days = stats.days.keys.map(dateOnly).toSet();
-    final current = streak(days, now);
-    final record = longestStreak(days);
-    final started = streakStart(days, now);
+    final info = streakInfo(days, now); // one missed day a week is forgiven
+    final current = info.days;
+    final record = longestStreak(days) > current ? longestStreak(days) : current;
+    final end = days.contains(now) ? now : addDays(now, -1);
+    final started = current == 0 ? null : addDays(end, -(current + info.frozen.length - 1));
     final goal = streakMilestones.firstWhere((m) => m > current, orElse: () => streakMilestones.last);
     final previousGoal = streakMilestones.lastWhere((m) => m <= current, orElse: () => 0);
     final reviewedToday = days.contains(now);
@@ -227,6 +235,24 @@ class StreakPage extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
                 ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(color: Accent.sky.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.ac_unit_rounded, size: 16, color: Accent.sky),
+                      const SizedBox(width: 6),
+                      Text(
+                        info.frozen.isEmpty
+                            ? 'Streak freeze: miss 1 day a week, keep your streak'
+                            : 'Streak freeze saved ${info.frozen.length} day${info.frozen.length == 1 ? '' : 's'}',
+                        style: theme.textTheme.labelMedium?.copyWith(color: Accent.sky, fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -235,7 +261,7 @@ class StreakPage extends StatelessWidget {
               margin: const EdgeInsets.symmetric(horizontal: 16),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(10, 16, 10, 16),
-                child: _WeekRow(days: days, today: now),
+                child: _WeekRow(days: days, today: now, frozen: info.frozen.toSet()),
               ),
             ),
           ),

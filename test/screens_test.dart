@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:memory_stack/data/store.dart';
 import 'package:memory_stack/logic/models.dart';
 import 'package:memory_stack/logic/srs.dart';
+import 'package:memory_stack/screens/library_page.dart';
+import 'package:memory_stack/screens/profile_page.dart';
 import 'package:memory_stack/screens/review_page.dart';
 import 'package:memory_stack/screens/stats_page.dart';
 import 'package:memory_stack/screens/streak_page.dart';
@@ -52,8 +54,8 @@ void main() {
     await tester.pumpWidget(
       app(TodayPage(store: Store('test'), problems: const [], stats: const Stats(), onOpenSheet: () => opened = true)),
     );
-    expect(find.text('All caught up'), findsOneWidget);
-    await tester.tap(find.text('Open A2Z sheet'));
+    expect(find.text('Start the A2Z sheet'), findsOneWidget);
+    await tester.tap(find.text('Open the sheet'));
     expect(opened, isTrue);
   });
 
@@ -134,5 +136,28 @@ void main() {
     expect(find.text('5'), findsOneWidget);
     expect(find.byIcon(Icons.check_rounded), findsWidgets);
     expect(find.text('Continue'), findsOneWidget);
+  });
+
+  testWidgets('Patterns view groups problems by pattern, weakest first', (tester) async {
+    tall(tester);
+    final problems = [
+      solved('a', 1).copyWith(patterns: ['Two Pointers'], reviews: 4, remembered: 4),
+      solved('b', 1).copyWith(patterns: ['Two Pointers', 'Sorting'], reviews: 2, remembered: 2),
+      solved('c', 1).copyWith(patterns: ['Sliding Window'], reviews: 4, remembered: 1),
+      solved('d', 1),
+    ];
+    await tester.pumpWidget(app(PatternsView(problems: problems)));
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.text('Two Pointers'), findsOneWidget);
+    expect(find.text('25%'), findsOneWidget); // Sliding Window: 1 of 4
+    expect(find.textContaining('1 problem has no pattern'), findsOneWidget);
+    expect(tester.getTopLeft(find.text('Sliding Window')).dy, lessThanOrEqualTo(tester.getTopLeft(find.text('Two Pointers')).dy));
+  });
+
+  testWidgets('Activity heatmap counts active days', (tester) async {
+    tall(tester);
+    final now = today();
+    await tester.pumpWidget(app(ActivityHeatmap(stats: Stats(days: {now: 3, addDays(now, -2): 1, addDays(now, -400): 5}), today: now)));
+    expect(find.text('2 active days in the last 18 weeks'), findsOneWidget);
   });
 }

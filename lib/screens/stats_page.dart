@@ -81,7 +81,7 @@ class _StatsPageState extends State<StatsPage> {
               ),
               StatTile(
                 icon: Icons.local_fire_department_rounded,
-                value: '${streak(stats.days.keys, now)}',
+                value: '${streakWithFreezes(stats.days.keys, now)}',
                 label: 'Day streak',
                 color: Accent.orange,
                 onTap: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => StreakPage(stats: stats))),

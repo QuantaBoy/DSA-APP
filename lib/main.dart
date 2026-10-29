@@ -2,9 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
+import 'data/prefs.dart';
 import 'firebase_options.dart';
+import 'screens/coach.dart';
 import 'screens/home_page.dart';
 import 'screens/login_page.dart';
 import 'screens/onboarding_page.dart';
@@ -14,39 +15,12 @@ Future<void> main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   // Keep a device copy of the data so the app works offline (already the default on Android, not on web).
   FirebaseFirestore.instance.settings = const Settings(persistenceEnabled: true);
-  await loadPreferences();
+  await Prefs.load();
+  tipsEnabled = true; // walkthrough tips on in the real app (off in tests)
   runApp(const MemoryStackApp());
 }
 
 const brand = Color(0xFF6C4EF5);
-
-/// Light, dark or follow the phone. Chosen in the account menu and remembered on this device.
-final themeMode = ValueNotifier(ThemeMode.light);
-
-/// Whether the first-launch intro slides were already shown on this device.
-final seenOnboarding = ValueNotifier(false);
-
-Future<void> loadPreferences() async {
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    themeMode.value = ThemeMode.values.firstWhere((m) => m.name == prefs.getString('themeMode'), orElse: () => ThemeMode.light);
-    seenOnboarding.value = prefs.getBool('seenOnboarding') ?? false;
-  } catch (_) {} // storage unavailable: light theme, show the intro
-}
-
-Future<void> finishOnboarding() async {
-  seenOnboarding.value = true;
-  try {
-    await (await SharedPreferences.getInstance()).setBool('seenOnboarding', true);
-  } catch (_) {}
-}
-
-Future<void> setThemeMode(ThemeMode mode) async {
-  themeMode.value = mode;
-  try {
-    await (await SharedPreferences.getInstance()).setString('themeMode', mode.name);
-  } catch (_) {}
-}
 
 /// One look for every screen, pill buttons and rounded cards.
 /// Light: soft lavender background, white cards with soft shadows, violet accents.
@@ -152,7 +126,7 @@ class MemoryStackApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder(
-      valueListenable: themeMode,
+      valueListenable: Prefs.themeMode,
       builder: (context, mode, _) => MaterialApp(
         title: 'Memory Stack',
         debugShowCheckedModeBanner: false,
@@ -174,8 +148,8 @@ class MemoryStackApp extends StatelessWidget {
             }
             if (snapshot.data != null) return HomePage(user: snapshot.data!);
             return ValueListenableBuilder(
-              valueListenable: seenOnboarding,
-              builder: (context, seen, _) => seen ? const LoginPage() : const OnboardingPage(onDone: finishOnboarding),
+              valueListenable: Prefs.seenOnboarding,
+              builder: (context, seen, _) => seen ? const LoginPage() : const OnboardingPage(onDone: Prefs.finishOnboarding),
             );
           },
         ),

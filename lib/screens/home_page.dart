@@ -2,21 +2,19 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
+import '../data/prefs.dart';
 import '../data/reminder.dart';
 import '../data/store.dart';
-import '../main.dart' show themeMode, setThemeMode;
 import 'add_problem_page.dart';
+import 'library_page.dart';
 import 'motion.dart';
+import 'profile_page.dart';
 import 'sheet_page.dart';
-import 'stack_page.dart';
-import 'stats_page.dart';
 import 'today_page.dart';
 
-/// Shown in the account menu. Keep in step with `version:` in pubspec.yaml.
-const appVersion = '1.7.0';
-
-/// Signed-in shell: bottom tabs for today's reviews, the A2Z sheet, your stack and stats.
+/// Signed-in shell: Home, Sheet, Library and Profile. Bottom bar on phones, sidebar on wide screens.
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.user});
 
@@ -27,244 +25,135 @@ class HomePage extends StatefulWidget {
 }
 
 const _tabs = [
-  (title: 'Today', icon: Icons.today_outlined, selected: Icons.today),
-  (title: 'A2Z Sheet', icon: Icons.menu_book_outlined, selected: Icons.menu_book),
-  (title: 'My stack', icon: Icons.layers_outlined, selected: Icons.layers),
-  (title: 'Stats', icon: Icons.insights_outlined, selected: Icons.insights),
+  (title: 'Home', icon: Icons.home_outlined, selected: Icons.home_rounded),
+  (title: 'Sheet', icon: Icons.menu_book_outlined, selected: Icons.menu_book_rounded),
+  (title: 'Library', icon: Icons.layers_outlined, selected: Icons.layers_rounded),
+  (title: 'Profile', icon: Icons.person_outline_rounded, selected: Icons.person_rounded),
 ];
+
+const _home = 0, _sheet = 1, _library = 2, _profile = 3;
 
 class _HomePageState extends State<HomePage> {
   late final store = Store(widget.user.uid);
   late final Stream<UserData> _data = store.data();
-  int _tab = 0;
+  int _tab = _home;
 
   @override
   void initState() {
     super.initState();
-    unawaited(scheduleDailyReminder().catchError((Object _) {})); // a missing reminder must never break the app
-    unawaited(store.upgrade().catchError((Object _) {})); // moves old-layout data once; retried next launch if it fails
+    // Neither may ever break the app: a missing reminder or a failed upgrade is retried next launch.
+    unawaited(scheduleDailyReminder(Prefs.reminderMinutes.value).catchError((Object _) {}));
+    unawaited(store.upgrade().catchError((Object _) {}));
+  }
+
+  void _go(int tab) {
+    if (tab == _tab) return;
+    unawaited(HapticFeedback.selectionClick());
+    setState(() => _tab = tab);
   }
 
   @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<UserData>(
-      stream: _data,
-      builder: (context, snapshot) {
-        final data = snapshot.data;
-        final Widget body;
-        if (snapshot.hasError) {
-          body = Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Text('Could not load your data.\n${snapshot.error}', textAlign: TextAlign.center),
-            ),
-          );
-        } else if (data == null) {
-          body = const Skeleton();
-        } else {
-          body = switch (_tab) {
-            0 => TodayPage(
-              store: store,
-              problems: data.problems,
-              stats: data.stats,
-              onOpenSheet: () => setState(() => _tab = 1),
-              onSeeAll: () => setState(() => _tab = 2),
-            ),
-            1 => SheetPage(store: store, problems: data.problems),
-            2 => StackPage(store: store, problems: data.problems),
-            _ => StatsPage(problems: data.problems, stats: data.stats),
-          };
-        }
-        final wide = MediaQuery.sizeOf(context).width >= 840; // tablet or PC: side rail instead of bottom bar
-        final switcher = AnimatedSwitcher(
-          duration: const Duration(milliseconds: 280),
-          switchInCurve: Curves.easeOutCubic,
-          switchOutCurve: Curves.easeIn,
-          transitionBuilder: (child, a) => FadeTransition(
-            opacity: a,
-            child: SlideTransition(
-              position: Tween(begin: const Offset(0, 0.02), end: Offset.zero).animate(a),
-              child: child,
-            ),
+  Widget build(BuildContext context) => StreamBuilder<UserData>(
+    stream: _data,
+    builder: (context, snapshot) {
+      final data = snapshot.data;
+      final Widget body;
+      if (snapshot.hasError) {
+        body = Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Text('Could not load your data.\n${snapshot.error}', textAlign: TextAlign.center),
           ),
-          child: KeyedSubtree(key: ValueKey(data == null ? -1 : _tab), child: body),
         );
-        final title = Text(switch (_tab) {
-          0 => 'Hi, ${_firstName(widget.user)} 👋',
-          1 => 'A2Z DSA Sheet',
-          _ => _tabs[_tab].title,
-        });
-        if (wide) {
-          // Tablet / PC: full-height sidebar, page header, content centred.
-          return Scaffold(
-            body: Row(
-              children: [
-                _Sidebar(user: widget.user, tab: _tab, onTab: (i) => setState(() => _tab = i)),
-                Expanded(
-                  child: Column(
-                    children: [
-                      AppBar(
-                        title: title,
-                        automaticallyImplyLeading: false,
-                        actions: [_AccountMenu(user: widget.user, store: store)],
-                      ),
-                      Expanded(
-                        child: Center(
-                          child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 900), child: switcher),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            floatingActionButton: _tab == 2
-                ? FloatingActionButton.extended(
-                    onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => AddProblemPage(store: store))),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add problem'),
-                  )
-                : null,
-          );
-        }
-        return Scaffold(
-          appBar: AppBar(
-            title: title,
-            actions: [_AccountMenu(user: widget.user, store: store)],
+      } else if (data == null) {
+        body = const Skeleton();
+      } else {
+        body = switch (_tab) {
+          _home => TodayPage(
+            store: store,
+            problems: data.problems,
+            stats: data.stats,
+            onOpenSheet: () => _go(_sheet),
+            onSeeAll: () => _go(_library),
           ),
-          body: switcher,
-          floatingActionButton: _tab == 2
-              ? FloatingActionButton.extended(
-                  onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => AddProblemPage(store: store))),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add problem'),
-                )
-              : null,
-          bottomNavigationBar: NavigationBar(
-            selectedIndex: _tab,
-            onDestinationSelected: (i) => setState(() => _tab = i),
-            destinations: [
-              for (final t in _tabs) NavigationDestination(icon: Icon(t.icon), selectedIcon: Icon(t.selected), label: t.title),
+          _sheet => SheetPage(store: store, problems: data.problems),
+          _library => LibraryPage(store: store, problems: data.problems),
+          _ => ProfilePage(user: widget.user, store: store, problems: data.problems, stats: data.stats),
+        };
+      }
+      final content = AnimatedSwitcher(
+        duration: const Duration(milliseconds: 280),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeIn,
+        transitionBuilder: (child, a) => FadeTransition(
+          opacity: a,
+          child: SlideTransition(
+            position: Tween(begin: const Offset(0, 0.02), end: Offset.zero).animate(a),
+            child: child,
+          ),
+        ),
+        child: KeyedSubtree(key: ValueKey(data == null ? -1 : _tab), child: body),
+      );
+      final title = Text(switch (_tab) {
+        _home => 'Hi, ${firstName(widget.user)} 👋',
+        _sheet => 'A2Z DSA Sheet',
+        _ => _tabs[_tab].title,
+      });
+      final avatar = Padding(
+        padding: const EdgeInsets.only(right: 12),
+        child: IconButton(
+          tooltip: 'Profile',
+          onPressed: () => _go(_profile),
+          icon: CircleAvatar(
+            radius: 17,
+            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+            child: Text(firstName(widget.user).characters.first.toUpperCase()),
+          ),
+        ),
+      );
+      final fab = _tab == _library
+          ? FloatingActionButton.extended(
+              onPressed: () => unawaited(Navigator.push(context, MaterialPageRoute<void>(builder: (_) => AddProblemPage(store: store)))),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Add problem'),
+            )
+          : null;
+
+      if (MediaQuery.sizeOf(context).width >= 840) {
+        // Tablet / PC: full-height sidebar, page header, content centred.
+        return Scaffold(
+          body: Row(
+            children: [
+              _Sidebar(user: widget.user, tab: _tab, onTab: _go),
+              Expanded(
+                child: Column(
+                  children: [
+                    AppBar(title: title, automaticallyImplyLeading: false, actions: [if (_tab != _profile) avatar]),
+                    Expanded(
+                      child: Center(
+                        child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 900), child: content),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
+          floatingActionButton: fab,
         );
-      },
-    );
-  }
-}
-
-String _firstName(User user) {
-  final name = user.displayName?.trim();
-  if (name != null && name.isNotEmpty) return name.split(' ').first;
-  return user.email?.split('@').first ?? 'there';
-}
-
-/// Avatar button with the signed-in email, sign out, and delete account.
-class _AccountMenu extends StatelessWidget {
-  const _AccountMenu({required this.user, required this.store});
-
-  final User user;
-  final Store store;
-
-  Future<void> _chooseTheme(BuildContext context) => showDialog<void>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Appearance'),
-      content: ValueListenableBuilder(
-        valueListenable: themeMode,
-        builder: (context, mode, _) => SegmentedButton<ThemeMode>(
-          segments: const [
-            ButtonSegment(value: ThemeMode.light, icon: Icon(Icons.light_mode_outlined), label: Text('Light')),
-            ButtonSegment(value: ThemeMode.dark, icon: Icon(Icons.dark_mode_outlined), label: Text('Dark')),
-            ButtonSegment(value: ThemeMode.system, icon: Icon(Icons.phone_android_outlined), label: Text('System')),
-          ],
-          selected: {mode},
-          onSelectionChanged: (m) => setThemeMode(m.single),
+      }
+      return Scaffold(
+        appBar: AppBar(title: title, actions: [if (_tab != _profile) avatar]),
+        body: content,
+        floatingActionButton: fab,
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: _tab,
+          onDestinationSelected: _go,
+          destinations: [for (final t in _tabs) NavigationDestination(icon: Icon(t.icon), selectedIcon: Icon(t.selected), label: t.title)],
         ),
-      ),
-      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Done'))],
-    ),
+      );
+    },
   );
-
-  Future<void> _deleteAccount(BuildContext context) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        icon: const Icon(Icons.warning_amber_rounded),
-        title: const Text('Delete your account?'),
-        content: const Text(
-          'All your problems, notes and review history are deleted for good, then you are signed out. This cannot be undone.',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true || !context.mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
-    // Firebase only deletes accounts that signed in recently; check first so data is never deleted without the account.
-    final signedIn = user.metadata.lastSignInTime;
-    if (signedIn == null || DateTime.now().difference(signedIn) > const Duration(minutes: 4)) {
-      messenger.showSnackBar(const SnackBar(content: Text('For your security, sign out, sign in again, then delete the account.')));
-      return;
-    }
-    try {
-      await store.deleteEverything();
-      await user.delete();
-    } on FirebaseException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('Could not delete the account (${e.code}). Sign in again and retry.')));
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final initial = _firstName(user).characters.first.toUpperCase();
-    return PopupMenuButton<String>(
-      tooltip: 'Account',
-      onSelected: (v) => switch (v) {
-        'theme' => _chooseTheme(context),
-        'out' => FirebaseAuth.instance.signOut(),
-        _ => _deleteAccount(context),
-      },
-      itemBuilder: (_) => [
-        PopupMenuItem(
-          enabled: false,
-          child: Text('${user.email ?? ''}\nMemory Stack v$appVersion', style: TextStyle(color: colors.onSurfaceVariant)),
-        ),
-        const PopupMenuDivider(),
-        const PopupMenuItem(
-          value: 'theme',
-          child: ListTile(leading: Icon(Icons.palette_outlined), title: Text('Appearance'), contentPadding: EdgeInsets.zero),
-        ),
-        const PopupMenuItem(
-          value: 'out',
-          child: ListTile(leading: Icon(Icons.logout), title: Text('Sign out'), contentPadding: EdgeInsets.zero),
-        ),
-        PopupMenuItem(
-          value: 'delete',
-          child: ListTile(
-            leading: Icon(Icons.delete_forever_outlined, color: colors.error),
-            title: Text('Delete account', style: TextStyle(color: colors.error)),
-            contentPadding: EdgeInsets.zero,
-          ),
-        ),
-      ],
-      child: Padding(
-        padding: const EdgeInsets.only(right: 12),
-        child: CircleAvatar(
-          radius: 17,
-          backgroundColor: colors.primaryContainer,
-          child: Text(initial, style: TextStyle(color: colors.onPrimaryContainer)),
-        ),
-      ),
-    );
-  }
 }
 
 /// Desktop sidebar: logo, the four sections, dark mode switch and who is signed in.
@@ -332,7 +221,7 @@ class _Sidebar extends StatelessWidget {
             ),
           const Spacer(),
           ValueListenableBuilder(
-            valueListenable: themeMode,
+            valueListenable: Prefs.themeMode,
             builder: (context, mode, _) {
               final isDark =
                   mode == ThemeMode.dark || (mode == ThemeMode.system && MediaQuery.platformBrightnessOf(context) == Brightness.dark);
@@ -348,42 +237,46 @@ class _Sidebar extends StatelessWidget {
                         style: TextStyle(color: colors.onSurfaceVariant, fontWeight: FontWeight.w500),
                       ),
                     ),
-                    Switch(value: isDark, onChanged: (v) => setThemeMode(v ? ThemeMode.dark : ThemeMode.light)),
+                    Switch.adaptive(value: isDark, onChanged: (v) => Prefs.setThemeMode(v ? ThemeMode.dark : ThemeMode.light)),
                   ],
                 ),
               );
             },
           ),
           const Divider(height: 24),
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: colors.primary,
-                foregroundColor: colors.onPrimary,
-                child: Text(_firstName(user).characters.first.toUpperCase()),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _firstName(user),
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      user.email ?? '',
-                      style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => onTab(_profile),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: colors.primary,
+                  foregroundColor: colors.onPrimary,
+                  child: Text(firstName(user).characters.first.toUpperCase()),
                 ),
-              ),
-            ],
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        firstName(user),
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        user.email ?? '',
+                        style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

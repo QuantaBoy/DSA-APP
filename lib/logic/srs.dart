@@ -104,3 +104,30 @@ DateTime? streakStart(Iterable<DateTime> reviewDays, DateTime on) {
 
 /// Streak goals, in order. The challenge bar always aims at the next one.
 const streakMilestones = [3, 7, 14, 30, 60, 100, 200, 365];
+
+/// The current streak where one missed day per [freezeEvery] streak days is forgiven (a "streak freeze"),
+/// with the forgiven days so the streak screen can show them.
+({int days, List<DateTime> frozen}) streakInfo(Iterable<DateTime> reviewDays, DateTime on, {int freezeEvery = 7}) {
+  final days = reviewDays.map(dateOnly).toSet();
+  var day = dateOnly(on);
+  if (!days.contains(day)) day = addDays(day, -1); // today still open
+  var count = 0;
+  int? lastFreezeAt; // streak length when the last freeze was used
+  final frozen = <DateTime>[];
+  while (true) {
+    if (days.contains(day)) {
+      count++;
+      day = addDays(day, -1);
+      continue;
+    }
+    final canFreeze = count > 0 && days.contains(addDays(day, -1)) && (lastFreezeAt == null || count - lastFreezeAt >= freezeEvery);
+    if (!canFreeze) break;
+    lastFreezeAt = count;
+    frozen.add(day);
+    day = addDays(day, -1);
+  }
+  return (days: count, frozen: frozen);
+}
+
+/// Streak length with freezes, for the places that only show the number.
+int streakWithFreezes(Iterable<DateTime> reviewDays, DateTime on) => streakInfo(reviewDays, on).days;

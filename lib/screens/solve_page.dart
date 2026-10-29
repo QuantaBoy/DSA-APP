@@ -9,6 +9,7 @@ import '../data/sheet.dart';
 import '../data/store.dart';
 import '../logic/models.dart';
 import '../logic/srs.dart';
+import 'coach.dart';
 import 'code_pad.dart';
 import 'open_link.dart';
 import 'solution_sheet.dart';
@@ -30,6 +31,24 @@ class SolvePage extends StatefulWidget {
 
 class _SolvePageState extends State<SolvePage> {
   final _code = CodeController();
+  final _padKey = GlobalKey(), _doneKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    showTipsOnce(context, 'solve', [
+      (
+        target: _padKey,
+        title: 'Code and run',
+        text: 'Pick a language, write a full program, add input and tap Run. It runs on a real compiler.',
+      ),
+      (
+        target: _doneKey,
+        title: 'Save what you learned',
+        text: 'Tap I solved it to fill a quick solution card. Your reviews show it later.',
+      ),
+    ]);
+  }
 
   @override
   void dispose() {
@@ -156,13 +175,14 @@ class _SolvePageState extends State<SolvePage> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  CodePad(controller: _code, title: 'Your solution'),
+                  CodePad(key: _padKey, controller: _code, title: 'Your solution'),
                 ],
               ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               child: FilledButton.icon(
+                key: _doneKey,
                 style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56)),
                 onPressed: _finish,
                 icon: Icon(widget.solved ? Icons.save_outlined : Icons.check),
