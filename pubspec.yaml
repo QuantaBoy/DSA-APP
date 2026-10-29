@@ -38,7 +38,8 @@ flutter:
 # App icon: `dart run flutter_launcher_icons` regenerates the Android and web icons from these files.
 flutter_launcher_icons:
   android: true
-  ios: false
+  ios: true
+  remove_alpha_ios: true
   image_path: assets/icon/icon.png
   adaptive_icon_background: "#6C4EF5"
   adaptive_icon_foreground: assets/icon/foreground.png
