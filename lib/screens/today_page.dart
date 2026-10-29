@@ -8,6 +8,7 @@ import '../data/store.dart';
 import '../logic/models.dart';
 import '../logic/srs.dart';
 import 'coach.dart';
+import 'interview_page.dart';
 import 'motion.dart';
 import 'review_page.dart';
 import 'solve_page.dart';
@@ -164,6 +165,52 @@ class _TodayPageState extends State<TodayPage> {
                         ),
                         StatTile(icon: Icons.event_note_rounded, value: '${due.length}', label: 'Due now', color: Accent.red),
                       ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Rise(
+                    index: 2,
+                    child: Pressable(
+                      onTap: () => unawaited(
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute<void>(
+                            builder: (_) => InterviewSetupPage(store: widget.store, problems: problems),
+                          ),
+                        ),
+                      ),
+                      child: Card(
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Accent.violet.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: const Icon(Icons.timer_rounded, color: Accent.violet),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Mock interview', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+                                    Text(
+                                      'A random problem against the clock',
+                                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.chevron_right_rounded),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                   if (twoColumns)

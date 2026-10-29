@@ -121,4 +121,12 @@ void main() {
     // A two-day gap is never forgiven.
     expect(streakInfo([d(2026, 10, 1), d(2026, 10, 4)], d(2026, 10, 4)).days, 1);
   });
+
+  test('mock interview results become review grades', () {
+    const limit = Duration(minutes: 30);
+    expect(interviewGrade(solved: false, took: const Duration(minutes: 5), limit: limit), Grade.again);
+    expect(interviewGrade(solved: true, took: const Duration(minutes: 12), limit: limit), Grade.easy);
+    expect(interviewGrade(solved: true, took: const Duration(minutes: 25), limit: limit), Grade.good);
+    expect(interviewGrade(solved: true, took: const Duration(minutes: 31), limit: limit), Grade.hard);
+  });
 }

@@ -131,3 +131,11 @@ const streakMilestones = [3, 7, 14, 30, 60, 100, 200, 365];
 
 /// Streak length with freezes, for the places that only show the number.
 int streakWithFreezes(Iterable<DateTime> reviewDays, DateTime on) => streakInfo(reviewDays, on).days;
+
+/// A mock interview on a problem you already solved counts as a review:
+/// not solved is Again, solved within half the time is Easy, within the time Good, over it Hard.
+Grade interviewGrade({required bool solved, required Duration took, required Duration limit}) {
+  if (!solved) return Grade.again;
+  if (took <= limit ~/ 2) return Grade.easy;
+  return took <= limit ? Grade.good : Grade.hard;
+}
