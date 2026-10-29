@@ -4,6 +4,7 @@ library;
 // Renders the main screens to PNGs for design review: flutter test test/shots --update-goldens
 import 'dart:io';
 
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,7 +13,12 @@ import 'package:memory_stack/data/store.dart';
 import 'package:memory_stack/logic/models.dart';
 import 'package:memory_stack/logic/srs.dart';
 import 'package:memory_stack/main.dart';
+import 'package:memory_stack/data/leaderboard.dart';
+import 'package:memory_stack/data/prefs.dart';
+import 'package:memory_stack/screens/interview_page.dart';
+import 'package:memory_stack/screens/leaderboard_page.dart';
 import 'package:memory_stack/screens/library_page.dart';
+import 'package:memory_stack/screens/review_page.dart';
 import 'package:memory_stack/screens/login_page.dart';
 import 'package:memory_stack/screens/onboarding_page.dart';
 import 'package:memory_stack/screens/sheet_page.dart';
@@ -168,6 +174,29 @@ void main() {
       tab: 2,
     ),
   );
+  testWidgets('flashcard', (t) async {
+    final store = Store('u', db: FakeFirebaseFirestore());
+    final p = problems.first.copyWith(patterns: ['Hashing', 'Two Pointers']);
+    await t.runAsync(() => store.addProblem(p, solution: const Solution(idea: 'Store value → index; for each x look up target − x', time: 'O(n)', space: 'O(n)', mistake: 'Returned values instead of indices')));
+    await page(t, 'flashcard_front', ReviewPage(store: store, queue: [p, problems[1]]));
+    await t.tap(find.text('Show my solution'));
+    await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+    await t.pump(const Duration(seconds: 1));
+    await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+    await t.pump(const Duration(seconds: 1));
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('flashcard_back.png'));
+  });
+  testWidgets('interview', (t) => page(t, 'interview', InterviewSetupPage(store: Store('x'), problems: problems)));
+  testWidgets('leaderboard', (t) async {
+    final board = Leaderboard(db: FakeFirebaseFirestore());
+    await t.runAsync(() async {
+      for (final (i, n) in ['Bilal', 'Asha', 'Chen', 'Divya', 'Emeka', 'Fatima'].indexed) {
+        await board.publish(uid: n == 'Asha' ? 'me' : n, name: n, streak: [42, 30, 21, 14, 9, 5][i], solved: [120, 98, 77, 60, 41, 20][i]);
+      }
+    });
+    Prefs.leaderboard.value = true;
+    await page(t, 'leaderboard', LeaderboardPage(uid: 'me', name: 'Asha', streak: 30, solved: 98, board: board));
+  });
   testWidgets('onboarding', (t) => page(t, 'onboarding', OnboardingPage(onDone: () {})));
   testWidgets('streak', (t) => page(t, 'streak', StreakPage(stats: Stats(days: {for (var i = 0; i < 5; i++) addDays(today(), -i): 1}))));
   testWidgets(
