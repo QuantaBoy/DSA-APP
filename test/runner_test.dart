@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:memory_stack/data/runner.dart';
+import 'package:memory_stack/data/templates.dart';
 import 'package:memory_stack/screens/code_pad.dart';
 
 void main() {
@@ -82,5 +83,53 @@ void main() {
     expect(ranWith, 'Python|5');
     expect(find.text('Ran successfully'), findsOneWidget);
     expect(find.text('5'), findsWidgets);
+  });
+
+  test('outputs match ignoring trailing spaces and blank lines, but not real differences', () {
+    expect(outputsMatch('1 2 3 \n\n', '1 2 3'), isTrue);
+    expect(outputsMatch('a\r\nb\n', 'a\nb'), isTrue);
+    expect(outputsMatch('1 2 3', '1 2 4'), isFalse);
+    expect(outputsMatch('1\n2', '1'), isFalse);
+  });
+
+  test('every language has a template for every input kind, and they count as untouched starters', () {
+    for (final language in languages.keys) {
+      for (final kind in InputKind.values) {
+        final code = template(language, kind);
+        expect(code, contains('your solution'), reason: '$language $kind');
+        expect(isStarterCode(code), isTrue);
+      }
+    }
+    expect(isStarterCode('print("my own code")'), isFalse);
+  });
+
+  testWidgets('test cases show pass and fail against the expected output', (tester) async {
+    tester.view.physicalSize = const Size(1080, 3000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: CodePad(
+              controller: CodeController(),
+              // Echo the input doubled, like a real solution would compute something.
+              runner: (language, source, stdin) async =>
+                  RunResult(status: 'Ran successfully', ok: true, output: '${int.parse(stdin.trim()) * 2}\n'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.enterText(find.widgetWithText(TextField, 'Input (stdin)'), '21');
+    await tester.enterText(find.widgetWithText(TextField, 'Expected (optional)'), '42');
+    await tester.tap(find.text('Add case'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'Input'), '5');
+    await tester.enterText(find.widgetWithText(TextField, 'Expected (optional)').last, '11');
+    await tester.tap(find.text('Run 2 cases'));
+    await tester.pumpAndSettle();
+    expect(find.text('1 / 2 PASSED'), findsOneWidget);
+    expect(find.text('Wrong answer'), findsOneWidget);
   });
 }

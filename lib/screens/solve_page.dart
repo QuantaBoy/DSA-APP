@@ -59,7 +59,7 @@ class _SolvePageState extends State<SolvePage> {
   /// Your code, or null if you never changed the starter program.
   String? get _yourCode {
     final text = _code.fullText.trim();
-    return text.isEmpty || languages.values.any((l) => l.starter.trim() == text) ? null : text;
+    return isStarterCode(text) ? null : text;
   }
 
   Future<void> _finish() async {
@@ -132,7 +132,7 @@ class _SolvePageState extends State<SolvePage> {
                       ),
                       if (p.video != null)
                         OutlinedButton.icon(
-                          onPressed: () => openLink(context, p.video!),
+                          onPressed: () => openLink(context, p.video!, inApp: false),
                           icon: const Icon(Icons.play_circle_outline),
                           label: const Text('Video'),
                         ),

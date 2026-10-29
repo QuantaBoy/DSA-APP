@@ -143,9 +143,31 @@ void main() {
       brightness: Brightness.dark,
     ),
   );
-  testWidgets('patterns', (t) => shot(t, 'patterns', 'Library', PatternsView(problems: [
-    for (final (i, p) in problems.indexed) p.copyWith(patterns: [['Hashing', 'Two Pointers'], ['Sliding Window'], ['Heap'], ['Stack'], ['Tree Traversal', 'BFS']][i], reviews: 4, remembered: [4, 1, 2, 4, 3][i]),
-  ]), tab: 2));
+  testWidgets(
+    'patterns',
+    (t) => shot(
+      t,
+      'patterns',
+      'Library',
+      PatternsView(
+        problems: [
+          for (final (i, p) in problems.indexed)
+            p.copyWith(
+              patterns: [
+                ['Hashing', 'Two Pointers'],
+                ['Sliding Window'],
+                ['Heap'],
+                ['Stack'],
+                ['Tree Traversal', 'BFS'],
+              ][i],
+              reviews: 4,
+              remembered: [4, 1, 2, 4, 3][i],
+            ),
+        ],
+      ),
+      tab: 2,
+    ),
+  );
   testWidgets('onboarding', (t) => page(t, 'onboarding', OnboardingPage(onDone: () {})));
   testWidgets('streak', (t) => page(t, 'streak', StreakPage(stats: Stats(days: {for (var i = 0; i < 5; i++) addDays(today(), -i): 1}))));
   testWidgets(

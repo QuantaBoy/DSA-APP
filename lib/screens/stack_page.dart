@@ -48,14 +48,14 @@ class _StackPageState extends State<StackPage> {
         };
 
   Future<void> _confirmDelete(BuildContext context, Problem p) async {
-    final ok = await showDialog<bool>(
+    final ok = await showAdaptiveDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AlertDialog.adaptive(
         title: Text('Delete ${p.name}?'),
-        content: const Text('Its notes are deleted too. This cannot be undone.'),
+        content: const Text('Its solution card and review history go too. This cannot be undone.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+          adaptiveAction(context, 'Cancel', () => Navigator.pop(context, false)),
+          adaptiveAction(context, 'Delete', () => Navigator.pop(context, true), destructive: true),
         ],
       ),
     );

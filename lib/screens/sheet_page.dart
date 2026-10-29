@@ -75,14 +75,14 @@ class _SheetPageState extends State<SheetPage> {
   );
 
   Future<void> _unmark(SheetProblem p) async {
-    final ok = await showDialog<bool>(
+    final ok = await showAdaptiveDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AlertDialog.adaptive(
         title: Text('Mark ${p.title} as not solved?'),
-        content: const Text('It is removed from your review stack, with its notes.'),
+        content: const Text('It is removed from your reviews, with its solution card.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Remove')),
+          adaptiveAction(context, 'Cancel', () => Navigator.pop(context, false)),
+          adaptiveAction(context, 'Remove', () => Navigator.pop(context, true), destructive: true),
         ],
       ),
     );
@@ -160,7 +160,7 @@ class _SheetPageState extends State<SheetPage> {
                     problem: next,
                     onSolveHere: () => _solve(sheet, next, false),
                     onOpen: () => openLink(context, next.url),
-                    onVideo: next.video == null ? null : () => openLink(context, next.video!),
+                    onVideo: next.video == null ? null : () => openLink(context, next.video!, inApp: false),
                     onSolved: () => _markSolved(sheet, next, askForCard: true),
                   ),
                 ),
@@ -373,7 +373,7 @@ class _StepTile extends StatelessWidget {
                       visualDensity: VisualDensity.compact,
                       tooltip: p.video == null ? 'Solve' : 'Watch video',
                       icon: Icon(p.video == null ? Icons.chevron_right_rounded : Icons.play_arrow_rounded, size: 18),
-                      onPressed: p.video == null ? () => onOpen(p) : () => openLink(context, p.video!),
+                      onPressed: p.video == null ? () => onOpen(p) : () => openLink(context, p.video!, inApp: false),
                     ),
                   ],
                 ),

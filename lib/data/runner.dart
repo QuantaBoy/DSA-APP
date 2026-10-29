@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'templates.dart';
+
 /// Where code runs: a Judge0 server (https://judge0.com). Phones cannot compile C++ or Java themselves.
 ///
 /// Defaults to the free public instance, which is rate-limited. For launch, run your own
@@ -12,22 +14,20 @@ import 'package:http/http.dart' as http;
 const judge0Url = String.fromEnvironment('JUDGE0_URL', defaultValue: 'https://ce.judge0.com');
 const judge0Key = String.fromEnvironment('JUDGE0_KEY');
 
-/// Judge0 language ids, and a starting program that reads input, for each language we offer.
-const languages = {
-  'C++': (
-    id: 54,
-    starter: '#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int n;\n    cin >> n;\n    cout << n << endl;\n    return 0;\n}\n',
-  ),
-  'Java': (
-    id: 62,
-    starter: 'import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner in = new Scanner(System.in);\n        int n = in.nextInt();\n        System.out.println(n);\n    }\n}\n',
-  ),
-  'Python': (id: 71, starter: 'n = int(input())\nprint(n)\n'),
-  'JavaScript': (
-    id: 63,
-    starter: "const input = require('fs').readFileSync(0, 'utf8').trim().split(/\\s+/);\nconst n = Number(input[0]);\nconsole.log(n);\n",
-  ),
-};
+/// Judge0 language ids. Each language's starter program reads a number (see templates.dart for other inputs).
+const _languageIds = {'C++': 54, 'Java': 62, 'Python': 71, 'JavaScript': 63};
+
+final languages = {for (final e in _languageIds.entries) e.key: (id: e.value, starter: template(e.key, InputKind.number))};
+
+/// True when [code] is empty or one of the untouched starter programs, so switching templates may replace it.
+bool isStarterCode(String code) {
+  final text = code.trim();
+  return text.isEmpty ||
+      [
+        for (final l in _languageIds.keys)
+          for (final k in InputKind.values) template(l, k).trim(),
+      ].contains(text);
+}
 
 /// What happened when the code ran.
 class RunResult {

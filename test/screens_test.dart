@@ -157,7 +157,14 @@ void main() {
   testWidgets('Activity heatmap counts active days', (tester) async {
     tall(tester);
     final now = today();
-    await tester.pumpWidget(app(ActivityHeatmap(stats: Stats(days: {now: 3, addDays(now, -2): 1, addDays(now, -400): 5}), today: now)));
+    await tester.pumpWidget(
+      app(
+        ActivityHeatmap(
+          stats: Stats(days: {now: 3, addDays(now, -2): 1, addDays(now, -400): 5}),
+          today: now,
+        ),
+      ),
+    );
     expect(find.text('2 active days in the last 18 weeks'), findsOneWidget);
   });
 }
