@@ -9,9 +9,12 @@ class CatalogItem {
   const CatalogItem({required this.platform, required this.title, required this.difficulty, required this.topics, required this.url});
 
   factory CatalogItem.fromJson(Map<String, dynamic> j) => CatalogItem(
-        platform: j['p'] as String, title: j['t'] as String, difficulty: j['d'] as String,
-        topics: (j['g'] as List).cast<String>(), url: j['u'] as String,
-      );
+    platform: j['p'] as String,
+    title: j['t'] as String,
+    difficulty: j['d'] as String,
+    topics: (j['g'] as List).cast<String>(),
+    url: j['u'] as String,
+  );
 
   final String platform;
   final String title;
@@ -26,9 +29,8 @@ class CatalogItem {
 List<CatalogItem>? _cache;
 
 Future<List<CatalogItem>> loadCatalog() async => _cache ??= [
-      for (final j in jsonDecode(await rootBundle.loadString('assets/catalog.json')) as List)
-        CatalogItem.fromJson(j as Map<String, dynamic>),
-    ];
+  for (final j in jsonDecode(await rootBundle.loadString('assets/catalog.json')) as List) CatalogItem.fromJson(j as Map<String, dynamic>),
+];
 
 /// Titles starting with the query first, then titles containing it.
 List<CatalogItem> searchCatalog(List<CatalogItem> items, String platform, String query, {int limit = 8}) {

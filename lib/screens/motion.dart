@@ -2,8 +2,6 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-import 'widgets.dart';
-
 /// Small animation building blocks used across the app.
 /// All of them show the final state at once when the phone's "remove animations" setting is on.
 
@@ -93,18 +91,13 @@ class _PressableState extends State<Pressable> {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapDown: widget.onTap == null ? null : (_) => _set(true),
-        onTapUp: widget.onTap == null ? null : (_) => _set(false),
-        onTapCancel: () => _set(false),
-        onTap: widget.onTap,
-        child: AnimatedScale(
-          scale: _down ? 0.97 : 1,
-          duration: const Duration(milliseconds: 120),
-          curve: Curves.easeOut,
-          child: widget.child,
-        ),
-      );
+    behavior: HitTestBehavior.opaque,
+    onTapDown: widget.onTap == null ? null : (_) => _set(true),
+    onTapUp: widget.onTap == null ? null : (_) => _set(false),
+    onTapCancel: () => _set(false),
+    onTap: widget.onTap,
+    child: AnimatedScale(scale: _down ? 0.97 : 1, duration: const Duration(milliseconds: 120), curve: Curves.easeOut, child: widget.child),
+  );
 }
 
 /// Gently floats up and down forever (for the illustration on the Today card).
@@ -140,35 +133,6 @@ class _BobState extends State<Bob> with SingleTickerProviderStateMixin {
   }
 }
 
-/// Three cards stacking up with a tick on top: the app's mark, animated for the Today card.
-class StackIllustration extends StatelessWidget {
-  const StackIllustration({super.key, this.size = 76});
-
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    Widget card(double width, double alpha, {Widget? child}) => Container(
-          width: size * width,
-          height: size * 0.24,
-          decoration: BoxDecoration(color: Colors.white.withValues(alpha: alpha), borderRadius: BorderRadius.circular(size * 0.09)),
-          alignment: Alignment.center,
-          child: child,
-        );
-    return SizedBox(
-      width: size,
-      height: size,
-      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Bob(height: 5, period: const Duration(milliseconds: 2600), child: card(0.72, 0.35)),
-        SizedBox(height: size * 0.05),
-        Bob(height: 3.5, period: const Duration(milliseconds: 2300), child: card(0.86, 0.6)),
-        SizedBox(height: size * 0.05),
-        card(1, 1, child: Icon(Icons.check_rounded, size: size * 0.2, color: HeroCard.ink(context))),
-      ]),
-    );
-  }
-}
-
 /// Grey placeholder blocks with a light sweeping across, shown while data loads.
 class Skeleton extends StatefulWidget {
   const Skeleton({super.key});
@@ -190,11 +154,11 @@ class _SkeletonState extends State<Skeleton> with SingleTickerProviderStateMixin
   Widget build(BuildContext context) {
     final base = Theme.of(context).colorScheme.surfaceContainerHighest;
     Widget block(double height, {double? width, double radius = 18}) => Container(
-          height: height,
-          width: width,
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(color: base, borderRadius: BorderRadius.circular(radius)),
-        );
+      height: height,
+      width: width,
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(color: base, borderRadius: BorderRadius.circular(radius)),
+    );
     return AnimatedBuilder(
       animation: _c,
       builder: (context, child) => ShaderMask(
@@ -213,7 +177,17 @@ class _SkeletonState extends State<Skeleton> with SingleTickerProviderStateMixin
         children: [
           block(20, width: 220, radius: 8),
           block(200, radius: 26),
-          Row(children: [for (var i = 0; i < 3; i++) Expanded(child: Padding(padding: EdgeInsets.only(left: i == 0 ? 0 : 10), child: block(110)))]),
+          Row(
+            children: [
+              for (var i = 0; i < 3; i++)
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(left: i == 0 ? 0 : 10),
+                    child: block(110),
+                  ),
+                ),
+            ],
+          ),
           for (var i = 0; i < 4; i++) block(72),
         ],
       ),

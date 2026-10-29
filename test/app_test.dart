@@ -59,7 +59,11 @@ void main() {
     await tester.tap(find.text('Get started'));
     expect(done, 1);
 
-    await tester.pumpWidget(MaterialApp(home: OnboardingPage(key: UniqueKey(), onDone: () => done++)));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: OnboardingPage(key: UniqueKey(), onDone: () => done++),
+      ),
+    );
     await tester.tap(find.text('Skip'));
     expect(done, 2);
   });

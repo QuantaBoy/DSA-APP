@@ -70,72 +70,94 @@ class _CodePadState extends State<CodePad> {
     final colors = theme.colorScheme;
     final mono = const TextStyle(fontFamily: 'monospace', fontSize: 13, height: 1.4);
     final r = _result;
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Row(children: [
-        Expanded(child: Text(widget.title, style: theme.textTheme.titleMedium)),
-        DropdownButton<String>(
-          value: _language,
-          underline: const SizedBox(),
-          borderRadius: BorderRadius.circular(12),
-          items: [for (final l in languages.keys) DropdownMenuItem(value: l, child: Text(l))],
-          onChanged: (l) => setState(() => _setLanguage(l!)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(child: Text(widget.title, style: theme.textTheme.titleMedium)),
+            DropdownButton<String>(
+              value: _language,
+              underline: const SizedBox(),
+              borderRadius: BorderRadius.circular(12),
+              items: [for (final l in languages.keys) DropdownMenuItem(value: l, child: Text(l))],
+              onChanged: (l) => setState(() => _setLanguage(l!)),
+            ),
+          ],
         ),
-      ]),
-      const SizedBox(height: 8),
-      ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: CodeTheme(
-          data: CodeThemeData(styles: theme.brightness == Brightness.dark ? atomOneDarkTheme : atomOneLightTheme),
-          child: CodeField(
-            controller: widget.controller,
-            minLines: 12,
-            textStyle: mono,
-            gutterStyle: const GutterStyle(showErrors: false, showFoldingHandles: false, margin: 6, width: 64), // room for 3-digit line numbers
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: CodeTheme(
+            data: CodeThemeData(styles: theme.brightness == Brightness.dark ? atomOneDarkTheme : atomOneLightTheme),
+            child: CodeField(
+              controller: widget.controller,
+              minLines: 12,
+              textStyle: mono,
+              gutterStyle: const GutterStyle(
+                showErrors: false,
+                showFoldingHandles: false,
+                margin: 6,
+                width: 64,
+              ), // room for 3-digit line numbers
+            ),
           ),
         ),
-      ),
-      const SizedBox(height: 12),
-      TextField(
-        controller: _stdin,
-        minLines: 1,
-        maxLines: 4,
-        style: mono,
-        decoration: const InputDecoration(labelText: 'Input (stdin)', hintText: 'e.g. 5\n1 2 3 4 5'),
-      ),
-      const SizedBox(height: 12),
-      FilledButton.icon(
-        onPressed: _running ? null : _run,
-        icon: _running
-            ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
-            : const Icon(Icons.play_arrow_rounded),
-        label: Text(_running ? 'Running…' : 'Run'),
-      ),
-      if (r != null) ...[
         const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(color: const Color(0xFF16161D), borderRadius: BorderRadius.circular(12)),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Icon(r.ok ? Icons.check_circle : Icons.error, size: 18, color: r.ok ? const Color(0xFF4ADE80) : colors.error),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(r.status,
-                    style: TextStyle(color: r.ok ? const Color(0xFF4ADE80) : colors.error, fontWeight: FontWeight.w700)),
-              ),
-              if (r.time != null)
-                Text('${r.time}s${r.memoryKb == null ? '' : ' · ${(r.memoryKb! / 1024).toStringAsFixed(1)} MB'}',
-                    style: const TextStyle(color: Colors.white60, fontSize: 12)),
-            ]),
-            const SizedBox(height: 10),
-            SelectableText(
-              [if (r.output.isNotEmpty) r.output.trimRight(), if (r.error.isNotEmpty) r.error, if (r.output.isEmpty && r.error.isEmpty) '(no output)']
-                  .join('\n'),
-              style: mono.copyWith(color: r.error.isNotEmpty && r.output.isEmpty ? const Color(0xFFFCA5A5) : Colors.white),
-            ),
-          ]),
+        TextField(
+          controller: _stdin,
+          minLines: 1,
+          maxLines: 4,
+          style: mono,
+          decoration: const InputDecoration(labelText: 'Input (stdin)', hintText: 'e.g. 5\n1 2 3 4 5'),
         ),
+        const SizedBox(height: 12),
+        FilledButton.icon(
+          onPressed: _running ? null : _run,
+          icon: _running
+              ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.play_arrow_rounded),
+          label: Text(_running ? 'Running…' : 'Run'),
+        ),
+        if (r != null) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(color: const Color(0xFF16161D), borderRadius: BorderRadius.circular(12)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(r.ok ? Icons.check_circle : Icons.error, size: 18, color: r.ok ? const Color(0xFF4ADE80) : colors.error),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        r.status,
+                        style: TextStyle(color: r.ok ? const Color(0xFF4ADE80) : colors.error, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    if (r.time != null)
+                      Text(
+                        '${r.time}s${r.memoryKb == null ? '' : ' · ${(r.memoryKb! / 1024).toStringAsFixed(1)} MB'}',
+                        style: const TextStyle(color: Colors.white60, fontSize: 12),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                SelectableText(
+                  [
+                    if (r.output.isNotEmpty) r.output.trimRight(),
+                    if (r.error.isNotEmpty) r.error,
+                    if (r.output.isEmpty && r.error.isEmpty) '(no output)',
+                  ].join('\n'),
+                  style: mono.copyWith(color: r.error.isNotEmpty && r.output.isEmpty ? const Color(0xFFFCA5A5) : Colors.white),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
-    ]);
+    );
   }
 }

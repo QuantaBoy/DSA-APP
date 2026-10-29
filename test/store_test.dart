@@ -4,8 +4,8 @@ import 'package:memory_stack/data/store.dart';
 import 'package:memory_stack/logic/models.dart';
 import 'package:memory_stack/logic/srs.dart';
 
-Problem solved(String id, String topic) => Problem.solved(
-    id: id, name: 'P$id', platform: 'LeetCode', difficulty: 'Easy', topic: topic, solvedOn: addDays(today(), -3));
+Problem solved(String id, String topic) =>
+    Problem.solved(id: id, name: 'P$id', platform: 'LeetCode', difficulty: 'Easy', topic: topic, solvedOn: addDays(today(), -3));
 
 void main() {
   test('everything loads from one document; reviews update the totals; deleting takes a problem out', () async {
@@ -37,7 +37,12 @@ void main() {
     final db = FakeFirebaseFirestore();
     final user = db.collection('users').doc('u');
     final p = solved('a', 'Arrays').review(remembered: true, on: today());
-    await user.collection('problems').doc('a').set({...p.toMap()..remove('reviews')..remove('remembered'), 'notes': 'hash map'});
+    await user.collection('problems').doc('a').set({
+      ...p.toMap()
+        ..remove('reviews')
+        ..remove('remembered'),
+      'notes': 'hash map',
+    });
     await user.collection('reviews').add({'problemId': 'a', 'reviewedOn': '2026-10-27', 'remembered': true, 'stageBefore': 0});
     await user.collection('reviews').add({'problemId': 'gone', 'reviewedOn': '2026-10-27', 'remembered': false, 'stageBefore': 0});
 

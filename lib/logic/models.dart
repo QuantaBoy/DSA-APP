@@ -1,6 +1,15 @@
 import 'srs.dart';
 
 const platforms = ['LeetCode', 'Codeforces', 'CodeChef', 'Other'];
+
+/// Input limits. maxNoteLength must match isValidNote() in firestore.rules.
+abstract final class Limits {
+  static const nameLength = 150;
+  static const topicLength = 60;
+  static const urlLength = 500;
+  static const maxNoteLength = 20000;
+}
+
 const difficulties = ['Easy', 'Medium', 'Hard'];
 
 /// A problem you solved, plus where it is in the review schedule.
@@ -32,8 +41,15 @@ class Problem {
   }) {
     final day = dateOnly(solvedOn);
     return Problem(
-      id: id, name: name, platform: platform, difficulty: difficulty, topic: topic,
-      url: url, solvedOn: day, stage: 0, nextDue: firstDue(day),
+      id: id,
+      name: name,
+      platform: platform,
+      difficulty: difficulty,
+      topic: topic,
+      url: url,
+      solvedOn: day,
+      stage: 0,
+      nextDue: firstDue(day),
     );
   }
 
@@ -54,23 +70,47 @@ class Problem {
   int daysOverdue(DateTime today) => dateOnly(today).difference(nextDue).inDays;
 
   Map<String, Object?> toMap() => {
-        'name': name, 'platform': platform, 'difficulty': difficulty, 'topic': topic, 'url': url,
-        'solvedOn': dayKey(solvedOn), 'stage': stage, 'nextDue': dayKey(nextDue), 'reviews': reviews, 'remembered': remembered,
-      };
+    'name': name,
+    'platform': platform,
+    'difficulty': difficulty,
+    'topic': topic,
+    'url': url,
+    'solvedOn': dayKey(solvedOn),
+    'stage': stage,
+    'nextDue': dayKey(nextDue),
+    'reviews': reviews,
+    'remembered': remembered,
+  };
 
   factory Problem.fromMap(String id, Map<String, dynamic> m) => Problem(
-        id: id, name: m['name'] as String, platform: m['platform'] as String, difficulty: m['difficulty'] as String,
-        topic: m['topic'] as String, url: m['url'] as String?,
-        solvedOn: parseDay(m['solvedOn'] as String), stage: m['stage'] as int, nextDue: parseDay(m['nextDue'] as String),
-        reviews: m['reviews'] as int? ?? 0, remembered: m['remembered'] as int? ?? 0,
-      );
+    id: id,
+    name: m['name'] as String,
+    platform: m['platform'] as String,
+    difficulty: m['difficulty'] as String,
+    topic: m['topic'] as String,
+    url: m['url'] as String?,
+    solvedOn: parseDay(m['solvedOn'] as String),
+    stage: m['stage'] as int,
+    nextDue: parseDay(m['nextDue'] as String),
+    reviews: m['reviews'] as int? ?? 0,
+    remembered: m['remembered'] as int? ?? 0,
+  );
 
   /// The problem after one review: rescheduled, with its counts updated.
   Problem review({required bool remembered, required DateTime on}) {
     final (newStage, due) = afterReview(stage, remembered, dateOnly(on));
     return Problem(
-      id: id, name: name, platform: platform, difficulty: difficulty, topic: topic, url: url, solvedOn: solvedOn,
-      stage: newStage, nextDue: due, reviews: reviews + 1, remembered: this.remembered + (remembered ? 1 : 0),
+      id: id,
+      name: name,
+      platform: platform,
+      difficulty: difficulty,
+      topic: topic,
+      url: url,
+      solvedOn: solvedOn,
+      stage: newStage,
+      nextDue: due,
+      reviews: reviews + 1,
+      remembered: this.remembered + (remembered ? 1 : 0),
     );
   }
 }
@@ -92,12 +132,12 @@ class Stats {
   }
 
   factory Stats.fromMap(Map<String, dynamic> m) => Stats(
-        days: {for (final e in (m['days'] as Map? ?? {}).entries) parseDay(e.key as String): e.value as int},
-        topics: {
-          for (final e in (m['topics'] as Map? ?? {}).entries)
-            e.key as String: (remembered: (e.value as Map)['remembered'] as int? ?? 0, total: (e.value as Map)['total'] as int? ?? 0),
-        },
-      );
+    days: {for (final e in (m['days'] as Map? ?? {}).entries) parseDay(e.key as String): e.value as int},
+    topics: {
+      for (final e in (m['topics'] as Map? ?? {}).entries)
+        e.key as String: (remembered: (e.value as Map)['remembered'] as int? ?? 0, total: (e.value as Map)['total'] as int? ?? 0),
+    },
+  );
 }
 
 /// Days are stored as 'YYYY-MM-DD' text: no time zone, sorts correctly, readable in the Firebase console.

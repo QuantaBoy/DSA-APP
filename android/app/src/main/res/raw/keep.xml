@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Resource shrinking must keep the icon the daily reminder uses (it is looked up by name at runtime). -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@mipmap/ic_launcher,@drawable/*" />

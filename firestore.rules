@@ -1,10 +1,49 @@
 rules_version = '2';
 
+// Each user owns exactly one document plus their notes. Everything not matched below is denied.
+//
+//   users/{uid}               v, problems (map by id), days (reviews per day), topics (results per topic)
+//   users/{uid}/notes/{id}    { text } — notes or code for one problem
+//   users/{uid}/problems/{id} and /reviews/{id} — old (v1) layout: read and delete only, so the app can move it
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Each signed-in user can only read and write their own data. Everything else is denied.
-    match /users/{uid}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // Shape and size limits. Firestore also caps a document at 1 MiB.
+    function isValidUser(data) {
+      return data.keys().hasOnly(['v', 'problems', 'days', 'topics'])
+        && (!('v' in data) || data.v is int)
+        && (!('problems' in data) || (data.problems is map && data.problems.size() <= 3000))
+        && (!('days' in data) || (data.days is map && data.days.size() <= 4000))
+        && (!('topics' in data) || (data.topics is map && data.topics.size() <= 500));
+    }
+
+    function isValidNote(data) {
+      return data.keys().hasOnly(['text'])
+        && data.text is string
+        && data.text.size() > 0
+        && data.text.size() <= 20000;
+    }
+
+    match /users/{uid} {
+      allow get, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid) && isValidUser(request.resource.data);
+
+      match /notes/{problemId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && problemId.size() <= 64 && isValidNote(request.resource.data);
+      }
+
+      match /problems/{id} {
+        allow read, delete: if isOwner(uid);
+      }
+
+      match /reviews/{id} {
+        allow read, delete: if isOwner(uid);
+      }
     }
   }
 }

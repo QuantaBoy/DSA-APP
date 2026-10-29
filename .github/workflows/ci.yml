@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  app:
+    name: Analyze and test the app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed --line-length 140 lib test
+      - run: flutter analyze
+      - run: flutter test --exclude-tags shots
+
+  firestore-rules:
+    name: Test Firestore security rules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: firestore-tests/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci --prefix firestore-tests
+      - run: npx --yes firebase-tools@latest emulators:exec --only firestore --project demo-memory-stack "npm --prefix firestore-tests test"

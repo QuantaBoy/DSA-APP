@@ -10,7 +10,13 @@ import 'package:memory_stack/screens/today_page.dart';
 import 'package:memory_stack/screens/widgets.dart';
 
 Problem solved(String id, int daysAgo, {String topic = 'Arrays'}) => Problem.solved(
-    id: id, name: 'Problem $id', platform: 'LeetCode', difficulty: 'Easy', topic: topic, solvedOn: addDays(today(), -daysAgo));
+  id: id,
+  name: 'Problem $id',
+  platform: 'LeetCode',
+  difficulty: 'Easy',
+  topic: topic,
+  solvedOn: addDays(today(), -daysAgo),
+);
 
 Widget app(Widget child) => MaterialApp(home: Scaffold(body: child));
 
@@ -42,7 +48,9 @@ void main() {
 
   testWidgets('Today with an empty stack points to the sheet', (tester) async {
     var opened = false;
-    await tester.pumpWidget(app(TodayPage(store: Store('test'), problems: const [], stats: const Stats(), onOpenSheet: () => opened = true)));
+    await tester.pumpWidget(
+      app(TodayPage(store: Store('test'), problems: const [], stats: const Stats(), onOpenSheet: () => opened = true)),
+    );
     expect(find.text('All caught up'), findsOneWidget);
     await tester.tap(find.text('Open A2Z sheet'));
     expect(opened, isTrue);
@@ -65,7 +73,11 @@ void main() {
     tester.view.devicePixelRatio = 1; // tall screen: everything visible without scrolling
     addTearDown(tester.view.reset);
     final p = solved('a', 3);
-    await tester.pumpWidget(MaterialApp(home: ReviewPage(store: _NotesStore('return seen[target - x]'), queue: [p])));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReviewPage(store: _NotesStore('return seen[target - x]'), queue: [p]),
+      ),
+    );
     expect(find.text('Write it from memory'), findsOneWidget);
     expect(find.text('return seen[target - x]'), findsNothing); // hidden until you check
     await tester.tap(find.text('Check against my solution'));

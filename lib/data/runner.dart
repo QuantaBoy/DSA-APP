@@ -14,10 +14,19 @@ const judge0Key = String.fromEnvironment('JUDGE0_KEY');
 
 /// Judge0 language ids, and a starting program that reads input, for each language we offer.
 const languages = {
-  'C++': (id: 54, starter: '#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int n;\n    cin >> n;\n    cout << n << endl;\n    return 0;\n}\n'),
-  'Java': (id: 62, starter: 'import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner in = new Scanner(System.in);\n        int n = in.nextInt();\n        System.out.println(n);\n    }\n}\n'),
+  'C++': (
+    id: 54,
+    starter: '#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int n;\n    cin >> n;\n    cout << n << endl;\n    return 0;\n}\n',
+  ),
+  'Java': (
+    id: 62,
+    starter: 'import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner in = new Scanner(System.in);\n        int n = in.nextInt();\n        System.out.println(n);\n    }\n}\n',
+  ),
   'Python': (id: 71, starter: 'n = int(input())\nprint(n)\n'),
-  'JavaScript': (id: 63, starter: "const input = require('fs').readFileSync(0, 'utf8').trim().split(/\\s+/);\nconst n = Number(input[0]);\nconsole.log(n);\n"),
+  'JavaScript': (
+    id: 63,
+    starter: "const input = require('fs').readFileSync(0, 'utf8').trim().split(/\\s+/);\nconst n = Number(input[0]);\nconsole.log(n);\n",
+  ),
 };
 
 /// What happened when the code ran.
@@ -44,8 +53,14 @@ class RunResult {
   }
 }
 
+/// Largest program and input we send; the runner rejects bigger ones anyway, this fails fast and clearly.
+const maxSourceLength = 64 * 1024, maxInputLength = 64 * 1024;
+
 /// Runs [code] with [stdin] and waits for the result (Judge0 limits each run to a few seconds).
 Future<RunResult> runCode(String language, String code, String stdin, {http.Client? client}) async {
+  if (code.length > maxSourceLength || stdin.length > maxInputLength) {
+    return const RunResult(status: 'Too large', ok: false, error: 'Code and input are limited to 64 KB each.');
+  }
   final c = client ?? http.Client();
   try {
     final response = await c

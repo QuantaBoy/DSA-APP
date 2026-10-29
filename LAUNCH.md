@@ -11,7 +11,7 @@
 ## 2. Build
 
 ```
-flutter build appbundle --release
+flutter build appbundle --release --obfuscate --split-debug-info=build/symbols
 ```
 Upload `build/app/outputs/bundle/release/app-release.aab`. The build is signed with your upload key automatically, using `android/key.properties`.
 

@@ -1,11 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../data/sheet.dart';
 import '../data/store.dart';
 import '../logic/models.dart';
 import '../logic/srs.dart';
-import 'open_link.dart';
 import 'motion.dart';
+import 'open_link.dart';
 import 'solve_page.dart';
 import 'widgets.dart';
 
@@ -27,14 +29,14 @@ class _SheetPageState extends State<SheetPage> {
 
   void _markSolved(Sheet sheet, SheetProblem p) {
     final problem = sheet.toProblem(p, today());
-    widget.store.addProblem(problem); // not awaited: saved locally at once, syncs when online
+    unawaited(widget.store.addProblem(problem)); // saved locally at once, syncs when online
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text('${p.title} added to your stack. First review on ${prettyDay(problem.nextDue)}.')));
   }
 
   void _solve(Sheet sheet, SheetProblem p, bool solved) => Navigator.push(
     context,
-    MaterialPageRoute(
+    MaterialPageRoute<void>(
       builder: (_) => SolvePage(store: widget.store, sheet: sheet, problem: p, solved: solved),
     ),
   );
@@ -51,7 +53,7 @@ class _SheetPageState extends State<SheetPage> {
         ],
       ),
     );
-    if (ok == true) widget.store.deleteProblem(widget.problems.firstWhere((x) => x.id == p.id));
+    if (ok == true) unawaited(widget.store.deleteProblem(widget.problems.firstWhere((x) => x.id == p.id)));
   }
 
   @override
@@ -75,18 +77,30 @@ class _SheetPageState extends State<SheetPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(children: [
-                    Text.rich(
-                      TextSpan(children: [
-                        TextSpan(text: '$done', style: const TextStyle(fontWeight: FontWeight.w800)),
-                        TextSpan(text: ' / ${sheet.problems.length} solved', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
-                      ]),
-                      style: theme.textTheme.titleSmall,
-                    ),
-                    const Spacer(),
-                    Text('${(done * 100 / sheet.problems.length).round()}%',
-                        style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w800)),
-                  ]),
+                  Row(
+                    children: [
+                      Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: '$done',
+                              style: const TextStyle(fontWeight: FontWeight.w800),
+                            ),
+                            TextSpan(
+                              text: ' / ${sheet.problems.length} solved',
+                              style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+                            ),
+                          ],
+                        ),
+                        style: theme.textTheme.titleSmall,
+                      ),
+                      const Spacer(),
+                      Text(
+                        '${(done * 100 / sheet.problems.length).round()}%',
+                        style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w800),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 8),
                   Grow(
                     value: done / sheet.problems.length,
@@ -138,14 +152,14 @@ class _SheetPageState extends State<SheetPage> {
             ),
             for (var step = 1; step <= sheet.steps.length; step++)
               if (_step == null || _step == step)
-              _StepTile(
-                step: step,
-                sheet: sheet,
-                solved: solved,
-                initiallyExpanded: _step == step || (_step == null && next?.step == step),
-                onToggle: (p, isSolved) => isSolved ? _unmark(p) : _markSolved(sheet, p),
-                onOpen: (p) => _solve(sheet, p, solved.contains(p.id)),
-              ),
+                _StepTile(
+                  step: step,
+                  sheet: sheet,
+                  solved: solved,
+                  initiallyExpanded: _step == step || (_step == null && next?.step == step),
+                  onToggle: (p, isSolved) => isSolved ? _unmark(p) : _markSolved(sheet, p),
+                  onOpen: (p) => _solve(sheet, p, solved.contains(p.id)),
+                ),
             Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
@@ -282,7 +296,10 @@ class _StepTile extends StatelessWidget {
         initiallyExpanded: initiallyExpanded,
         shape: const Border(), // no lines above and below when open
         collapsedShape: const Border(),
-        title: Text('Step $step · ${sheet.steps[step - 1]}', style: TextStyle(fontWeight: FontWeight.w800, color: theme.colorScheme.primary)),
+        title: Text(
+          'Step $step · ${sheet.steps[step - 1]}',
+          style: TextStyle(fontWeight: FontWeight.w800, color: theme.colorScheme.primary),
+        ),
         subtitle: Grow(
           value: done / problems.length,
           builder: (context, v) => LinearProgressIndicator(value: v, borderRadius: BorderRadius.circular(3)),
@@ -302,20 +319,27 @@ class _StepTile extends StatelessWidget {
               onTap: () => onOpen(p),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(6, 2, 10, 2),
-                child: Row(children: [
-                  Checkbox(value: solved.contains(p.id), onChanged: (_) => onToggle(p, solved.contains(p.id))),
-                  Expanded(
-                    child: Text(p.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w500)),
-                  ),
-                  if (p.difficulty != null) ...[const SizedBox(width: 8), Pill.difficulty(p.difficulty!)],
-                  const SizedBox(width: 6),
-                  IconButton.filledTonal(
-                    visualDensity: VisualDensity.compact,
-                    tooltip: p.video == null ? 'Solve' : 'Watch video',
-                    icon: Icon(p.video == null ? Icons.chevron_right_rounded : Icons.play_arrow_rounded, size: 18),
-                    onPressed: p.video == null ? () => onOpen(p) : () => openLink(context, p.video!),
-                  ),
-                ]),
+                child: Row(
+                  children: [
+                    Checkbox(value: solved.contains(p.id), onChanged: (_) => onToggle(p, solved.contains(p.id))),
+                    Expanded(
+                      child: Text(
+                        p.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                    if (p.difficulty != null) ...[const SizedBox(width: 8), Pill.difficulty(p.difficulty!)],
+                    const SizedBox(width: 6),
+                    IconButton.filledTonal(
+                      visualDensity: VisualDensity.compact,
+                      tooltip: p.video == null ? 'Solve' : 'Watch video',
+                      icon: Icon(p.video == null ? Icons.chevron_right_rounded : Icons.play_arrow_rounded, size: 18),
+                      onPressed: p.video == null ? () => onOpen(p) : () => openLink(context, p.video!),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

@@ -28,43 +28,54 @@ class Store {
   CollectionReference<Map<String, dynamic>> get _notes => _user.collection('notes');
 
   Stream<UserData> data() => _user.snapshots().map((s) {
-        final m = s.data() ?? const {};
-        return (
-          problems: [for (final e in (m['problems'] as Map? ?? {}).entries) Problem.fromMap(e.key as String, Map<String, dynamic>.from(e.value as Map))],
-          stats: Stats.fromMap(m),
-        );
-      });
+    final m = s.data() ?? const {};
+    return (
+      problems: [
+        for (final e in (m['problems'] as Map? ?? {}).entries) Problem.fromMap(e.key as String, Map<String, dynamic>.from(e.value as Map)),
+      ],
+      stats: Stats.fromMap(m),
+    );
+  });
 
   /// A fresh id for Problem.solved(id: ...).
   String newProblemId() => _notes.doc().id;
 
   Future<void> addProblem(Problem p, {String? notes}) => Future.wait([
-        _user.set({'v': _version, 'problems': {p.id: p.toMap()}}, SetOptions(merge: true)),
-        if (notes != null && notes.isNotEmpty) setNotes(p.id, notes),
-      ]);
+    _user.set({
+      'v': _version,
+      'problems': {p.id: p.toMap()},
+    }, SetOptions(merge: true)),
+    if (notes != null && notes.isNotEmpty) setNotes(p.id, notes),
+  ]);
 
   /// Reschedules the problem and adds the review to the day and topic totals, in one write.
   Future<void> review(Problem p, {required bool remembered}) => _user.update({
-        FieldPath(['problems', p.id]): p.review(remembered: remembered, on: today()).toMap(),
-        FieldPath(['days', dayKey(today())]): FieldValue.increment(1),
-        FieldPath(['topics', p.topic, 'total']): FieldValue.increment(1),
-        if (remembered) FieldPath(['topics', p.topic, 'remembered']): FieldValue.increment(1),
-      });
+    FieldPath(['problems', p.id]): p.review(remembered: remembered, on: today()).toMap(),
+    FieldPath(['days', dayKey(today())]): FieldValue.increment(1),
+    FieldPath(['topics', p.topic, 'total']): FieldValue.increment(1),
+    if (remembered) FieldPath(['topics', p.topic, 'remembered']): FieldValue.increment(1),
+  });
 
   /// Deletes a problem, its notes, and its share of the topic totals.
   Future<void> deleteProblem(Problem p) => Future.wait([
-        _user.update({
-          FieldPath(['problems', p.id]): FieldValue.delete(),
-          if (p.reviews > 0) FieldPath(['topics', p.topic, 'total']): FieldValue.increment(-p.reviews),
-          if (p.remembered > 0) FieldPath(['topics', p.topic, 'remembered']): FieldValue.increment(-p.remembered),
-        }),
-        _notes.doc(p.id).delete(),
-      ]);
+    _user.update({
+      FieldPath(['problems', p.id]): FieldValue.delete(),
+      if (p.reviews > 0) FieldPath(['topics', p.topic, 'total']): FieldValue.increment(-p.reviews),
+      if (p.remembered > 0) FieldPath(['topics', p.topic, 'remembered']): FieldValue.increment(-p.remembered),
+    }),
+    _notes.doc(p.id).delete(),
+  ]);
 
   Future<String?> notes(String id) async => (await _notes.doc(id).get()).data()?['text'] as String?;
 
-  Future<void> setNotes(String id, String? text) =>
-      text == null || text.isEmpty ? _notes.doc(id).delete() : _notes.doc(id).set({'text': text});
+  /// Saves (or clears, when empty) a problem's notes. Throws [ArgumentError] past [Limits.maxNoteLength].
+  Future<void> setNotes(String id, String? text) {
+    if (text == null || text.isEmpty) return _notes.doc(id).delete();
+    if (text.length > Limits.maxNoteLength) {
+      throw ArgumentError.value(text.length, 'text', 'longer than ${Limits.maxNoteLength} characters');
+    }
+    return _notes.doc(id).set({'text': text});
+  }
 
   /// Deletes every problem, note and total: used when the account is deleted.
   Future<void> deleteEverything() async {
@@ -73,7 +84,8 @@ class Store {
       ...(await _user.collection('problems').get()).docs, // version 1 data, if never moved
       ...(await _user.collection('reviews').get()).docs,
     ];
-    for (var i = 0; i < docs.length; i += 500) { // a Firestore batch holds at most 500 writes
+    for (var i = 0; i < docs.length; i += 500) {
+      // a Firestore batch holds at most 500 writes
       final batch = _db.batch();
       for (final d in docs.skip(i).take(500)) {
         batch.delete(d.reference);
@@ -111,8 +123,7 @@ class Store {
       }
     }
 
-    final batch = _db.batch()
-      ..set(_user, {'v': _version, 'problems': problems, 'days': days, 'topics': topics}, SetOptions(merge: true));
+    final batch = _db.batch()..set(_user, {'v': _version, 'problems': problems, 'days': days, 'topics': topics}, SetOptions(merge: true));
     for (final d in oldProblems.docs) {
       final notes = d.data()['notes'] as String?;
       if (notes != null && notes.isNotEmpty) batch.set(_notes.doc(d.id), {'text': notes});

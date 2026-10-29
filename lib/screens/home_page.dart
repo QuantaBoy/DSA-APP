@@ -1,19 +1,20 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../data/reminder.dart';
 import '../data/store.dart';
 import '../main.dart' show themeMode, setThemeMode;
-
 import 'add_problem_page.dart';
+import 'motion.dart';
 import 'sheet_page.dart';
 import 'stack_page.dart';
 import 'stats_page.dart';
-import 'motion.dart';
 import 'today_page.dart';
 
 /// Shown in the account menu. Keep in step with `version:` in pubspec.yaml.
-const appVersion = '1.6.0';
+const appVersion = '1.7.0';
 
 /// Signed-in shell: bottom tabs for today's reviews, the A2Z sheet, your stack and stats.
 class HomePage extends StatefulWidget {
@@ -40,8 +41,8 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    scheduleDailyReminder().catchError((_) {}); // a missing reminder must never break the app
-    store.upgrade().catchError((_) {}); // moves old-layout data once; retried next launch if it fails
+    unawaited(scheduleDailyReminder().catchError((Object _) {})); // a missing reminder must never break the app
+    unawaited(store.upgrade().catchError((Object _) {})); // moves old-layout data once; retried next launch if it fails
   }
 
   @override
@@ -88,22 +89,38 @@ class _HomePageState extends State<HomePage> {
           ),
           child: KeyedSubtree(key: ValueKey(data == null ? -1 : _tab), child: body),
         );
-        final title = Text(switch (_tab) { 0 => 'Hi, ${_firstName(widget.user)} 👋', 1 => 'A2Z DSA Sheet', _ => _tabs[_tab].title });
+        final title = Text(switch (_tab) {
+          0 => 'Hi, ${_firstName(widget.user)} 👋',
+          1 => 'A2Z DSA Sheet',
+          _ => _tabs[_tab].title,
+        });
         if (wide) {
           // Tablet / PC: full-height sidebar, page header, content centred.
           return Scaffold(
-            body: Row(children: [
-              _Sidebar(user: widget.user, tab: _tab, onTab: (i) => setState(() => _tab = i)),
-              Expanded(
-                child: Column(children: [
-                  AppBar(title: title, automaticallyImplyLeading: false, actions: [_AccountMenu(user: widget.user, store: store)]),
-                  Expanded(child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 900), child: switcher))),
-                ]),
-              ),
-            ]),
+            body: Row(
+              children: [
+                _Sidebar(user: widget.user, tab: _tab, onTab: (i) => setState(() => _tab = i)),
+                Expanded(
+                  child: Column(
+                    children: [
+                      AppBar(
+                        title: title,
+                        automaticallyImplyLeading: false,
+                        actions: [_AccountMenu(user: widget.user, store: store)],
+                      ),
+                      Expanded(
+                        child: Center(
+                          child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 900), child: switcher),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
             floatingActionButton: _tab == 2
                 ? FloatingActionButton.extended(
-                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AddProblemPage(store: store))),
+                    onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => AddProblemPage(store: store))),
                     icon: const Icon(Icons.add),
                     label: const Text('Add problem'),
                   )
@@ -111,22 +128,25 @@ class _HomePageState extends State<HomePage> {
           );
         }
         return Scaffold(
-          appBar: AppBar(title: title, actions: [_AccountMenu(user: widget.user, store: store)]),
+          appBar: AppBar(
+            title: title,
+            actions: [_AccountMenu(user: widget.user, store: store)],
+          ),
           body: switcher,
           floatingActionButton: _tab == 2
               ? FloatingActionButton.extended(
-                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AddProblemPage(store: store))),
+                  onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => AddProblemPage(store: store))),
                   icon: const Icon(Icons.add),
                   label: const Text('Add problem'),
                 )
               : null,
           bottomNavigationBar: NavigationBar(
-                  selectedIndex: _tab,
-                  onDestinationSelected: (i) => setState(() => _tab = i),
-                  destinations: [
-                    for (final t in _tabs) NavigationDestination(icon: Icon(t.icon), selectedIcon: Icon(t.selected), label: t.title),
-                  ],
-                ),
+            selectedIndex: _tab,
+            onDestinationSelected: (i) => setState(() => _tab = i),
+            destinations: [
+              for (final t in _tabs) NavigationDestination(icon: Icon(t.icon), selectedIcon: Icon(t.selected), label: t.title),
+            ],
+          ),
         );
       },
     );
@@ -261,63 +281,112 @@ class _Sidebar extends StatelessWidget {
     final colors = theme.colorScheme;
     return Container(
       width: 240,
-      decoration: BoxDecoration(color: colors.surfaceContainerLowest, border: Border(right: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.5)))),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerLowest,
+        border: Border(right: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.5))),
+      ),
       padding: const EdgeInsets.fromLTRB(14, 20, 14, 16),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
-          ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.asset('assets/illustrations/logo.png', width: 36, height: 36)),
-          const SizedBox(width: 10),
-          Text('Memory Stack', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-        ]),
-        const SizedBox(height: 28),
-        for (final (i, t) in _tabs.indexed)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Material(
-              color: i == tab ? colors.primaryContainer.withValues(alpha: theme.brightness == Brightness.dark ? 1 : 0.6) : Colors.transparent,
-              borderRadius: BorderRadius.circular(14),
-              child: InkWell(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.asset('assets/illustrations/logo.png', width: 36, height: 36),
+              ),
+              const SizedBox(width: 10),
+              Text('Memory Stack', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+            ],
+          ),
+          const SizedBox(height: 28),
+          for (final (i, t) in _tabs.indexed)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Material(
+                color: i == tab
+                    ? colors.primaryContainer.withValues(alpha: theme.brightness == Brightness.dark ? 1 : 0.6)
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(14),
-                onTap: () => onTab(i),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  child: Row(children: [
-                    Icon(i == tab ? t.selected : t.icon, size: 22, color: i == tab ? colors.primary : colors.onSurfaceVariant),
-                    const SizedBox(width: 12),
-                    Text(t.title, style: TextStyle(fontWeight: i == tab ? FontWeight.w700 : FontWeight.w500, color: i == tab ? colors.onSurface : colors.onSurfaceVariant)),
-                  ]),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () => onTab(i),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    child: Row(
+                      children: [
+                        Icon(i == tab ? t.selected : t.icon, size: 22, color: i == tab ? colors.primary : colors.onSurfaceVariant),
+                        const SizedBox(width: 12),
+                        Text(
+                          t.title,
+                          style: TextStyle(
+                            fontWeight: i == tab ? FontWeight.w700 : FontWeight.w500,
+                            color: i == tab ? colors.onSurface : colors.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
+          const Spacer(),
+          ValueListenableBuilder(
+            valueListenable: themeMode,
+            builder: (context, mode, _) {
+              final isDark =
+                  mode == ThemeMode.dark || (mode == ThemeMode.system && MediaQuery.platformBrightnessOf(context) == Brightness.dark);
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: Row(
+                  children: [
+                    Icon(Icons.dark_mode_outlined, size: 20, color: colors.onSurfaceVariant),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Dark mode',
+                        style: TextStyle(color: colors.onSurfaceVariant, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                    Switch(value: isDark, onChanged: (v) => setThemeMode(v ? ThemeMode.dark : ThemeMode.light)),
+                  ],
+                ),
+              );
+            },
           ),
-        const Spacer(),
-        ValueListenableBuilder(
-          valueListenable: themeMode,
-          builder: (context, mode, _) {
-            final isDark = mode == ThemeMode.dark || (mode == ThemeMode.system && MediaQuery.platformBrightnessOf(context) == Brightness.dark);
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              child: Row(children: [
-                Icon(Icons.dark_mode_outlined, size: 20, color: colors.onSurfaceVariant),
-                const SizedBox(width: 12),
-                Expanded(child: Text('Dark mode', style: TextStyle(color: colors.onSurfaceVariant, fontWeight: FontWeight.w500))),
-                Switch(value: isDark, onChanged: (v) => setThemeMode(v ? ThemeMode.dark : ThemeMode.light)),
-              ]),
-            );
-          },
-        ),
-        const Divider(height: 24),
-        Row(children: [
-          CircleAvatar(radius: 18, backgroundColor: colors.primary, foregroundColor: colors.onPrimary, child: Text(_firstName(user).characters.first.toUpperCase())),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(_firstName(user), style: const TextStyle(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
-              Text(user.email ?? '', style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
-            ]),
+          const Divider(height: 24),
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: colors.primary,
+                foregroundColor: colors.onPrimary,
+                child: Text(_firstName(user).characters.first.toUpperCase()),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _firstName(user),
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      user.email ?? '',
+                      style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ]),
-      ]),
+        ],
+      ),
     );
   }
 }

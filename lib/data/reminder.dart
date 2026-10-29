@@ -13,12 +13,8 @@ final _notifications = FlutterLocalNotificationsPlugin();
 Future<void> scheduleDailyReminder() async {
   if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
   tzdata.initializeTimeZones();
-  await _notifications.initialize(
-    settings: const InitializationSettings(android: AndroidInitializationSettings('@mipmap/ic_launcher')),
-  );
-  await _notifications
-      .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-      ?.requestNotificationsPermission();
+  await _notifications.initialize(settings: const InitializationSettings(android: AndroidInitializationSettings('@mipmap/ic_launcher')));
+  await _notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission();
 
   final now = DateTime.now();
   var at = DateTime(now.year, now.month, now.day, reminderHour);
@@ -31,8 +27,11 @@ Future<void> scheduleDailyReminder() async {
     body: 'Your problems are waiting. A few minutes now keeps them in memory.',
     scheduledDate: tz.TZDateTime.from(at, tz.UTC),
     notificationDetails: const NotificationDetails(
-      android: AndroidNotificationDetails('daily_review', 'Daily review reminder',
-          channelDescription: 'One reminder a day to review due problems.'),
+      android: AndroidNotificationDetails(
+        'daily_review',
+        'Daily review reminder',
+        channelDescription: 'One reminder a day to review due problems.',
+      ),
     ),
     androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
     matchDateTimeComponents: DateTimeComponents.time,

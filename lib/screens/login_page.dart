@@ -57,10 +57,10 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _google() => _run(() async {
-        final provider = GoogleAuthProvider();
-        final auth = FirebaseAuth.instance;
-        await (kIsWeb ? auth.signInWithPopup(provider) : auth.signInWithProvider(provider));
-      });
+    final provider = GoogleAuthProvider();
+    final auth = FirebaseAuth.instance;
+    await (kIsWeb ? auth.signInWithPopup(provider) : auth.signInWithProvider(provider));
+  });
 
   Future<void> _forgotPassword() async {
     final email = _email.text.trim();
@@ -71,9 +71,7 @@ class _LoginPageState extends State<LoginPage> {
     await _run(() async {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('If $email has an account, a reset link is on its way.')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('If $email has an account, a reset link is on its way.')));
       }
     });
   }
@@ -95,11 +93,16 @@ class _LoginPageState extends State<LoginPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Row(children: [
-                        ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.asset('assets/illustrations/logo.png', width: 44, height: 44)),
-                        const SizedBox(width: 10),
-                        Text('Memory Stack', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-                      ]),
+                      Row(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.asset('assets/illustrations/logo.png', width: 44, height: 44),
+                          ),
+                          const SizedBox(width: 10),
+                          Text('Memory Stack', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                        ],
+                      ),
                       const SizedBox(height: 36),
                       AnimatedSwitcher(
                         duration: const Duration(milliseconds: 250),
@@ -107,11 +110,19 @@ class _LoginPageState extends State<LoginPage> {
                           key: ValueKey(_signUp),
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(_signUp ? 'Create account' : 'Welcome back',
-                                style: theme.textTheme.headlineLarge?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -0.8, color: colors.primary)),
+                            Text(
+                              _signUp ? 'Create account' : 'Welcome back',
+                              style: theme.textTheme.headlineLarge?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.8,
+                                color: colors.primary,
+                              ),
+                            ),
                             const SizedBox(height: 6),
                             Text(
-                              _signUp ? 'Sign up to start remembering every problem you solve.' : "We've missed you. Sign in to keep your streak going.",
+                              _signUp
+                                  ? 'Sign up to start remembering every problem you solve.'
+                                  : "We've missed you. Sign in to keep your streak going.",
                               style: theme.textTheme.bodyLarge?.copyWith(color: colors.onSurfaceVariant),
                             ),
                           ],
@@ -121,7 +132,11 @@ class _LoginPageState extends State<LoginPage> {
                       if (_signUp) ...[
                         TextFormField(
                           controller: _name,
-                          decoration: const InputDecoration(labelText: 'Name', prefixIcon: Icon(Icons.person_outline), border: OutlineInputBorder()),
+                          decoration: const InputDecoration(
+                            labelText: 'Name',
+                            prefixIcon: Icon(Icons.person_outline),
+                            border: OutlineInputBorder(),
+                          ),
                           textCapitalization: TextCapitalization.words,
                           textInputAction: TextInputAction.next,
                           autofillHints: const [AutofillHints.name],
@@ -131,7 +146,11 @@ class _LoginPageState extends State<LoginPage> {
                       ],
                       TextFormField(
                         controller: _email,
-                        decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.mail_outline), border: OutlineInputBorder()),
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          prefixIcon: Icon(Icons.mail_outline),
+                          border: OutlineInputBorder(),
+                        ),
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.next,
                         autocorrect: false,
@@ -167,10 +186,7 @@ class _LoginPageState extends State<LoginPage> {
                           alignment: Alignment.centerRight,
                           child: TextButton(onPressed: _busy ? null : _forgotPassword, child: const Text('Forgot password?')),
                         ),
-                      if (_error != null) ...[
-                        const SizedBox(height: 8),
-                        Text(_error!, style: TextStyle(color: colors.error)),
-                      ],
+                      if (_error != null) ...[const SizedBox(height: 8), Text(_error!, style: TextStyle(color: colors.error))],
                       const SizedBox(height: 16),
                       FilledButton(
                         onPressed: _busy ? null : _submit,
@@ -180,11 +196,16 @@ class _LoginPageState extends State<LoginPage> {
                             : Text(_signUp ? 'Sign up' : 'Sign in'),
                       ),
                       const SizedBox(height: 20),
-                      Row(children: [
-                        const Expanded(child: Divider()),
-                        Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: Text('or', style: TextStyle(color: colors.onSurfaceVariant))),
-                        const Expanded(child: Divider()),
-                      ]),
+                      Row(
+                        children: [
+                          const Expanded(child: Divider()),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Text('or', style: TextStyle(color: colors.onSurfaceVariant)),
+                          ),
+                          const Expanded(child: Divider()),
+                        ],
+                      ),
                       const SizedBox(height: 20),
                       OutlinedButton.icon(
                         onPressed: _busy ? null : _google,
@@ -193,18 +214,25 @@ class _LoginPageState extends State<LoginPage> {
                         label: Text(_signUp ? 'Sign up with Google' : 'Sign in with Google'),
                       ),
                       const SizedBox(height: 24),
-                      Wrap(alignment: WrapAlignment.center, crossAxisAlignment: WrapCrossAlignment.center, children: [
-                        Text(_signUp ? 'Already have an account?' : "Don't have an account?", style: TextStyle(color: colors.onSurfaceVariant)),
-                        TextButton(
-                          onPressed: _busy
-                              ? null
-                              : () => setState(() {
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(
+                            _signUp ? 'Already have an account?' : "Don't have an account?",
+                            style: TextStyle(color: colors.onSurfaceVariant),
+                          ),
+                          TextButton(
+                            onPressed: _busy
+                                ? null
+                                : () => setState(() {
                                     _signUp = !_signUp;
                                     _error = null;
                                   }),
-                          child: Text(_signUp ? 'Sign in' : 'Sign up', style: const TextStyle(fontWeight: FontWeight.w800)),
-                        ),
-                      ]),
+                            child: Text(_signUp ? 'Sign in' : 'Sign up', style: const TextStyle(fontWeight: FontWeight.w800)),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -220,14 +248,14 @@ class _LoginPageState extends State<LoginPage> {
 bool _isEmail(String v) => RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v);
 
 String? _message(String code) => switch (code) {
-      'invalid-credential' || 'wrong-password' || 'user-not-found' => 'Wrong email or password.',
-      'invalid-email' => 'That email address is not valid.',
-      'email-already-in-use' => 'That email already has an account. Sign in instead.',
-      'weak-password' => 'Choose a stronger password.',
-      'user-disabled' => 'This account has been disabled.',
-      'too-many-requests' => 'Too many attempts. Wait a minute and try again.',
-      'network-request-failed' => 'No internet connection. Check it and try again.',
-      'operation-not-allowed' => 'This sign-in method is not turned on in Firebase yet.',
-      'popup-closed-by-user' || 'web-context-canceled' || 'web-context-cancelled' => null, // user closed Google window
-      _ => 'Something went wrong ($code). Please try again.',
-    };
+  'invalid-credential' || 'wrong-password' || 'user-not-found' => 'Wrong email or password.',
+  'invalid-email' => 'That email address is not valid.',
+  'email-already-in-use' => 'That email already has an account. Sign in instead.',
+  'weak-password' => 'Choose a stronger password.',
+  'user-disabled' => 'This account has been disabled.',
+  'too-many-requests' => 'Too many attempts. Wait a minute and try again.',
+  'network-request-failed' => 'No internet connection. Check it and try again.',
+  'operation-not-allowed' => 'This sign-in method is not turned on in Firebase yet.',
+  'popup-closed-by-user' || 'web-context-canceled' || 'web-context-cancelled' => null, // user closed Google window
+  _ => 'Something went wrong ($code). Please try again.',
+};

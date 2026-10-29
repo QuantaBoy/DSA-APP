@@ -1,1 +1,70 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"memory-stack-e6990","appId":"1:153577681363:android:6a82e0352ef267b9aeff26","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"memory-stack-e6990","configurations":{"android":"1:153577681363:android:6a82e0352ef267b9aeff26","ios":"1:153577681363:ios:ff42cfdc230f91a0aeff26","web":"1:153577681363:web:e9cef817bfb9690daeff26"}}}}},"firestore":{"rules":"firestore.rules"},"hosting":{"public":"build/web","ignore":["firebase.json","**/.*"],"rewrites":[{"source":"**","destination":"/index.html"}]}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "memory-stack-e6990",
+          "appId": "1:153577681363:android:6a82e0352ef267b9aeff26",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "memory-stack-e6990",
+          "configurations": {
+            "android": "1:153577681363:android:6a82e0352ef267b9aeff26",
+            "ios": "1:153577681363:ios:ff42cfdc230f91a0aeff26",
+            "web": "1:153577681363:web:e9cef817bfb9690daeff26"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
+          },
+          {
+            "key": "X-Frame-Options",
+            "value": "DENY"
+          },
+          {
+            "key": "Content-Security-Policy",
+            "value": "frame-ancestors 'none'; object-src 'none'; base-uri 'self'"
+          },
+          {
+            "key": "Referrer-Policy",
+            "value": "strict-origin-when-cross-origin"
+          },
+          {
+            "key": "Permissions-Policy",
+            "value": "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+          },
+          {
+            "key": "Cross-Origin-Opener-Policy",
+            "value": "same-origin-allow-popups"
+          }
+        ]
+      }
+    ]
+  }
+}

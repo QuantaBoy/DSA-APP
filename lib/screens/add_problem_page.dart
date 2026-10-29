@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../data/catalog.dart';
 import '../data/store.dart';
 import '../logic/models.dart';
 import '../logic/srs.dart';
+import 'open_link.dart';
 
 class AddProblemPage extends StatefulWidget {
   const AddProblemPage({super.key, required this.store});
@@ -28,7 +31,11 @@ class _AddProblemPageState extends State<AddProblemPage> {
   @override
   void initState() {
     super.initState();
-    loadCatalog().then((c) => mounted ? setState(() => _catalog = c) : null);
+    unawaited(
+      loadCatalog().then((c) {
+        if (mounted) setState(() => _catalog = c);
+      }),
+    );
   }
 
   @override
@@ -39,10 +46,10 @@ class _AddProblemPageState extends State<AddProblemPage> {
   }
 
   void _pick(CatalogItem item) => setState(() {
-        _url.text = item.url;
-        _difficulty = item.difficulty;
-        _topic?.text = item.mainTopic;
-      });
+    _url.text = item.url;
+    _difficulty = item.difficulty;
+    _topic?.text = item.mainTopic;
+  });
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(context: context, initialDate: _solvedOn, firstDate: DateTime(2000), lastDate: today());
@@ -53,13 +60,17 @@ class _AddProblemPageState extends State<AddProblemPage> {
     if (!_form.currentState!.validate()) return;
     String? optional(TextEditingController c) => c.text.trim().isEmpty ? null : c.text.trim();
     final problem = Problem.solved(
-      id: widget.store.newProblemId(), name: _name!.text.trim(), platform: _platform, difficulty: _difficulty,
-      topic: _topic!.text.trim(), url: optional(_url), solvedOn: _solvedOn,
+      id: widget.store.newProblemId(),
+      name: _name!.text.trim(),
+      platform: _platform,
+      difficulty: _difficulty,
+      topic: _topic!.text.trim(),
+      url: optional(_url),
+      solvedOn: _solvedOn,
     );
-    widget.store.addProblem(problem, notes: optional(_notes)); // not awaited: saves locally at once, syncs when online
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Added ${problem.name}. First review on ${prettyDay(problem.nextDue)}.')),
-    );
+    unawaited(widget.store.addProblem(problem, notes: optional(_notes))); // saved locally at once, syncs when online
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('Added ${problem.name}. First review on ${prettyDay(problem.nextDue)}.')));
     Navigator.pop(context);
   }
 
@@ -90,14 +101,20 @@ class _AddProblemPageState extends State<AddProblemPage> {
                   controller: controller,
                   focusNode: focus,
                   decoration: const InputDecoration(
-                    labelText: 'Problem name', hintText: 'Start typing, e.g. Two Sum', border: OutlineInputBorder()),
+                    labelText: 'Problem name',
+                    hintText: 'Start typing, e.g. Two Sum',
+                    border: OutlineInputBorder(),
+                  ),
                   textInputAction: TextInputAction.next,
+                  maxLength: Limits.nameLength,
                   validator: (v) => (v ?? '').trim().isEmpty ? 'Enter the problem name' : null,
                 );
               },
               optionsViewBuilder: (context, onSelected, options) => _Options(
-                options: options.toList(), onSelected: onSelected,
-                title: (i) => i.title, subtitle: (i) => '${i.difficulty} · ${i.topics.take(3).join(', ')}',
+                options: options.toList(),
+                onSelected: onSelected,
+                title: (i) => i.title,
+                subtitle: (i) => '${i.difficulty} · ${i.topics.take(3).join(', ')}',
               ),
             ),
             gap,
@@ -120,6 +137,7 @@ class _AddProblemPageState extends State<AddProblemPage> {
                   focusNode: focus,
                   decoration: const InputDecoration(labelText: 'Topic', hintText: 'e.g. Two Pointers', border: OutlineInputBorder()),
                   textInputAction: TextInputAction.next,
+                  maxLength: Limits.topicLength,
                   validator: (v) => (v ?? '').trim().isEmpty ? 'Pick or type a topic' : null,
                 );
               },
@@ -131,9 +149,10 @@ class _AddProblemPageState extends State<AddProblemPage> {
               controller: _url,
               decoration: const InputDecoration(labelText: 'Link (optional)', border: OutlineInputBorder()),
               keyboardType: TextInputType.url,
+              maxLength: Limits.urlLength,
               validator: (v) {
                 final t = (v ?? '').trim();
-                return t.isEmpty || t.startsWith('https://') || t.startsWith('http://') ? null : 'The link must start with https://';
+                return t.isEmpty || isWebLink(t) ? null : 'Enter a full link starting with https://';
               },
             ),
             gap,
@@ -148,6 +167,7 @@ class _AddProblemPageState extends State<AddProblemPage> {
               controller: _notes,
               minLines: 5,
               maxLines: 12,
+              maxLength: Limits.maxNoteLength,
               style: const TextStyle(fontFamily: 'monospace', fontSize: 14),
               decoration: const InputDecoration(
                 labelText: 'Your solution / key idea (optional)',
@@ -180,25 +200,21 @@ class _Options<T extends Object> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Align(
-        alignment: Alignment.topLeft,
-        child: Material(
-          elevation: 4,
-          borderRadius: BorderRadius.circular(8),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 280, maxWidth: 560),
-            child: ListView(
-              padding: EdgeInsets.zero,
-              shrinkWrap: true,
-              children: [
-                for (final o in options)
-                  ListTile(
-                    title: Text(title(o)),
-                    subtitle: subtitle == null ? null : Text(subtitle!(o)),
-                    onTap: () => onSelected(o),
-                  ),
-              ],
-            ),
-          ),
+    alignment: Alignment.topLeft,
+    child: Material(
+      elevation: 4,
+      borderRadius: BorderRadius.circular(8),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: 280, maxWidth: 560),
+        child: ListView(
+          padding: EdgeInsets.zero,
+          shrinkWrap: true,
+          children: [
+            for (final o in options)
+              ListTile(title: Text(title(o)), subtitle: subtitle == null ? null : Text(subtitle!(o)), onTap: () => onSelected(o)),
+          ],
         ),
-      );
+      ),
+    ),
+  );
 }

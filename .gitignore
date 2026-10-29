@@ -47,3 +47,6 @@ app.*.map.json
 # Widget Preview related
 .widget_preview/
 .firebase/
+
+# Firestore rules tests
+firestore-tests/node_modules/

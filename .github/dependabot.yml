@@ -1,0 +1,13 @@
+# Weekly update pull requests for dependencies, including security fixes.
+version: 2
+updates:
+  - package-ecosystem: pub
+    directory: /
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+  - package-ecosystem: npm
+    directory: /firestore-tests
+    schedule: { interval: monthly }
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: monthly }

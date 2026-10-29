@@ -15,7 +15,15 @@ void main() {
       sent = jsonDecode(request.body) as Map<String, dynamic>;
       expect(request.url.path, '/submissions');
       expect(request.url.queryParameters['wait'], 'true');
-      return http.Response(jsonEncode({'stdout': '42\n', 'status': {'id': 3, 'description': 'Accepted'}, 'time': '0.01', 'memory': 2048}), 200);
+      return http.Response(
+        jsonEncode({
+          'stdout': '42\n',
+          'status': {'id': 3, 'description': 'Accepted'},
+          'time': '0.01',
+          'memory': 2048,
+        }),
+        200,
+      );
     });
     final r = await runCode('Python', 'print(int(input())*2)', '21', client: client);
     expect(sent, {'language_id': 71, 'source_code': 'print(int(input())*2)', 'stdin': '21'});
@@ -23,8 +31,15 @@ void main() {
   });
 
   test('compile errors and a busy runner come back as readable messages', () async {
-    final broken = MockClient((_) async => http.Response(
-        jsonEncode({'compile_output': "error: expected ';'", 'status': {'id': 6, 'description': 'Compilation Error'}}), 200));
+    final broken = MockClient(
+      (_) async => http.Response(
+        jsonEncode({
+          'compile_output': "error: expected ';'",
+          'status': {'id': 6, 'description': 'Compilation Error'},
+        }),
+        200,
+      ),
+    );
     final r = await runCode('C++', 'int main(){', '', client: broken);
     expect([r.ok, r.status, r.error], [false, 'Compilation Error', "error: expected ';'"]);
 
@@ -38,19 +53,21 @@ void main() {
     addTearDown(tester.view.reset);
     final code = CodeController();
     String? ranWith;
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        body: SingleChildScrollView(
-          child: CodePad(
-            controller: code,
-            runner: (language, source, stdin) async {
-              ranWith = '$language|$stdin';
-              return const RunResult(status: 'Ran successfully', ok: true, output: '5\n', time: '0.002');
-            },
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: CodePad(
+              controller: code,
+              runner: (language, source, stdin) async {
+                ranWith = '$language|$stdin';
+                return const RunResult(status: 'Ran successfully', ok: true, output: '5\n', time: '0.002');
+              },
+            ),
           ),
         ),
       ),
-    ));
+    );
     expect(code.fullText, languages['C++']!.starter);
 
     await tester.tap(find.text('C++'));
