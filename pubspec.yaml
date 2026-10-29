@@ -32,7 +32,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/catalog.json
-    - assets/sheets/a2z.json
+    - assets/sheets/
     - assets/illustrations/
 
 # App icon: `dart run flutter_launcher_icons` regenerates the Android and web icons from these files.

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../data/prefs.dart';
 import '../data/reminder.dart';
+import '../data/sheet.dart';
 import '../data/store.dart';
 import 'add_problem_page.dart';
 import 'library_page.dart';
@@ -94,11 +95,12 @@ class _HomePageState extends State<HomePage> {
         ),
         child: KeyedSubtree(key: ValueKey(data == null ? -1 : _tab), child: body),
       );
-      final title = Text(switch (_tab) {
-        _home => 'Hi, ${firstName(widget.user)} 👋',
-        _sheet => 'A2Z DSA Sheet',
-        _ => _tabs[_tab].title,
-      });
+      final Widget title = _tab == _sheet
+          ? ValueListenableBuilder(
+              valueListenable: Prefs.sheetId,
+              builder: (context, id, _) => Text(sheets.firstWhere((s) => s.id == id, orElse: () => sheets.first).name),
+            )
+          : Text(_tab == _home ? 'Hi, ${firstName(widget.user)} 👋' : _tabs[_tab].title);
       final avatar = Padding(
         padding: const EdgeInsets.only(right: 12),
         child: IconButton(

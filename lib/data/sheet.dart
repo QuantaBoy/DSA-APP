@@ -90,7 +90,21 @@ class Sheet {
   );
 }
 
-Sheet? _a2z;
+/// The sheets you can follow. The id is the asset file name; [credit] is shown under the list.
+const sheets = [
+  (id: 'a2z', name: "Striver's A2Z", size: 402, credit: "Problem list from Striver's A2Z DSA Sheet by takeUforward."),
+  (id: 'neetcode150', name: 'NeetCode 150', size: 150, credit: 'Problem list from NeetCode 150 by neetcode.io. Problems on LeetCode.'),
+  (id: 'blind75', name: 'Blind 75', size: 75, credit: 'The Blind 75 list, first shared on Blind. Problems on LeetCode.'),
+];
 
-Future<Sheet> loadA2zSheet() async =>
-    _a2z ??= Sheet.fromJson(jsonDecode(await rootBundle.loadString('assets/sheets/a2z.json')) as Map<String, dynamic>);
+final _cache = <String, Future<Sheet>>{};
+
+/// Loads a sheet once; later calls get the same Future. Unknown ids fall back to A2Z.
+Future<Sheet> loadSheet(String id) {
+  final known = sheets.any((s) => s.id == id) ? id : 'a2z';
+  return _cache[known] ??= rootBundle
+      .loadString('assets/sheets/$known.json')
+      .then((text) => Sheet.fromJson(jsonDecode(text) as Map<String, dynamic>));
+}
+
+Future<Sheet> loadA2zSheet() => loadSheet('a2z');

@@ -30,7 +30,6 @@ class TodayPage extends StatefulWidget {
 }
 
 class _TodayPageState extends State<TodayPage> {
-  final _sheet = loadA2zSheet();
   final _heroKey = GlobalKey(), _goalKey = GlobalKey(), _streakKey = GlobalKey();
 
   @override
@@ -94,7 +93,7 @@ class _TodayPageState extends State<TodayPage> {
     return ValueListenableBuilder(
       valueListenable: Prefs.dailyNewGoal,
       builder: (context, goal, _) => FutureBuilder<Sheet>(
-        future: _sheet,
+        future: loadSheet(Prefs.sheetId.value),
         builder: (context, snap) {
           final sheet = snap.data;
           final next = sheet?.nextUnsolved({for (final p in problems) p.id});

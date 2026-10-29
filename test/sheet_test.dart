@@ -32,4 +32,20 @@ void main() {
     expect(problem.url, p.url);
     expect(problem.nextDue, DateTime.utc(2026, 10, 28));
   });
+
+  test('NeetCode 150 and Blind 75 load in full, with LeetCode links and shared ids', () async {
+    for (final (id, size) in [('neetcode150', 150), ('blind75', 75)]) {
+      final sheet = await loadSheet(id);
+      expect(sheet.problems.length, size, reason: id);
+      expect(sheet.problems.map((p) => p.id).toSet().length, size, reason: 'ids are Firestore doc ids');
+      expect(sheet.problems.every((p) => p.url.startsWith('https://leetcode.com/problems/') && p.id.startsWith('lc-')), isTrue);
+      expect(sheet.problems.every((p) => p.difficulty != null), isTrue);
+    }
+    // The same problem has the same id in both sheets, so solving it once counts in both.
+    final nc = (await loadSheet('neetcode150')).problems.map((p) => p.id).toSet();
+    final blind = (await loadSheet('blind75')).problems.map((p) => p.id).toSet();
+    expect(blind.difference(nc).length, lessThan(10));
+    expect(nc.contains('lc-two-sum') && blind.contains('lc-two-sum'), isTrue);
+    expect((await loadSheet('nope')).title, contains('A2Z'), reason: 'unknown ids fall back to A2Z');
+  });
 }

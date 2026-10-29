@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../data/prefs.dart';
 import '../data/sheet.dart';
 import '../data/store.dart';
 import '../logic/models.dart';
@@ -27,8 +28,8 @@ class SheetPage extends StatefulWidget {
 }
 
 class _SheetPageState extends State<SheetPage> {
-  late final Future<Sheet> _sheet = loadA2zSheet();
   int? _step; // topic filter chip: null = all steps
+  String _query = ''; // search across the whole sheet
   final _continueKey = GlobalKey(), _chipsKey = GlobalKey();
 
   @override
@@ -90,9 +91,10 @@ class _SheetPageState extends State<SheetPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<Sheet>(
-      future: _sheet,
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: Prefs.sheetId,
+    builder: (context, sheetId, _) => FutureBuilder<Sheet>(
+      future: loadSheet(sheetId), // cached per sheet
       builder: (context, snap) {
         if (snap.hasError) return Center(child: Text('Could not load the sheet: ${snap.error}'));
         if (!snap.hasData) return const Center(child: CircularProgressIndicator());
@@ -105,6 +107,18 @@ class _SheetPageState extends State<SheetPage> {
         return ListView(
           padding: const EdgeInsets.only(bottom: 24),
           children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: SegmentedButton<String>(
+                showSelectedIcon: false,
+                segments: [for (final s in sheets) ButtonSegment(value: s.id, label: Text(s.name))],
+                selected: {sheetId},
+                onSelectionChanged: (s) => setState(() {
+                  _step = null;
+                  Prefs.setSheet(s.single);
+                }),
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: Column(
@@ -167,28 +181,62 @@ class _SheetPageState extends State<SheetPage> {
               )
             else
               const Padding(padding: EdgeInsets.all(16), child: Text('You finished the whole sheet. Keep up your reviews!')),
-            SizedBox(
-              key: _chipsKey,
-              height: 52,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-                children: [
-                  for (final (i, label) in ['All', ...sheet.steps].indexed)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(label),
-                        selected: (i == 0 ? null : i) == _step,
-                        showCheckmark: false,
-                        onSelected: (_) => setState(() => _step = i == 0 ? null : i),
-                      ),
-                    ),
-                ],
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+              child: TextField(
+                onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  isDense: true,
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  hintText: 'Search ${sheet.problems.length} problems',
+                ),
               ),
             ),
+            if (_query.isNotEmpty) ...[
+              for (final p in sheet.problems.where((p) => p.title.toLowerCase().contains(_query)).take(40))
+                ListTile(
+                  leading: Checkbox(
+                    value: solved.contains(p.id),
+                    onChanged: (_) => solved.contains(p.id) ? _unmark(p) : _markSolved(sheet, p),
+                  ),
+                  title: Text(p.title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text('Step ${p.step} · ${sheet.steps[p.step - 1]}'),
+                  trailing: p.difficulty == null ? null : Pill.difficulty(p.difficulty!),
+                  onTap: () => _solve(sheet, p, solved.contains(p.id)),
+                ),
+              if (!sheet.problems.any((p) => p.title.toLowerCase().contains(_query)))
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    'No problem matches "$_query".',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+                  ),
+                ),
+            ] else
+              SizedBox(
+                key: _chipsKey,
+                height: 52,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                  children: [
+                    for (final (i, label) in ['All', ...sheet.steps].indexed)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(label),
+                          selected: (i == 0 ? null : i) == _step,
+                          showCheckmark: false,
+                          onSelected: (_) => setState(() => _step = i == 0 ? null : i),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             for (var step = 1; step <= sheet.steps.length; step++)
-              if (_step == null || _step == step)
+              if (_query.isEmpty && (_step == null || _step == step))
                 _StepTile(
                   step: step,
                   sheet: sheet,
@@ -200,15 +248,15 @@ class _SheetPageState extends State<SheetPage> {
             Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
-                'Problem list from ${sheet.title} by takeUforward (Striver).',
+                sheets.firstWhere((s) => s.id == sheetId, orElse: () => sheets.first).credit,
                 style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
               ),
             ),
           ],
         );
       },
-    );
-  }
+    ),
+  );
 }
 
 class _ContinueCard extends StatelessWidget {
