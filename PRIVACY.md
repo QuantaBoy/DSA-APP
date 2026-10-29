@@ -25,13 +25,17 @@ Data is stored in Google Firebase (Authentication and Cloud Firestore), and a co
 
 When you tap **Run**, the code and input you typed are sent to a code-execution service (Judge0) so they can be compiled and run, and the output is sent back. Nothing else about you is sent, and we do not keep the code you run unless you save it as your solution.
 
+## Leaderboard (optional)
+
+Only if you choose **Join the leaderboard**, your first name, streak and number of solved problems are shown to other signed-in users. Never your email, notes or code. Leaving the leaderboard deletes your entry.
+
 ## Notifications
 
 The app schedules one local reminder a day on your phone. No data is sent for this. You can turn it off in your phone's notification settings.
 
 ## Deleting your data
 
-In the app, tap your profile picture (top right) and choose **Delete account**. This permanently deletes your account and all your problems, notes and review history. You can also email us and we will delete it for you within 30 days.
+In the app, open **Profile** and choose **Delete account**. This permanently deletes your account and all your problems, notes and review history. You can also email us and we will delete it for you within 30 days.
 
 ## Children
 

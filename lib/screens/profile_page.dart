@@ -3,11 +3,13 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../data/leaderboard.dart';
 import '../data/prefs.dart';
 import '../data/reminder.dart';
 import '../data/store.dart';
 import '../logic/models.dart';
 import '../logic/srs.dart';
+import 'leaderboard_page.dart';
 import 'motion.dart';
 import 'open_link.dart';
 import 'stats_page.dart';
@@ -15,7 +17,7 @@ import 'streak_page.dart';
 import 'widgets.dart';
 
 /// Shown in Profile → About. Keep in step with `version:` in pubspec.yaml.
-const appVersion = '1.8.0';
+const appVersion = '1.9.0';
 
 /// First name for greetings, falling back to the email name.
 String firstName(User user) {
@@ -113,6 +115,15 @@ class ProfilePage extends StatelessWidget {
             ),
             icon: const Icon(Icons.insights_rounded),
             label: const Text('Detailed stats'),
+            style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+          child: OutlinedButton.icon(
+            onPressed: () => open(LeaderboardPage(uid: user.uid, name: firstName(user), streak: days, solved: problems.length)),
+            icon: const Icon(Icons.leaderboard_rounded),
+            label: const Text('Leaderboard'),
             style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
           ),
         ),
@@ -251,6 +262,10 @@ class ProfilePage extends StatelessWidget {
       return;
     }
     try {
+      if (Prefs.leaderboard.value) {
+        await Leaderboard().leave(user.uid);
+        Prefs.setLeaderboard(false);
+      }
       await store.deleteEverything();
       await user.delete();
     } on FirebaseException catch (e) {

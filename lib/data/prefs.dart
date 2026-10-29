@@ -18,11 +18,14 @@ abstract final class Prefs {
   /// The sheet you follow (see sheets in sheet.dart).
   static final sheetId = ValueNotifier('a2z');
 
+  /// Whether you joined the leaderboard on this device (the entry itself lives in Firestore).
+  static final leaderboard = ValueNotifier(false);
+
   /// Ids of walkthrough tips already shown.
   static final seenTips = ValueNotifier<Set<String>>(const {});
 
   static const _theme = 'themeMode', _onboarding = 'seenOnboarding', _reminder = 'reminderMinutes';
-  static const _goal = 'dailyNewGoal', _tips = 'seenTips', _sheet = 'sheetId', _reminderOff = -1;
+  static const _goal = 'dailyNewGoal', _tips = 'seenTips', _sheet = 'sheetId', _board = 'leaderboard', _reminderOff = -1;
 
   static Future<SharedPreferences?> _prefs() async {
     try {
@@ -42,6 +45,7 @@ abstract final class Prefs {
     dailyNewGoal.value = (p.getInt(_goal) ?? 1).clamp(0, 10);
     seenTips.value = {...?p.getStringList(_tips)};
     sheetId.value = p.getString(_sheet) ?? 'a2z';
+    leaderboard.value = p.getBool(_board) ?? false;
   }
 
   static void setThemeMode(ThemeMode mode) {
@@ -67,6 +71,11 @@ abstract final class Prefs {
   static void setSheet(String id) {
     sheetId.value = id;
     unawaited(_prefs().then((p) => p?.setString(_sheet, id)));
+  }
+
+  static void setLeaderboard(bool joined) {
+    leaderboard.value = joined;
+    unawaited(_prefs().then((p) => p?.setBool(_board, joined)));
   }
 
   static void markTipSeen(String id) {

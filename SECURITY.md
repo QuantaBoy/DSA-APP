@@ -15,6 +15,7 @@ Memory Stack has no server code of its own. The app talks directly to Firebase (
 | Reading or changing another user's data | Rules allow only `request.auth.uid == uid`; listing users is denied | `firestore.rules` |
 | Junk or oversized data, unknown fields, privilege flags | Allowed fields and types only, map and note size limits, every other path denied | `firestore.rules` |
 | Writing to the old (v1) layout | Read and delete only | `firestore.rules` |
+| Leaderboard abuse (others' entries, fake numbers, extra data, scraping by visitors) | Opt-in; read only when signed in; write only your own entry with name ≤ 30 chars, numbers 0–5000, server timestamp. Numbers are client-reported (server checks need Cloud Functions) | `firestore.rules` |
 | Rules regressions | Emulator tests for each case, run in CI | `firestore-tests/` |
 | Malicious problem links (`javascript:`, `intent:`, `file:`) | Only `http`/`https` links are opened or accepted | `lib/screens/open_link.dart` |
 | Oversized input | Field length limits; notes ≤ 20,000 characters (same limit as the rules); code and stdin ≤ 64 KB before sending to the runner | `lib/logic/models.dart`, `lib/data/runner.dart` |

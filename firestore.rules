@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Each user owns exactly one document plus their notes. Everything not matched below is denied.
+// Each user owns exactly one document plus their notes, and optionally a leaderboard entry. Everything else is denied.
 //
 //   users/{uid}               v, problems (map by id), days (reviews per day), topics (results per topic)
 //   users/{uid}/notes/{id}    solution card: text (code), idea, time, space, mistake
@@ -34,6 +34,23 @@ service cloud.firestore {
         && optionalString(data, 'mistake', 500)
         && optionalString(data, 'time', 40)
         && optionalString(data, 'space', 40);
+    }
+
+    // Opt-in leaderboard: anyone signed in can read; you can only write your own entry, with sane values.
+    // ponytail: the numbers are reported by the app, so a modified client could inflate them;
+    // server-side verification needs Cloud Functions (Blaze plan).
+    function isValidEntry(data) {
+      return data.keys().hasOnly(['name', 'streak', 'solved', 'updatedAt'])
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 30
+        && data.streak is int && data.streak >= 0 && data.streak <= 5000
+        && data.solved is int && data.solved >= 0 && data.solved <= 5000
+        && data.updatedAt == request.time;
+    }
+
+    match /leaderboard/{uid} {
+      allow read: if request.auth != null;
+      allow delete: if isOwner(uid);
+      allow create, update: if isOwner(uid) && isValidEntry(request.resource.data);
     }
 
     match /users/{uid} {

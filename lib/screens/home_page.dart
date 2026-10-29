@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../data/home_widget.dart';
+import '../data/leaderboard.dart';
 import '../data/prefs.dart';
 import '../data/reminder.dart';
 import '../data/sheet.dart';
@@ -48,11 +49,23 @@ class _HomePageState extends State<HomePage> {
     // Neither may ever break the app: a missing reminder or a failed upgrade is retried next launch.
     unawaited(scheduleDailyReminder(Prefs.reminderMinutes.value).catchError((Object _) {}));
     unawaited(store.upgrade().catchError((Object _) {}));
-    // Keep the home screen widget's numbers current (Firestore serves this listener from the same document).
+    // Keep the home screen widget and (if joined) the leaderboard entry current.
     _widgetFeed = store.data().listen((d) {
       final now = today();
-      unawaited(updateHomeWidget(due: d.problems.where((p) => p.isDue(now)).length, streak: streakWithFreezes(d.stats.days.keys, now)));
+      final streak = streakWithFreezes(d.stats.days.keys, now);
+      unawaited(updateHomeWidget(due: d.problems.where((p) => p.isDue(now)).length, streak: streak));
+      _publishLeaderboard(streak, d.problems.length);
     }, onError: (Object _) {});
+  }
+
+  (int, int)? _published; // last numbers sent to the leaderboard, so unchanged numbers cost no write
+
+  void _publishLeaderboard(int streak, int solved) {
+    if (!Prefs.leaderboard.value || _published == (streak, solved)) return;
+    _published = (streak, solved);
+    unawaited(
+      Leaderboard().publish(uid: widget.user.uid, name: firstName(widget.user), streak: streak, solved: solved).catchError((Object _) {}),
+    );
   }
 
   @override

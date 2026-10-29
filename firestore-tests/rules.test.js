@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { after, before, beforeEach, describe, it } from 'node:test';
 import { assertFails, assertSucceeds, initializeTestEnvironment } from '@firebase/rules-unit-testing';
-import { deleteDoc, deleteField, doc, getDoc, getDocs, collection, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, limit, orderBy, query, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 
 let env;
 
@@ -93,5 +93,32 @@ describe('old layout and anything else', () => {
   it('any other path is denied', async () => {
     await assertFails(setDoc(doc(alice(), 'users/alice/secrets/x'), { a: 1 }));
     await assertFails(setDoc(doc(alice(), 'config/app'), { a: 1 }));
+  });
+});
+
+describe('leaderboard', () => {
+  const entry = (extra = {}) => ({ name: 'Alice', streak: 5, solved: 20, updatedAt: serverTimestamp(), ...extra });
+
+  it('you can publish, update and remove only your own entry', async () => {
+    await assertSucceeds(setDoc(doc(alice(), 'leaderboard/alice'), entry()));
+    await assertSucceeds(setDoc(doc(alice(), 'leaderboard/alice'), entry({ streak: 6 })));
+    await assertFails(setDoc(doc(bob(), 'leaderboard/alice'), entry({ name: 'Bob' })));
+    await assertFails(deleteDoc(doc(bob(), 'leaderboard/alice')));
+    await assertSucceeds(deleteDoc(doc(alice(), 'leaderboard/alice')));
+  });
+
+  it('signed-in users can read the top list; visitors cannot', async () => {
+    await env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), 'leaderboard/alice'), { name: 'Alice', streak: 5, solved: 1 }));
+    await assertSucceeds(getDocs(query(collection(bob(), 'leaderboard'), orderBy('streak', 'desc'), limit(50))));
+    await assertFails(getDocs(collection(guest(), 'leaderboard')));
+  });
+
+  it('rejects fake or oversized values and extra fields', async () => {
+    const ref = doc(alice(), 'leaderboard/alice');
+    await assertFails(setDoc(ref, entry({ streak: 999999 })));
+    await assertFails(setDoc(ref, entry({ solved: -1 })));
+    await assertFails(setDoc(ref, entry({ name: 'x'.repeat(31) })));
+    await assertFails(setDoc(ref, entry({ email: 'a@b.c' })));
+    await assertFails(setDoc(ref, { name: 'Alice', streak: 5, solved: 2, updatedAt: new Date(0) }));
   });
 });
