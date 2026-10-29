@@ -4,10 +4,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../data/home_widget.dart';
 import '../data/prefs.dart';
 import '../data/reminder.dart';
 import '../data/sheet.dart';
 import '../data/store.dart';
+import '../logic/srs.dart';
 import 'add_problem_page.dart';
 import 'library_page.dart';
 import 'motion.dart';
@@ -37,6 +39,7 @@ const _home = 0, _sheet = 1, _library = 2, _profile = 3;
 class _HomePageState extends State<HomePage> {
   late final store = Store(widget.user.uid);
   late final Stream<UserData> _data = store.data();
+  late final StreamSubscription<UserData> _widgetFeed;
   int _tab = _home;
 
   @override
@@ -45,6 +48,17 @@ class _HomePageState extends State<HomePage> {
     // Neither may ever break the app: a missing reminder or a failed upgrade is retried next launch.
     unawaited(scheduleDailyReminder(Prefs.reminderMinutes.value).catchError((Object _) {}));
     unawaited(store.upgrade().catchError((Object _) {}));
+    // Keep the home screen widget's numbers current (Firestore serves this listener from the same document).
+    _widgetFeed = store.data().listen((d) {
+      final now = today();
+      unawaited(updateHomeWidget(due: d.problems.where((p) => p.isDue(now)).length, streak: streakWithFreezes(d.stats.days.keys, now)));
+    }, onError: (Object _) {});
+  }
+
+  @override
+  void dispose() {
+    unawaited(_widgetFeed.cancel());
+    super.dispose();
   }
 
   void _go(int tab) {
