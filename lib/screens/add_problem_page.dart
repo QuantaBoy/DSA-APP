@@ -7,6 +7,7 @@ import '../data/store.dart';
 import '../logic/models.dart';
 import '../logic/srs.dart';
 import 'open_link.dart';
+import 'solution_sheet.dart';
 
 class AddProblemPage extends StatefulWidget {
   const AddProblemPage({super.key, required this.store});
@@ -20,7 +21,7 @@ class AddProblemPage extends StatefulWidget {
 class _AddProblemPageState extends State<AddProblemPage> {
   final _form = GlobalKey<FormState>();
   final _url = TextEditingController();
-  final _notes = TextEditingController();
+  SolutionCard? _card;
   TextEditingController? _name; // owned by the Autocomplete fields
   TextEditingController? _topic;
   List<CatalogItem> _catalog = const [];
@@ -41,7 +42,6 @@ class _AddProblemPageState extends State<AddProblemPage> {
   @override
   void dispose() {
     _url.dispose();
-    _notes.dispose();
     super.dispose();
   }
 
@@ -68,7 +68,8 @@ class _AddProblemPageState extends State<AddProblemPage> {
       url: optional(_url),
       solvedOn: _solvedOn,
     );
-    unawaited(widget.store.addProblem(problem, notes: optional(_notes))); // saved locally at once, syncs when online
+    // saved locally at once, syncs when online
+    unawaited(widget.store.addProblem(problem.copyWith(patterns: _card?.patterns), solution: _card?.solution));
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text('Added ${problem.name}. First review on ${prettyDay(problem.nextDue)}.')));
     Navigator.pop(context);
@@ -163,18 +164,20 @@ class _AddProblemPageState extends State<AddProblemPage> {
               style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(52), alignment: Alignment.centerLeft),
             ),
             gap,
-            TextFormField(
-              controller: _notes,
-              minLines: 5,
-              maxLines: 12,
-              maxLength: Limits.maxNoteLength,
-              style: const TextStyle(fontFamily: 'monospace', fontSize: 14),
-              decoration: const InputDecoration(
-                labelText: 'Your solution / key idea (optional)',
-                hintText: "Paste your code, or the trick in one line: 'hash map of value → index'",
-                alignLabelWithHint: true,
-                border: OutlineInputBorder(),
-              ),
+            OutlinedButton.icon(
+              onPressed: () async {
+                final card = await editSolutionCard(
+                  context,
+                  title: _name?.text.trim().isNotEmpty == true ? _name!.text.trim() : 'New problem',
+                  initial: _card?.solution ?? const Solution(),
+                  patterns: _card?.patterns ?? const [],
+                  saveLabel: 'Done',
+                );
+                if (card != null) setState(() => _card = card);
+              },
+              icon: Icon(_card == null ? Icons.add_rounded : Icons.check_circle_rounded),
+              label: Text(_card == null ? 'Add solution card (optional)' : 'Solution card added · edit'),
+              style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(52), alignment: Alignment.centerLeft),
             ),
             const SizedBox(height: 24),
             FilledButton(

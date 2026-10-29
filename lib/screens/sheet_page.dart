@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../data/sheet.dart';
 import '../data/store.dart';
@@ -8,6 +9,7 @@ import '../logic/models.dart';
 import '../logic/srs.dart';
 import 'motion.dart';
 import 'open_link.dart';
+import 'solution_sheet.dart';
 import 'solve_page.dart';
 import 'widgets.dart';
 
@@ -27,11 +29,27 @@ class _SheetPageState extends State<SheetPage> {
   late final Future<Sheet> _sheet = loadA2zSheet();
   int? _step; // topic filter chip: null = all steps
 
-  void _markSolved(Sheet sheet, SheetProblem p) {
-    final problem = sheet.toProblem(p, today());
+  /// Adds the problem to the stack (with Undo). With [askForCard], also opens the solution card editor.
+  Future<void> _markSolved(Sheet sheet, SheetProblem p, {bool askForCard = false}) async {
+    var problem = sheet.toProblem(p, today());
+    unawaited(HapticFeedback.lightImpact());
     unawaited(widget.store.addProblem(problem)); // saved locally at once, syncs when online
+    if (askForCard) {
+      final card = await editSolutionCard(context, title: p.title, saveLabel: 'Save card');
+      if (card != null) {
+        problem = problem.copyWith(patterns: card.patterns);
+        unawaited(widget.store.addProblem(problem, solution: card.solution));
+      }
+    }
+    if (!mounted) return;
     ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('${p.title} added to your stack. First review on ${prettyDay(problem.nextDue)}.')));
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text('${p.title} added. First review ${prettyDay(problem.nextDue)}.'),
+          action: SnackBarAction(label: 'Undo', onPressed: () => unawaited(widget.store.deleteProblem(problem))),
+        ),
+      );
   }
 
   void _solve(Sheet sheet, SheetProblem p, bool solved) => Navigator.push(
@@ -126,7 +144,7 @@ class _SheetPageState extends State<SheetPage> {
                   onSolveHere: () => _solve(sheet, next, false),
                   onOpen: () => openLink(context, next.url),
                   onVideo: next.video == null ? null : () => openLink(context, next.video!),
-                  onSolved: () => _markSolved(sheet, next),
+                  onSolved: () => _markSolved(sheet, next, askForCard: true),
                 ),
               )
             else

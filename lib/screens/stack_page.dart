@@ -7,6 +7,7 @@ import '../logic/models.dart';
 import '../logic/srs.dart';
 import 'motion.dart';
 import 'open_link.dart';
+import 'solution_sheet.dart';
 import 'widgets.dart';
 
 /// Every problem in your review stack, soonest review first, with search and stage filters.
@@ -62,31 +63,12 @@ class _StackPageState extends State<StackPage> {
   }
 
   Future<void> _editNotes(BuildContext context, Problem p) async {
-    final controller = TextEditingController(text: await store.notes(p.id));
+    final current = await store.solution(p.id);
     if (!context.mounted) return;
-    final notes = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Notes · ${p.name}'),
-        content: SizedBox(
-          width: 480,
-          child: TextField(
-            controller: controller,
-            autofocus: true,
-            minLines: 4,
-            maxLines: 10,
-            maxLength: Limits.maxNoteLength,
-            style: const TextStyle(fontFamily: 'monospace'),
-            decoration: const InputDecoration(hintText: 'Key idea, edge cases, complexity, code…', border: OutlineInputBorder()),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: const Text('Save')),
-        ],
-      ),
-    );
-    if (notes != null) unawaited(store.setNotes(p.id, notes.isEmpty ? null : notes)); // saved locally at once
+    final card = await editSolutionCard(context, title: p.name, initial: current, patterns: p.patterns);
+    if (card == null) return;
+    unawaited(store.setSolution(p.id, card.solution)); // saved locally at once
+    unawaited(store.setPatterns(p.id, card.patterns));
   }
 
   @override
@@ -238,7 +220,7 @@ class _StackPageState extends State<StackPage> {
                                 PopupMenuButton<String>(
                                   onSelected: (v) => v == 'notes' ? _editNotes(context, p) : _confirmDelete(context, p),
                                   itemBuilder: (_) => const [
-                                    PopupMenuItem(value: 'notes', child: Text('Notes')),
+                                    PopupMenuItem(value: 'notes', child: Text('Solution card')),
                                     PopupMenuItem(value: 'delete', child: Text('Delete')),
                                   ],
                                 ),

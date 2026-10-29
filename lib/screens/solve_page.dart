@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_code_editor/flutter_code_editor.dart';
 
 import '../data/runner.dart';
@@ -10,6 +11,7 @@ import '../logic/models.dart';
 import '../logic/srs.dart';
 import 'code_pad.dart';
 import 'open_link.dart';
+import 'solution_sheet.dart';
 import 'widgets.dart';
 
 /// Solve one sheet problem in the app: read it on its site, code and run it here,
@@ -41,33 +43,32 @@ class _SolvePageState extends State<SolvePage> {
     return text.isEmpty || languages.values.any((l) => l.starter.trim() == text) ? null : text;
   }
 
-  void _finish() {
+  Future<void> _finish() async {
     final p = widget.problem;
     final messenger = ScaffoldMessenger.of(context);
-    final code = _yourCode;
-    final fits = code == null || code.length <= Limits.maxNoteLength;
+    final navigator = Navigator.of(context);
+    final code = _yourCode ?? '';
+    final initial = widget.solved ? (await widget.store.solution(p.id)).copyWith(code: code.isEmpty ? null : code) : Solution(code: code);
+    if (!mounted) return;
+    final card = await editSolutionCard(
+      context,
+      title: p.title,
+      initial: initial,
+      saveLabel: widget.solved ? 'Save card' : 'Save & add to my stack',
+    );
+    if (card == null && widget.solved) return; // dismissed: nothing to save
     // Writes are not awaited: Firestore saves locally at once and syncs when online.
     if (widget.solved) {
-      if (code != null && fits) unawaited(widget.store.setNotes(p.id, code));
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            fits ? 'Saved as your solution.' : 'Your code is longer than ${Limits.maxNoteLength} characters, so it was not saved.',
-          ),
-        ),
-      );
+      unawaited(widget.store.setSolution(p.id, card!.solution));
+      unawaited(widget.store.setPatterns(p.id, card.patterns));
+      messenger.showSnackBar(const SnackBar(content: Text('Solution card saved.')));
     } else {
-      final problem = widget.sheet.toProblem(p, today());
-      unawaited(widget.store.addProblem(problem, notes: fits ? code : null));
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            '${p.title} added to your stack. First review on ${prettyDay(problem.nextDue)}.${fits ? '' : ' Your code was too long to save.'}',
-          ),
-        ),
-      );
+      final problem = widget.sheet.toProblem(p, today()).copyWith(patterns: card?.patterns);
+      unawaited(widget.store.addProblem(problem, solution: card?.solution));
+      unawaited(HapticFeedback.mediumImpact());
+      messenger.showSnackBar(SnackBar(content: Text('${p.title} added to your stack. First review ${prettyDay(problem.nextDue)}.')));
     }
-    Navigator.pop(context);
+    navigator.pop();
   }
 
   @override

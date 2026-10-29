@@ -35,11 +35,35 @@ DateTime addDays(DateTime day, int days) => DateTime.utc(day.year, day.month, da
 
 DateTime firstDue(DateTime solvedOn) => addDays(dateOnly(solvedOn), reviewIntervals.first);
 
-/// Remembered moves one stage up; forgot drops two stages so it comes back soon.
-(int, DateTime) afterReview(int stage, bool remembered, DateTime reviewedOn) {
-  final next = remembered ? (stage + 1).clamp(0, reviewIntervals.length - 1) : (stage - 2).clamp(0, reviewIntervals.length - 1);
+/// How well a review went. Everything except [again] counts as remembered.
+enum Grade {
+  again('Again'),
+  hard('Hard'),
+  good('Good'),
+  easy('Easy');
+
+  const Grade(this.label);
+  final String label;
+
+  bool get remembered => this != again;
+
+  /// Stage change: again drops two stages, hard repeats the same interval, good moves up one, easy skips one.
+  int get step => switch (this) {
+    again => -2,
+    hard => 0,
+    good => 1,
+    easy => 2,
+  };
+}
+
+/// The new stage and due date after reviewing a problem at [stage].
+(int, DateTime) afterReview(int stage, Grade grade, DateTime reviewedOn) {
+  final next = (stage + grade.step).clamp(0, reviewIntervals.length - 1);
   return (next, addDays(dateOnly(reviewedOn), reviewIntervals[next]));
 }
+
+/// Days until the next review for each grade, for the labels on the grade buttons.
+int daysAfter(int stage, Grade grade) => reviewIntervals[(stage + grade.step).clamp(0, reviewIntervals.length - 1)];
 
 /// Consecutive days with at least one review, ending today (or yesterday if not reviewed yet today).
 int streak(Iterable<DateTime> reviewDays, DateTime on) {

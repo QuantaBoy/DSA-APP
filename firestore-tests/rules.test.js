@@ -61,6 +61,17 @@ describe('notes', () => {
     await assertSucceeds(deleteDoc(ref));
   });
 
+  it('accepts a full solution card', async () => {
+    await assertSucceeds(setDoc(doc(alice(), 'users/alice/notes/p1'),
+      { idea: 'two pointers', time: 'O(n)', space: 'O(1)', mistake: 'off by one', text: 'code' }));
+  });
+
+  it('rejects oversized card fields', async () => {
+    await assertFails(setDoc(doc(alice(), 'users/alice/notes/p1'), { idea: 'x'.repeat(501) }));
+    await assertFails(setDoc(doc(alice(), 'users/alice/notes/p1'), { time: 'x'.repeat(41) }));
+    await assertFails(setDoc(doc(alice(), 'users/alice/notes/p1'), {}));
+  });
+
   it('rejects oversized, empty or extra-field notes, and other users', async () => {
     await assertFails(setDoc(doc(alice(), 'users/alice/notes/p1'), { text: 'x'.repeat(20001) }));
     await assertFails(setDoc(doc(alice(), 'users/alice/notes/p1'), { text: '' }));

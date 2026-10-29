@@ -9,7 +9,7 @@ typedef UserData = ({List<Problem> problems, Stats stats});
 /// Reads and writes one user's data in Firestore.
 ///
 /// users/{uid}              one document: every problem (by id), reviews per day, results per topic
-/// users/{uid}/notes/{id}   your notes or code for one problem, loaded only when opened
+/// users/{uid}/notes/{id}   the solution card (idea, complexity, mistake, code), loaded only when opened
 ///
 /// Opening the app costs one read however many problems you have; Firebase's free plan allows 50,000 a day.
 /// Firestore keeps a copy on the device, so everything works offline and syncs later.
@@ -40,20 +40,33 @@ class Store {
   /// A fresh id for Problem.solved(id: ...).
   String newProblemId() => _notes.doc().id;
 
-  Future<void> addProblem(Problem p, {String? notes}) => Future.wait([
+  Future<void> addProblem(Problem p, {Solution? solution}) => Future.wait([
     _user.set({
       'v': _version,
       'problems': {p.id: p.toMap()},
     }, SetOptions(merge: true)),
-    if (notes != null && notes.isNotEmpty) setNotes(p.id, notes),
+    if (solution != null && !solution.isEmpty) setSolution(p.id, solution),
   ]);
 
   /// Reschedules the problem and adds the review to the day and topic totals, in one write.
-  Future<void> review(Problem p, {required bool remembered}) => _user.update({
-    FieldPath(['problems', p.id]): p.review(remembered: remembered, on: today()).toMap(),
+  Future<void> review(Problem p, Grade grade) => _user.update({
+    FieldPath(['problems', p.id]): p.review(grade: grade, on: today()).toMap(),
     FieldPath(['days', dayKey(today())]): FieldValue.increment(1),
     FieldPath(['topics', p.topic, 'total']): FieldValue.increment(1),
-    if (remembered) FieldPath(['topics', p.topic, 'remembered']): FieldValue.increment(1),
+    if (grade.remembered) FieldPath(['topics', p.topic, 'remembered']): FieldValue.increment(1),
+  });
+
+  /// Reverses [review]: puts [before] (the problem as it was) back and takes the review out of the totals.
+  Future<void> undoReview(Problem before, Grade grade) => _user.update({
+    FieldPath(['problems', before.id]): before.toMap(),
+    FieldPath(['days', dayKey(today())]): FieldValue.increment(-1),
+    FieldPath(['topics', before.topic, 'total']): FieldValue.increment(-1),
+    if (grade.remembered) FieldPath(['topics', before.topic, 'remembered']): FieldValue.increment(-1),
+  });
+
+  /// Tags a problem with DSA patterns (kept on the problem so the pattern library needs no extra reads).
+  Future<void> setPatterns(String id, List<String> patterns) => _user.update({
+    FieldPath(['problems', id, 'patterns']): patterns.take(Limits.maxPatterns).toList(),
   });
 
   /// Deletes a problem, its notes, and its share of the topic totals.
@@ -66,16 +79,26 @@ class Store {
     _notes.doc(p.id).delete(),
   ]);
 
-  Future<String?> notes(String id) async => (await _notes.doc(id).get()).data()?['text'] as String?;
-
-  /// Saves (or clears, when empty) a problem's notes. Throws [ArgumentError] past [Limits.maxNoteLength].
-  Future<void> setNotes(String id, String? text) {
-    if (text == null || text.isEmpty) return _notes.doc(id).delete();
-    if (text.length > Limits.maxNoteLength) {
-      throw ArgumentError.value(text.length, 'text', 'longer than ${Limits.maxNoteLength} characters');
-    }
-    return _notes.doc(id).set({'text': text});
+  /// The saved solution card, or an empty one.
+  Future<Solution> solution(String id) async {
+    final data = (await _notes.doc(id).get()).data();
+    return data == null ? const Solution() : Solution.fromMap(data);
   }
+
+  /// Saves (or clears, when empty) a solution card. Throws [ArgumentError] when a field is over its limit,
+  /// the same limits firestore.rules enforces, so a bad write fails here instead of silently on the server.
+  Future<void> setSolution(String id, Solution s) {
+    if (s.isEmpty) return _notes.doc(id).delete();
+    if (!fitsLimits(s)) throw ArgumentError.value(s, 'solution', 'a field is over its length limit');
+    return _notes.doc(id).set(s.toMap());
+  }
+
+  static bool fitsLimits(Solution s) =>
+      s.code.length <= Limits.maxNoteLength &&
+      s.idea.length <= Limits.shortTextLength &&
+      s.mistake.length <= Limits.shortTextLength &&
+      s.time.length <= Limits.complexityLength &&
+      s.space.length <= Limits.complexityLength;
 
   /// Deletes every problem, note and total: used when the account is deleted.
   Future<void> deleteEverything() async {

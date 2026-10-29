@@ -1,3 +1,4 @@
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:memory_stack/data/store.dart';
@@ -68,22 +69,48 @@ void main() {
     expect(graphs, lessThan(arrays));
   });
 
-  testWidgets('Review shows a code pad, and checking reveals the saved solution', (tester) async {
-    tester.view.physicalSize = const Size(1080, 2400);
-    tester.view.devicePixelRatio = 1; // tall screen: everything visible without scrolling
-    addTearDown(tester.view.reset);
-    final p = solved('a', 3);
+  testWidgets('Review: flip shows the solution card, grading moves on, undo brings the card back', (tester) async {
+    tall(tester);
+    final store = Store('u', db: FakeFirebaseFirestore());
+    final a = solved('a', 3).copyWith(patterns: ['Hashing']), b = solved('b', 2);
+    // Database calls run on the real clock; the widget-test clock only moves when pumped.
+    await tester.runAsync(() async {
+      await store.addProblem(
+        a,
+        solution: const Solution(idea: 'value to index map', time: 'O(n)'),
+      );
+      await store.addProblem(b);
+    });
+    Future<int?> stageOfA() => tester.runAsync(() async => (await store.data().first).problems.firstWhere((p) => p.id == 'a').stage);
+    Future<void> settle() async {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await tester.pump(const Duration(seconds: 1));
+    }
+
     await tester.pumpWidget(
       MaterialApp(
-        home: ReviewPage(store: _NotesStore('return seen[target - x]'), queue: [p]),
+        home: ReviewPage(store: store, queue: [a, b]),
       ),
     );
-    expect(find.text('Write it from memory'), findsOneWidget);
-    expect(find.text('return seen[target - x]'), findsNothing); // hidden until you check
-    await tester.tap(find.text('Check against my solution'));
-    await tester.pumpAndSettle();
-    expect(find.text('return seen[target - x]'), findsOneWidget);
-    expect(find.textContaining('Different code is fine'), findsOneWidget);
+    expect(find.text("What's the approach?"), findsOneWidget);
+    expect(find.text('value to index map'), findsNothing); // hidden until flipped
+
+    await tester.tap(find.text('Show my solution'));
+    await settle();
+    await settle(); // the card loads, then draws
+    expect(find.text('value to index map'), findsOneWidget);
+    expect(find.text('Time O(n)'), findsOneWidget);
+    expect(find.text('Good'), findsOneWidget); // grade buttons appear after the flip
+
+    await tester.tap(find.text('Good'));
+    await settle();
+    expect(find.text('Review 2 of 2'), findsOneWidget);
+    expect(await stageOfA(), 1);
+
+    await tester.tap(find.text('Undo'));
+    await settle();
+    expect(find.text('Review 1 of 2'), findsOneWidget);
+    expect(await stageOfA(), 0);
   });
 
   testWidgets('Streak page shows the streak, the next challenge and the record', (tester) async {
@@ -108,14 +135,4 @@ void main() {
     expect(find.byIcon(Icons.check_rounded), findsWidgets);
     expect(find.text('Continue'), findsOneWidget);
   });
-}
-
-/// A store whose saved solution is fixed, so the review screen can be tested without Firebase.
-class _NotesStore extends Store {
-  _NotesStore(this.saved) : super('test');
-
-  final String saved;
-
-  @override
-  Future<String?> notes(String id) async => saved;
 }

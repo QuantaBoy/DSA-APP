@@ -7,10 +7,90 @@ abstract final class Limits {
   static const nameLength = 150;
   static const topicLength = 60;
   static const urlLength = 500;
-  static const maxNoteLength = 20000;
+  static const maxNoteLength = 20000; // code
+  static const shortTextLength = 500; // idea, mistake
+  static const complexityLength = 40;
+  static const maxPatterns = 8;
 }
 
 const difficulties = ['Easy', 'Medium', 'Hard'];
+
+/// DSA patterns a solution can be tagged with. The pattern library groups problems by these.
+const dsaPatterns = [
+  'Two Pointers',
+  'Sliding Window',
+  'Hashing',
+  'Prefix Sum',
+  'Binary Search',
+  'Sorting',
+  'Stack',
+  'Monotonic Stack',
+  'Queue',
+  'Linked List',
+  'Fast & Slow Pointers',
+  'Recursion',
+  'Backtracking',
+  'Tree Traversal',
+  'BST',
+  'Heap',
+  'Greedy',
+  'Intervals',
+  'BFS',
+  'DFS',
+  'Topological Sort',
+  'Union Find',
+  'Shortest Path',
+  'Dynamic Programming',
+  'Trie',
+  'Bit Manipulation',
+  'Math',
+  'Matrix',
+  'Strings',
+  'Divide & Conquer',
+  'Design',
+];
+
+/// Common complexities, offered as quick picks on the solution card.
+const complexities = ['O(1)', 'O(log n)', 'O(n)', 'O(n log n)', 'O(n²)', 'O(n³)', 'O(2ⁿ)', 'O(n!)', 'O(m·n)'];
+
+/// What you want to remember about a solution: the approach first, code last.
+/// Stored in users/{uid}/notes/{problemId}; the patterns live on the [Problem] so lists need no extra reads.
+class Solution {
+  const Solution({this.idea = '', this.time = '', this.space = '', this.mistake = '', this.code = ''});
+
+  final String idea; // the key insight in one line
+  final String time;
+  final String space;
+  final String mistake; // what went wrong last time
+  final String code;
+
+  bool get isEmpty => idea.isEmpty && time.isEmpty && space.isEmpty && mistake.isEmpty && code.isEmpty;
+
+  Solution copyWith({String? idea, String? time, String? space, String? mistake, String? code}) => Solution(
+    idea: idea ?? this.idea,
+    time: time ?? this.time,
+    space: space ?? this.space,
+    mistake: mistake ?? this.mistake,
+    code: code ?? this.code,
+  );
+
+  /// Only non-empty fields are stored. `text` is the code (the field name predates the card).
+  Map<String, String> toMap() => {
+    if (code.isNotEmpty) 'text': code,
+    if (idea.isNotEmpty) 'idea': idea,
+    if (time.isNotEmpty) 'time': time,
+    if (space.isNotEmpty) 'space': space,
+    if (mistake.isNotEmpty) 'mistake': mistake,
+  };
+
+  factory Solution.fromMap(Map<String, dynamic> m) => Solution(
+    code: m['text'] as String? ?? '',
+    idea: m['idea'] as String? ?? '',
+    time: m['time'] as String? ?? '',
+    space: m['space'] as String? ?? '',
+    mistake: m['mistake'] as String? ?? '',
+  );
+}
 
 /// A problem you solved, plus where it is in the review schedule.
 /// Notes are stored separately (see Store.notes) so loading the stack stays one small read.
@@ -27,6 +107,7 @@ class Problem {
     required this.nextDue,
     this.reviews = 0,
     this.remembered = 0,
+    this.patterns = const [],
   });
 
   /// A newly added problem: stage 0, first review the day after it was solved.
@@ -64,6 +145,7 @@ class Problem {
   final DateTime nextDue;
   final int reviews; // how many times reviewed, and how many of those remembered:
   final int remembered; // kept so deleting the problem can take it out of the topic totals
+  final List<String> patterns; // e.g. ['Two Pointers'], from the solution card
 
   bool get mastered => stage == reviewIntervals.length - 1;
   bool isDue(DateTime today) => !nextDue.isAfter(dateOnly(today));
@@ -80,6 +162,7 @@ class Problem {
     'nextDue': dayKey(nextDue),
     'reviews': reviews,
     'remembered': remembered,
+    if (patterns.isNotEmpty) 'patterns': patterns,
   };
 
   factory Problem.fromMap(String id, Map<String, dynamic> m) => Problem(
@@ -94,24 +177,28 @@ class Problem {
     nextDue: parseDay(m['nextDue'] as String),
     reviews: m['reviews'] as int? ?? 0,
     remembered: m['remembered'] as int? ?? 0,
+    patterns: [...?(m['patterns'] as List?)?.whereType<String>()],
+  );
+
+  Problem copyWith({int? stage, DateTime? nextDue, int? reviews, int? remembered, List<String>? patterns}) => Problem(
+    id: id,
+    name: name,
+    platform: platform,
+    difficulty: difficulty,
+    topic: topic,
+    url: url,
+    solvedOn: solvedOn,
+    stage: stage ?? this.stage,
+    nextDue: nextDue ?? this.nextDue,
+    reviews: reviews ?? this.reviews,
+    remembered: remembered ?? this.remembered,
+    patterns: patterns ?? this.patterns,
   );
 
   /// The problem after one review: rescheduled, with its counts updated.
-  Problem review({required bool remembered, required DateTime on}) {
-    final (newStage, due) = afterReview(stage, remembered, dateOnly(on));
-    return Problem(
-      id: id,
-      name: name,
-      platform: platform,
-      difficulty: difficulty,
-      topic: topic,
-      url: url,
-      solvedOn: solvedOn,
-      stage: newStage,
-      nextDue: due,
-      reviews: reviews + 1,
-      remembered: this.remembered + (remembered ? 1 : 0),
-    );
+  Problem review({required Grade grade, required DateTime on}) {
+    final (newStage, due) = afterReview(stage, grade, dateOnly(on));
+    return copyWith(stage: newStage, nextDue: due, reviews: reviews + 1, remembered: remembered + (grade.remembered ? 1 : 0));
   }
 }
 

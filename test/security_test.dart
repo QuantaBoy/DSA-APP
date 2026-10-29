@@ -22,11 +22,12 @@ void main() {
     }
   });
 
-  test('notes past the limit are refused before reaching the server', () async {
+  test('solution cards past the limits are refused before reaching the server', () async {
     final store = Store('u', db: FakeFirebaseFirestore());
-    expect(() => store.setNotes('p', 'x' * (Limits.maxNoteLength + 1)), throwsArgumentError);
-    await store.setNotes('p', 'x' * Limits.maxNoteLength);
-    expect((await store.notes('p'))!.length, Limits.maxNoteLength);
+    expect(() => store.setSolution('p', Solution(code: 'x' * (Limits.maxNoteLength + 1))), throwsArgumentError);
+    expect(() => store.setSolution('p', Solution(idea: 'x' * (Limits.shortTextLength + 1))), throwsArgumentError);
+    await store.setSolution('p', Solution(code: 'x' * Limits.maxNoteLength));
+    expect((await store.solution('p')).code.length, Limits.maxNoteLength);
   });
 
   test('oversized code is not sent to the runner', () async {

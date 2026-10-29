@@ -24,29 +24,37 @@ void main() {
     expect(p.daysOverdue(DateTime(2026, 11, 3)), 2);
   });
 
-  test('remembered climbs one stage and caps at yearly', () {
-    expect(afterReview(0, true, d(2026, 10, 25)), (1, d(2026, 10, 28)));
-    expect(afterReview(9, true, d(2026, 10, 25)), (9, d(2027, 10, 25)));
+  test('good climbs one stage, easy two, both capped at yearly', () {
+    expect(afterReview(0, Grade.good, d(2026, 10, 25)), (1, d(2026, 10, 28)));
+    expect(afterReview(0, Grade.easy, d(2026, 10, 25)), (2, d(2026, 11, 1)));
+    expect(afterReview(9, Grade.good, d(2026, 10, 25)), (9, d(2027, 10, 25)));
+    expect(afterReview(8, Grade.easy, d(2026, 10, 25)).$1, 9);
   });
 
-  test('forgot drops two stages, never below zero', () {
-    expect(afterReview(5, false, d(2026, 10, 25)), (3, d(2026, 11, 8)));
-    expect(afterReview(1, false, d(2026, 10, 25)), (0, d(2026, 10, 26)));
+  test('hard repeats the same interval; again drops two stages, never below zero', () {
+    expect(afterReview(3, Grade.hard, d(2026, 10, 25)), (3, d(2026, 11, 8)));
+    expect(afterReview(5, Grade.again, d(2026, 10, 25)), (3, d(2026, 11, 8)));
+    expect(afterReview(1, Grade.again, d(2026, 10, 25)), (0, d(2026, 10, 26)));
+  });
+
+  test('grade buttons show the days until the next review', () {
+    expect([for (final g in Grade.values) daysAfter(2, g)], [1, 7, 14, 30]);
+    expect(Grade.values.where((g) => g.remembered), [Grade.hard, Grade.good, Grade.easy]);
   });
 
   test('review reschedules and counts the review', () {
-    final updated = problem('1', 'Array').review(remembered: true, on: DateTime(2026, 10, 2, 8));
+    final updated = problem('1', 'Array').review(grade: Grade.good, on: DateTime(2026, 10, 2, 8));
     expect(updated.stage, 1);
     expect(updated.nextDue, d(2026, 10, 5));
     expect([updated.reviews, updated.remembered], [1, 1]);
-    final forgot = updated.review(remembered: false, on: d(2026, 10, 5));
+    final forgot = updated.review(grade: Grade.again, on: d(2026, 10, 5));
     expect([forgot.reviews, forgot.remembered], [2, 1]);
   });
 
   test('ten remembered reviews reach mastered', () {
     var p = problem('1', 'Array');
     for (var i = 0; i < 10; i++) {
-      p = p.review(remembered: true, on: p.nextDue);
+      p = p.review(grade: Grade.good, on: p.nextDue);
     }
     expect(p.mastered, isTrue);
   });
@@ -68,7 +76,7 @@ void main() {
       topic: 'Array',
       url: 'https://leetcode.com/problems/two-sum',
       solvedOn: DateTime(2026, 1, 9, 23, 59),
-    ).review(remembered: true, on: d(2026, 1, 10));
+    ).review(grade: Grade.good, on: d(2026, 1, 10));
     final map = p.toMap();
     expect(map['solvedOn'], '2026-01-09');
     final back = Problem.fromMap('x', map);
