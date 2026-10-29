@@ -32,4 +32,5 @@ Then open `build/ios/archive/Runner.xcarchive` in Xcode â†’ **Distribute App** â
 - In App Store Connect, create the app with bundle id `com.memorystack.memoryStack`.
 - Privacy policy: https://memory-stack-e6990.web.app/privacy.html
 - Apple requires **Sign in with Apple** when an app offers Google sign-in. Add it before the first App Store review: enable *Apple* in Firebase Authentication, then add an Apple button next to Google.
-- The daily reminder is Android-only for now; on iOS it needs notification permission code and an APNs setup.
+- The daily reminder works on iOS too (local notifications; the app asks for permission the first time).
+- The home screen widget is Android-only. An iOS widget needs a WidgetKit extension target created in Xcode on a Mac; the app already writes the numbers through `home_widget`, so the Swift widget only has to read `due` and `streak` from the shared App Group.
