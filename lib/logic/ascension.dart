@@ -39,7 +39,7 @@ Level levelFor(int xp) {
 }
 
 enum Rank {
-  awakened('Awakened', 1, [Color(0xFFE6E8F0), Color(0xFF9CA1B8)]),
+  awakened('Awakened', 1, [Color(0xFF8B7CFF), Color(0xFF3B2A99)]),
   shadowInitiate('Shadow Initiate', 5, [Color(0xFF8A8FA3), Color(0xFF2B2E3B)]),
   bladeOfLogic('Blade of Logic', 10, [Color(0xFFF1F5F9), Color(0xFF7C8BA1)]),
   voidArchitect('Void Architect', 20, [Color(0xFF38BDF8), Color(0xFF1E3A8A)]),
