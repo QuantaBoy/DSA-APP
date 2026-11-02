@@ -7,6 +7,12 @@ import 'package:flutter/services.dart';
 import '../data/prefs.dart';
 import '../logic/ascension.dart';
 
+/// The worn title with its stars, e.g. "Array Executioner ★★", or null.
+String? wornLabel(String? id, Set<String> earned) {
+  final t = titleById(id);
+  return t == null ? null : titleLabel(t, tierOf(t.id, earned));
+}
+
 /// Your current power, worked out on the home screen from your data. Null until the data loads.
 typedef Power = ({int xp, Level level, Rank rank, Set<String> titles, ({HunterTitle title, Progress progress})? next});
 
@@ -174,133 +180,7 @@ class _AuraPainter extends CustomPainter {
   bool shouldRepaint(_AuraPainter old) => old.t != t || old.glow != glow || old.power != power;
 }
 
-/// Home power card: badge with aura, level, rank, the title you wear, XP to the next level, and the title collection.
-class PowerCard extends StatelessWidget {
-  const PowerCard({super.key});
-
-  @override
-  Widget build(BuildContext context) => ValueListenableBuilder(
-    valueListenable: power,
-    builder: (context, p, _) {
-      if (p == null) return const SizedBox.shrink();
-      return Container(
-        margin: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          // Near-black void lit by your rank's colour from behind the badge.
-          gradient: RadialGradient(
-            center: const Alignment(-0.75, -0.55),
-            radius: 1.3,
-            colors: [p.rank.colors.first.withValues(alpha: 0.38), const Color(0xFF0A0B16), const Color(0xFF040509)],
-            stops: const [0, 0.45, 1],
-          ),
-          border: Border.all(color: p.rank.colors.first.withValues(alpha: 0.6)),
-          boxShadow: [BoxShadow(color: p.rank.colors.first.withValues(alpha: 0.35), blurRadius: 24)],
-        ),
-        child: CustomPaint(
-          painter: _GridPainter(p.rank.colors.first),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  RankBadge(rank: p.rank, level: p.level.level, size: 110),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'LEVEL ${p.level.level}',
-                          style: const TextStyle(color: _system, fontWeight: FontWeight.w900, letterSpacing: 2),
-                        ),
-                        Text(
-                          p.rank.title,
-                          style: TextStyle(color: p.rank.colors.first, fontSize: 22, fontWeight: FontWeight.w900, height: 1.1),
-                        ),
-                        ValueListenableBuilder(
-                          valueListenable: Prefs.equippedTitle,
-                          builder: (context, id, _) => Text(
-                            titleById(id)?.name ?? 'No title worn',
-                            style: TextStyle(
-                              color: id == null ? Colors.white54 : _gold,
-                              fontWeight: FontWeight.w800,
-                              shadows: id == null ? null : const [Shadow(color: _gold, blurRadius: 10)],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  const Icon(Icons.bolt_rounded, color: _system, size: 20),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      '${p.level.needed - p.level.into} XP to Level ${p.level.level + 1}',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16),
-                    ),
-                  ),
-                  Text('${p.level.into} / ${p.level.needed}', style: const TextStyle(color: Colors.white54, fontSize: 12)),
-                ],
-              ),
-              const SizedBox(height: 6),
-              _Bar(value: p.level.into / p.level.needed, color: _system),
-              if (Rank.values.where((r) => r.fromLevel > p.level.level).firstOrNull case final rank?) ...[
-                const SizedBox(height: 12),
-                _Goal(
-                  icon: Icons.keyboard_double_arrow_up_rounded,
-                  color: rank.colors.first,
-                  label: 'NEXT RANK',
-                  text: '${rank.title} at Lv ${rank.fromLevel}',
-                ),
-              ],
-              if (p.next case final next?) ...[
-                const SizedBox(height: 10),
-                _Goal(
-                  icon: Icons.military_tech_rounded,
-                  color: _gold,
-                  label: 'NEXT TITLE',
-                  text: '${next.title.name}  ·  ${next.progress.done} / ${next.progress.total}',
-                ),
-                const SizedBox(height: 6),
-                _Bar(value: next.progress.done / next.progress.total, color: _gold),
-                const SizedBox(height: 4),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(next.title.how, style: const TextStyle(color: Colors.white54, fontSize: 12)),
-                ),
-              ],
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'Every solve feeds your power. Hunt.',
-                      style: TextStyle(color: Colors.white38, fontSize: 12, fontStyle: FontStyle.italic),
-                    ),
-                  ),
-                  TextButton.icon(
-                    style: TextButton.styleFrom(foregroundColor: _gold),
-                    onPressed: () => unawaited(Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const TitlesPage()))),
-                    icon: const Icon(Icons.military_tech_rounded),
-                    label: Text('Titles ${p.titles.length}/${titles.length}'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      );
-    },
-  );
-}
-
-/// Every title: earned ones in gold (tap to wear), locked ones show how to earn them, secret ones stay hidden.
+/// Every topic title with its stars: earned ones in gold (tap to wear), locked ones show how to earn them.
 class TitlesPage extends StatelessWidget {
   const TitlesPage({super.key});
 
@@ -325,8 +205,8 @@ class TitlesPage extends StatelessWidget {
             for (final t in titles)
               Builder(
                 builder: (context) {
-                  final has = earned.contains(t.id);
-                  final hidden = t.secret && !has;
+                  final tier = tierOf(t.id, earned);
+                  final has = tier > 0;
                   return Card(
                     color: has ? const Color(0xFF1A1630) : const Color(0xFF12131C),
                     margin: const EdgeInsets.only(bottom: 8),
@@ -337,10 +217,13 @@ class TitlesPage extends StatelessWidget {
                     child: ListTile(
                       leading: Icon(has ? Icons.military_tech_rounded : Icons.lock_rounded, color: has ? _gold : Colors.white24),
                       title: Text(
-                        hidden ? '???' : t.name,
+                        has ? titleLabel(t, tier) : t.name,
                         style: TextStyle(color: has ? _gold : Colors.white38, fontWeight: FontWeight.w900),
                       ),
-                      subtitle: Text(hidden ? 'A secret. Keep going.' : t.how, style: const TextStyle(color: Colors.white38)),
+                      subtitle: Text(
+                        has ? '${t.topic} · tier $tier of ${t.fullOnly ? 1 : 3}' : howToEarn(t),
+                        style: const TextStyle(color: Colors.white38),
+                      ),
                       trailing: !has
                           ? null
                           : worn == t.id
@@ -375,8 +258,9 @@ Future<void> celebrate(BuildContext context, Power before, Power now) async {
   }
   for (final id in now.titles.difference(before.titles)) {
     final t = titleById(id);
-    if (t == null || !context.mounted) continue;
-    await _systemWindow(context, header: 'TITLE ACQUIRED', lines: [t.name], titleId: id);
+    final tier = int.parse(id.split('#').last);
+    if (t == null || tier < tierOf(t.id, now.titles) || !context.mounted) continue; // only the highest new tier
+    await _systemWindow(context, header: tier == 1 ? 'TITLE ACQUIRED' : 'TITLE UPGRADED', lines: [titleLabel(t, tier)], titleId: t.id);
   }
 }
 
@@ -575,89 +459,8 @@ class _ShineIconState extends State<_ShineIcon> with SingleTickerProviderStateMi
   );
 }
 
-class _Bar extends StatelessWidget {
-  const _Bar({required this.value, required this.color});
-
-  final double value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    decoration: BoxDecoration(boxShadow: [BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 10)]),
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(6),
-      child: TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0, end: value.clamp(0.0, 1.0)),
-        duration: const Duration(milliseconds: 900),
-        curve: Curves.easeOutCubic,
-        builder: (context, v, _) => LinearProgressIndicator(value: v, minHeight: 8, color: color, backgroundColor: Colors.white12),
-      ),
-    ),
-  );
-}
-
-class _Goal extends StatelessWidget {
-  const _Goal({required this.icon, required this.color, required this.label, required this.text});
-
-  final IconData icon;
-  final Color color;
-  final String label;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      Icon(icon, color: color, size: 20),
-      const SizedBox(width: 6),
-      Text(
-        label,
-        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.5),
-      ),
-      const SizedBox(width: 8),
-      Expanded(
-        child: Text(
-          text,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
-        ),
-      ),
-    ],
-  );
-}
-
-/// Faint System grid lines and a few diagonal energy streaks.
-class _GridPainter extends CustomPainter {
-  _GridPainter(this.color);
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final line = Paint()
-      ..color = color.withValues(alpha: 0.06)
-      ..strokeWidth = 1;
-    for (var x = 0.0; x < size.width; x += 28) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), line);
-    }
-    for (var y = 0.0; y < size.height; y += 28) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), line);
-    }
-    final streak = Paint()
-      ..strokeWidth = 2
-      ..shader = LinearGradient(colors: [color.withValues(alpha: 0), color.withValues(alpha: 0.25), color.withValues(alpha: 0)])
-          .createShader(Offset.zero & size);
-    for (final f in [0.55, 0.7, 0.85]) {
-      canvas.drawLine(Offset(size.width * f, 0), Offset(size.width * (f - 0.25), size.height), streak);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_GridPainter old) => old.color != color;
-}
-
 /// Home card in the app's own style: an XP ring around your level, your rank, XP left, and the next title.
-/// Tap for the full power card.
+/// Tap to see your titles.
 class PowerStrip extends StatelessWidget {
   const PowerStrip({super.key});
 
@@ -674,18 +477,7 @@ class PowerStrip extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 16),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: () => unawaited(
-            Navigator.push(
-              context,
-              MaterialPageRoute<void>(
-                builder: (_) => Scaffold(
-                  backgroundColor: const Color(0xFF07080F),
-                  appBar: AppBar(backgroundColor: const Color(0xFF07080F), foregroundColor: Colors.white, title: const Text('Your power')),
-                  body: ListView(children: const [PowerCard()]),
-                ),
-              ),
-            ),
-          ),
+          onTap: () => unawaited(Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const TitlesPage()))),
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Row(

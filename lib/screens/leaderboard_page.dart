@@ -40,7 +40,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
       streak: widget.streak,
       solved: widget.solved,
       level: power.value?.level.level ?? 1,
-      title: titleById(Prefs.equippedTitle.value)?.name,
+      title: wornLabel(Prefs.equippedTitle.value, power.value?.titles ?? const {}),
     );
   }
 

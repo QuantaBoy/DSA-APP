@@ -28,15 +28,17 @@ void main() {
     expect(Rank.of(80), Rank.monarch);
   });
 
-  test('a section title unlocks only when all of it is solved', () {
-    SheetProblem sp(String id, String section) =>
-        SheetProblem.fromJson({'id': id, 's': 1, 'sec': section, 't': id, 'p': 'LeetCode', 'u': 'u'});
-    final sheet = Sheet(title: 'A2Z', source: '', steps: ['Beginner Problems'], problems: [sp('p1', 'Patterns'), sp('p2', 'Patterns')]);
-    Set<String> earned(List<Problem> ps) => earnedTitles((problems: ps, stats: const Stats(), aptCorrect: 0, aptWrong: 0), sheet);
-    expect(earned([_p('p1', 'Easy')]), isNot(contains('patterns')));
-    expect(earned([_p('p1', 'Easy'), _p('p2', 'Easy')]), containsAll(['patterns', 'a2z']));
-    final next = nextTitle((problems: [_p('p1', 'Easy')], stats: const Stats(), aptCorrect: 0, aptWrong: 0), sheet)!;
-    expect(next.title.id, 'patterns');
-    expect(next.progress, (done: 1, total: 2));
+  test('topic titles come in tiers: 3 solved, half, all', () {
+    SheetProblem sp(String id) => SheetProblem.fromJson({'id': id, 's': 1, 'sec': 'Patterns', 't': id, 'p': 'LeetCode', 'u': 'u'});
+    final sheet = Sheet(title: 'A2Z', source: '', steps: ['Beginner Problems'], problems: [for (var i = 0; i < 8; i++) sp('p$i')]);
+    Deeds solved(int n) => (problems: [for (var i = 0; i < n; i++) _p('p$i', 'Easy')], stats: const Stats(), aptCorrect: 0, aptWrong: 0);
+    expect(earnedTitles(solved(2), sheet), isEmpty);
+    expect(tierOf('patterns', earnedTitles(solved(3), sheet)), 1);
+    expect(tierOf('patterns', earnedTitles(solved(4), sheet)), 2);
+    final all = earnedTitles(solved(8), sheet);
+    expect(tierOf('patterns', all), 3);
+    expect(tierOf('a2z', all), 1);
+    expect(titleLabel(titleById('patterns#3')!, 3), 'Pattern Reaper ★★★');
+    expect(nextTitle(solved(1), sheet)!.progress, (done: 1, total: 3));
   });
 }

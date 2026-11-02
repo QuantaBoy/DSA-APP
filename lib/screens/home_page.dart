@@ -111,7 +111,7 @@ class _HomePageState extends State<HomePage> {
     final d = _last, p = power.value;
     if (d == null || p == null || !Prefs.leaderboard.value) return;
     final streak = streakWithFreezes(d.stats.days.keys, today());
-    final title = titleById(Prefs.equippedTitle.value)?.name;
+    final title = wornLabel(Prefs.equippedTitle.value, power.value?.titles ?? const {});
     final values = (streak, d.problems.length, p.level.level, title);
     if (_published == values) return;
     _published = values;

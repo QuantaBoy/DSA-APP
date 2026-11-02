@@ -4,7 +4,6 @@ import 'package:flutter/painting.dart';
 
 import '../data/sheet.dart';
 import 'models.dart';
-import 'srs.dart';
 
 /// Levels, ranks and titles, all worked out from what you already did, so nothing extra is stored
 /// and past work counts at once. Reset progress takes you back to level 1.
@@ -60,18 +59,21 @@ enum Rank {
 
 typedef Progress = ({int done, int total});
 
+/// A topic title. Each one has up to three tiers, so the first comes quickly:
+/// ★ after 3 problems of the topic, ★★ at half of it, ★★★ when all of it is solved.
 class HunterTitle {
-  const HunterTitle(this.id, this.name, this.how, this.progress, {this.secret = false});
+  const HunterTitle(this.id, this.name, this.topic, this.progress, {this.fullOnly = false});
   final String id;
   final String name;
-  final String how; // shown while locked (unless secret)
+  final String topic; // shown while locked
   final Progress Function(Deeds d, Sheet? a2z) progress;
-  final bool secret;
+  final bool fullOnly; // one tier only: everything solved
 
-  bool earned(Deeds d, Sheet? a2z) {
-    final p = progress(d, a2z);
-    return p.total > 0 && p.done >= p.total;
-  }
+  /// Problems needed for each tier, smallest first.
+  List<int> goals(int total) => fullOnly ? [total] : ({min(3, total), (total / 2).ceil(), total}.toList()..sort());
+
+  /// Tiers reached (0 = locked).
+  int tier(Progress p) => p.total == 0 ? 0 : goals(p.total).where((g) => p.done >= g).length;
 }
 
 /// How much of an A2Z step (or section) is solved.
@@ -83,15 +85,10 @@ Progress _part(Deeds d, Sheet? a2z, bool Function(SheetProblem) part) {
 }
 
 HunterTitle _step(String id, String name, String step) =>
-    HunterTitle(id, name, 'Clear every $step problem in A2Z', (d, s) => _part(d, s, (p) => s!.steps[p.step - 1] == step));
-
-HunterTitle _count(String id, String name, String how, int goal, int Function(Deeds d) count) =>
-    HunterTitle(id, name, how, (d, _) => (done: min(count(d), goal), total: goal));
-
-int _longest(Deeds d) => longestStreak(d.stats.days.keys);
+    HunterTitle(id, name, step, (d, s) => _part(d, s, (p) => s!.steps[p.step - 1] == step));
 
 final titles = <HunterTitle>[
-  HunterTitle('patterns', 'Pattern Reaper', 'Clear every Patterns problem in A2Z', (d, s) => _part(d, s, (p) => p.section == 'Patterns')),
+  HunterTitle('patterns', 'Pattern Reaper', 'Patterns', (d, s) => _part(d, s, (p) => p.section == 'Patterns')),
   _step('sorting', 'Order Bringer', 'Sorting'),
   _step('arrays', 'Array Executioner', 'Arrays'),
   _step('hashing', 'Keeper of Keys', 'Hashing'),
@@ -109,52 +106,35 @@ final titles = <HunterTitle>[
   _step('dp', 'Sage of Memory', 'Dynamic Programming'),
   _step('tries', 'Rootspeaker', 'Tries'),
   _step('strings', 'Threadweaver', 'Strings (Advanced Algo)'),
-  HunterTitle('a2z', 'The Unbound', "Clear all of Striver's A2Z", (d, s) => _part(d, s, (_) => true)),
-  _count('ember', 'Ember-Born', 'Keep a 7-day streak', 7, _longest),
-  _count('unyielding', 'The Unyielding', 'Keep a 30-day streak', 30, _longest),
-  _count('eternal', 'Eternal Flame', 'Keep a 100-day streak', 100, _longest),
-  _count('undying', 'Undying', 'Keep a 365-day streak', 365, _longest),
-  _count('relentless', 'Relentless', 'Solve 50 problems', 50, (d) => d.problems.length),
-  _count('warmachine', 'War Machine', 'Solve 200 problems', 200, (d) => d.problems.length),
-  _count('ironmind', 'Iron Mind', 'Do 500 reviews', 500, (d) => d.stats.reviews),
-  _count('lightning', 'Lightning Mind', 'Answer 100 aptitude questions right', 100, (d) => d.aptCorrect),
-  HunterTitle('ashes', 'Risen from Ashes', 'Come back after a broken streak', (d, _) => (done: _risen(d) ? 1 : 0, total: 1), secret: true),
+  HunterTitle('a2z', 'The Unbound', "all of Striver's A2Z", (d, s) => _part(d, s, (_) => true), fullOnly: true),
 ];
 
-const _streakTitles = {'ember', 'unyielding', 'eternal', 'undying'};
+/// What a locked title needs, in words.
+String howToEarn(HunterTitle t) => t.fullOnly ? 'Solve ${t.topic}' : 'Solve 3 ${t.topic} problems in A2Z';
 
-/// The locked solving title you are closest to (by share done), to chase next. Null once all are earned.
+/// Earned tiers as "id#tier", one entry per tier reached, so each new tier can be celebrated once.
+Set<String> earnedTitles(Deeds d, Sheet? a2z) => {
+  for (final t in titles)
+    for (var n = 1; n <= t.tier(t.progress(d, a2z)); n++) '${t.id}#$n',
+};
+
+/// Highest tier of [id] in [earned] (from earnedTitles), 0 if none.
+int tierOf(String id, Set<String> earned) => earned.where((e) => e.startsWith('$id#')).length;
+
+/// "Array Executioner ★★"
+String titleLabel(HunterTitle t, int tier) => tier == 0 ? t.name : '${t.name} ${'★' * tier}';
+
+HunterTitle? titleById(String? id) => titles.where((t) => t.id == id?.split('#').first).firstOrNull;
+
+/// The next tier you are closest to (by share done), to chase next. Null once everything is maxed.
 ({HunterTitle title, Progress progress})? nextTitle(Deeds d, Sheet? a2z) {
   ({HunterTitle title, Progress progress})? best;
-  for (final t in titles.where((t) => !t.secret && !_streakTitles.contains(t.id))) {
+  for (final t in titles) {
     final p = t.progress(d, a2z);
-    if (p.total == 0 || p.done >= p.total) continue;
-    if (best == null || p.done / p.total > best.progress.done / best.progress.total) best = (title: t, progress: p);
+    if (p.total == 0) continue;
+    final goal = t.goals(p.total).where((g) => g > p.done).firstOrNull;
+    if (goal == null) continue;
+    if (best == null || p.done / goal > best.progress.done / best.progress.total) best = (title: t, progress: (done: p.done, total: goal));
   }
   return best;
 }
-
-/// A gap of 3+ days, then a run of 3+ days after it.
-bool _risen(Deeds d) {
-  final days = d.stats.days.keys.map(dateOnly).toList()..sort();
-  var gap = false;
-  var run = 0;
-  for (var i = 1; i < days.length; i++) {
-    final step = days[i].difference(days[i - 1]).inDays;
-    if (step >= 3) {
-      gap = true;
-      run = 1;
-    } else if (step == 1 && gap) {
-      run++;
-      if (run >= 3) return true;
-    }
-  }
-  return false;
-}
-
-Set<String> earnedTitles(Deeds d, Sheet? a2z) => {
-  for (final t in titles)
-    if (t.earned(d, a2z)) t.id,
-};
-
-HunterTitle? titleById(String? id) => titles.where((t) => t.id == id).firstOrNull;
