@@ -1,7 +1,7 @@
 name: memory_stack
 description: "Spaced repetition for DSA problems."
 publish_to: 'none'
-version: 1.18.0+19
+version: 1.19.0+20
 
 environment:
   sdk: ^3.13.5
@@ -41,6 +41,7 @@ flutter:
     - assets/catalog.json
     - assets/sheets/
     - assets/illustrations/
+    - assets/dance/
 
 # App icon: `dart run flutter_launcher_icons` regenerates the Android and web icons from these files.
 flutter_launcher_icons:
