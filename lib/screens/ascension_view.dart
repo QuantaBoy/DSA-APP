@@ -8,7 +8,7 @@ import '../data/prefs.dart';
 import '../logic/ascension.dart';
 
 /// Your current power, worked out on the home screen from your data. Null until the data loads.
-typedef Power = ({int xp, Level level, Rank rank, Set<String> titles});
+typedef Power = ({int xp, Level level, Rank rank, Set<String> titles, ({HunterTitle title, Progress progress})? next});
 
 final power = ValueNotifier<Power?>(null);
 
@@ -174,49 +174,7 @@ class _AuraPainter extends CustomPainter {
   bool shouldRepaint(_AuraPainter old) => old.t != t || old.glow != glow || old.power != power;
 }
 
-/// Small level chip for the home header.
-class LevelChip extends StatelessWidget {
-  const LevelChip({super.key, this.onTap});
-
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) => ValueListenableBuilder(
-    valueListenable: power,
-    builder: (context, p, _) {
-      if (p == null) return const SizedBox.shrink();
-      return GestureDetector(
-        onTap: onTap,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            RankBadge(rank: p.rank, level: p.level.level, size: 40),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  p.rank.title.toUpperCase(),
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.2, color: p.rank.colors.last),
-                ),
-                const SizedBox(height: 3),
-                SizedBox(
-                  width: 70,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(value: p.level.into / p.level.needed, minHeight: 4, color: p.rank.colors.first),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
-    },
-  );
-}
-
-/// Profile card: badge with aura, level, rank, the title you wear, XP to the next level, and the title collection.
+/// Home power card: badge with aura, level, rank, the title you wear, XP to the next level, and the title collection.
 class PowerCard extends StatelessWidget {
   const PowerCard({super.key});
 
@@ -225,9 +183,8 @@ class PowerCard extends StatelessWidget {
     valueListenable: power,
     builder: (context, p, _) {
       if (p == null) return const SizedBox.shrink();
-      final theme = Theme.of(context);
       return Container(
-        margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        margin: const EdgeInsets.fromLTRB(16, 4, 16, 0),
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
@@ -273,33 +230,63 @@ class PowerCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: LinearProgressIndicator(
-                value: p.level.into / p.level.needed,
-                minHeight: 8,
-                color: _system,
-                backgroundColor: Colors.white12,
-              ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                const Icon(Icons.bolt_rounded, color: _system, size: 20),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    '${p.level.needed - p.level.into} XP to Level ${p.level.level + 1}',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16),
+                  ),
+                ),
+                Text('${p.level.into} / ${p.level.needed}', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+              ],
             ),
             const SizedBox(height: 6),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Text(
-                '${p.level.into} / ${p.level.needed} XP to Lv ${p.level.level + 1}',
-                style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+            _Bar(value: p.level.into / p.level.needed, color: _system),
+            if (Rank.values.where((r) => r.fromLevel > p.level.level).firstOrNull case final rank?) ...[
+              const SizedBox(height: 12),
+              _Goal(
+                icon: Icons.keyboard_double_arrow_up_rounded,
+                color: rank.colors.first,
+                label: 'NEXT RANK',
+                text: '${rank.title} at Lv ${rank.fromLevel}',
               ),
-            ),
-            const SizedBox(height: 4),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                style: TextButton.styleFrom(foregroundColor: _gold),
-                onPressed: () => unawaited(Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const TitlesPage()))),
-                icon: const Icon(Icons.military_tech_rounded),
-                label: Text('Titles  ${p.titles.length} / ${titles.length}'),
+            ],
+            if (p.next case final next?) ...[
+              const SizedBox(height: 10),
+              _Goal(
+                icon: Icons.military_tech_rounded,
+                color: _gold,
+                label: 'NEXT TITLE',
+                text: '${next.title.name}  ·  ${next.progress.done} / ${next.progress.total}',
               ),
+              const SizedBox(height: 6),
+              _Bar(value: next.progress.done / next.progress.total, color: _gold),
+              const SizedBox(height: 4),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(next.title.how, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+              ),
+            ],
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Every solve feeds your power. Hunt.',
+                    style: TextStyle(color: Colors.white38, fontSize: 12, fontStyle: FontStyle.italic),
+                  ),
+                ),
+                TextButton.icon(
+                  style: TextButton.styleFrom(foregroundColor: _gold),
+                  onPressed: () => unawaited(Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const TitlesPage()))),
+                  icon: const Icon(Icons.military_tech_rounded),
+                  label: Text('Titles ${p.titles.length}/${titles.length}'),
+                ),
+              ],
             ),
           ],
         ),
@@ -580,5 +567,56 @@ class _ShineIconState extends State<_ShineIcon> with SingleTickerProviderStateMi
       child: child,
     ),
     child: const Icon(Icons.military_tech_rounded, size: 90, color: Colors.white),
+  );
+}
+
+class _Bar extends StatelessWidget {
+  const _Bar({required this.value, required this.color});
+
+  final double value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(boxShadow: [BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 10)]),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0, end: value.clamp(0.0, 1.0)),
+        duration: const Duration(milliseconds: 900),
+        curve: Curves.easeOutCubic,
+        builder: (context, v, _) => LinearProgressIndicator(value: v, minHeight: 8, color: color, backgroundColor: Colors.white12),
+      ),
+    ),
+  );
+}
+
+class _Goal extends StatelessWidget {
+  const _Goal({required this.icon, required this.color, required this.label, required this.text});
+
+  final IconData icon;
+  final Color color;
+  final String label;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Icon(icon, color: color, size: 20),
+      const SizedBox(width: 6),
+      Text(
+        label,
+        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.5),
+      ),
+      const SizedBox(width: 8),
+      Expanded(
+        child: Text(
+          text,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+        ),
+      ),
+    ],
   );
 }

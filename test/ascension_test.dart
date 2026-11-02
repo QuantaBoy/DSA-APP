@@ -35,5 +35,8 @@ void main() {
     Set<String> earned(List<Problem> ps) => earnedTitles((problems: ps, stats: const Stats(), aptCorrect: 0, aptWrong: 0), sheet);
     expect(earned([_p('p1', 'Easy')]), isNot(contains('patterns')));
     expect(earned([_p('p1', 'Easy'), _p('p2', 'Easy')]), containsAll(['patterns', 'a2z']));
+    final next = nextTitle((problems: [_p('p1', 'Easy')], stats: const Stats(), aptCorrect: 0, aptWrong: 0), sheet)!;
+    expect(next.title.id, 'patterns');
+    expect(next.progress, (done: 1, total: 2));
   });
 }

@@ -89,7 +89,8 @@ class _HomePageState extends State<HomePage> {
     );
     final xp = totalXp(deeds);
     final level = levelFor(xp);
-    final now = (xp: xp, level: level, rank: Rank.of(level.level), titles: earnedTitles(deeds, await _a2z));
+    final a2z = await _a2z;
+    final now = (xp: xp, level: level, rank: Rank.of(level.level), titles: earnedTitles(deeds, a2z), next: nextTitle(deeds, a2z));
     power.value = now;
     _publishLeaderboard();
     // Celebrate what is new since the last look. Seen never goes down, so a slow first load
@@ -98,7 +99,7 @@ class _HomePageState extends State<HomePage> {
     final fresh = now.level.level > seenLevel || !Prefs.seenTitles.containsAll(now.titles);
     if (!fresh || _celebrating || !mounted) return;
     _celebrating = true;
-    final before = (xp: 0, level: (level: seenLevel, into: 0, needed: 0), rank: Rank.of(seenLevel), titles: Prefs.seenTitles);
+    final before = (xp: 0, level: (level: seenLevel, into: 0, needed: 0), rank: Rank.of(seenLevel), titles: Prefs.seenTitles, next: null);
     Prefs.markSeen(max(seenLevel, now.level.level), {...Prefs.seenTitles, ...now.titles});
     await celebrate(context, before, now);
     _celebrating = false;
@@ -251,18 +252,7 @@ class _HomePageState extends State<HomePage> {
         );
       }
       return Scaffold(
-        appBar: AppBar(
-          title: title,
-          actions: [
-            if (_tab == _home)
-              Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: LevelChip(onTap: () => _go(_profile)),
-              )
-            else if (_tab != _profile)
-              avatar,
-          ],
-        ),
+        appBar: AppBar(title: title, actions: [if (_tab != _profile) avatar]),
         body: content,
         floatingActionButton: fab,
         bottomNavigationBar: _BottomBar(tab: _tab, onTab: _go, onScan: () => showScanSheet(context, store)),

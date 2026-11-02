@@ -11,7 +11,6 @@ import '../data/reminder.dart';
 import '../data/store.dart';
 import '../logic/models.dart';
 import '../logic/srs.dart';
-import 'ascension_view.dart';
 import 'leaderboard_page.dart';
 import 'motion.dart';
 import 'open_link.dart';
@@ -80,7 +79,6 @@ class ProfilePage extends StatelessWidget {
             ),
           ),
         ),
-        const PowerCard(),
         const SizedBox(height: 16),
         Rise(
           index: 1,

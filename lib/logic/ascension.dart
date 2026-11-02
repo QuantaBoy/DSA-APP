@@ -66,30 +66,40 @@ enum Rank {
   static Rank of(int level) => values.lastWhere((r) => level >= r.fromLevel);
 }
 
-class Title {
-  const Title(this.id, this.name, this.how, this.earned, {this.secret = false});
+typedef Progress = ({int done, int total});
+
+class HunterTitle {
+  const HunterTitle(this.id, this.name, this.how, this.progress, {this.secret = false});
   final String id;
   final String name;
   final String how; // shown while locked (unless secret)
-  final bool Function(Deeds d, Sheet? a2z) earned;
+  final Progress Function(Deeds d, Sheet? a2z) progress;
   final bool secret;
+
+  bool earned(Deeds d, Sheet? a2z) {
+    final p = progress(d, a2z);
+    return p.total > 0 && p.done >= p.total;
+  }
 }
 
-/// A2Z step (or section) that unlocks a title when every problem in it is solved.
-bool _cleared(Deeds d, Sheet? a2z, bool Function(SheetProblem) part) {
-  if (a2z == null) return false;
+/// How much of an A2Z step (or section) is solved.
+Progress _part(Deeds d, Sheet? a2z, bool Function(SheetProblem) part) {
+  if (a2z == null) return (done: 0, total: 0);
   final ids = {for (final p in d.problems) p.id};
   final inPart = a2z.problems.where(part).toList();
-  return inPart.isNotEmpty && inPart.every((p) => ids.contains(p.id));
+  return (done: inPart.where((p) => ids.contains(p.id)).length, total: inPart.length);
 }
 
-Title _step(String id, String name, String step) =>
-    Title(id, name, 'Clear every $step problem in A2Z', (d, s) => _cleared(d, s, (p) => s!.steps[p.step - 1] == step));
+HunterTitle _step(String id, String name, String step) =>
+    HunterTitle(id, name, 'Clear every $step problem in A2Z', (d, s) => _part(d, s, (p) => s!.steps[p.step - 1] == step));
+
+HunterTitle _count(String id, String name, String how, int goal, int Function(Deeds d) count) =>
+    HunterTitle(id, name, how, (d, _) => (done: min(count(d), goal), total: goal));
 
 int _longest(Deeds d) => longestStreak(d.stats.days.keys);
 
-final titles = <Title>[
-  Title('patterns', 'Pattern Reaper', 'Clear every Patterns problem in A2Z', (d, s) => _cleared(d, s, (p) => p.section == 'Patterns')),
+final titles = <HunterTitle>[
+  HunterTitle('patterns', 'Pattern Reaper', 'Clear every Patterns problem in A2Z', (d, s) => _part(d, s, (p) => p.section == 'Patterns')),
   _step('sorting', 'Order Bringer', 'Sorting'),
   _step('arrays', 'Array Executioner', 'Arrays'),
   _step('hashing', 'Keeper of Keys', 'Hashing'),
@@ -107,17 +117,28 @@ final titles = <Title>[
   _step('dp', 'Sage of Memory', 'Dynamic Programming'),
   _step('tries', 'Rootspeaker', 'Tries'),
   _step('strings', 'Threadweaver', 'Strings (Advanced Algo)'),
-  Title('a2z', 'The Unbound', "Clear all of Striver's A2Z", (d, s) => _cleared(d, s, (_) => true)),
-  Title('ember', 'Ember-Born', 'Keep a 7-day streak', (d, _) => _longest(d) >= 7),
-  Title('unyielding', 'The Unyielding', 'Keep a 30-day streak', (d, _) => _longest(d) >= 30),
-  Title('eternal', 'Eternal Flame', 'Keep a 100-day streak', (d, _) => _longest(d) >= 100),
-  Title('undying', 'Undying', 'Keep a 365-day streak', (d, _) => _longest(d) >= 365),
-  Title('relentless', 'Relentless', 'Solve 50 problems', (d, _) => d.problems.length >= 50),
-  Title('warmachine', 'War Machine', 'Solve 200 problems', (d, _) => d.problems.length >= 200),
-  Title('ironmind', 'Iron Mind', 'Do 500 reviews', (d, _) => d.stats.reviews >= 500),
-  Title('lightning', 'Lightning Mind', 'Answer 100 aptitude questions right', (d, _) => d.aptCorrect >= 100),
-  Title('ashes', 'Risen from Ashes', 'Come back after a broken streak', (d, _) => _risen(d), secret: true),
+  HunterTitle('a2z', 'The Unbound', "Clear all of Striver's A2Z", (d, s) => _part(d, s, (_) => true)),
+  _count('ember', 'Ember-Born', 'Keep a 7-day streak', 7, _longest),
+  _count('unyielding', 'The Unyielding', 'Keep a 30-day streak', 30, _longest),
+  _count('eternal', 'Eternal Flame', 'Keep a 100-day streak', 100, _longest),
+  _count('undying', 'Undying', 'Keep a 365-day streak', 365, _longest),
+  _count('relentless', 'Relentless', 'Solve 50 problems', 50, (d) => d.problems.length),
+  _count('warmachine', 'War Machine', 'Solve 200 problems', 200, (d) => d.problems.length),
+  _count('ironmind', 'Iron Mind', 'Do 500 reviews', 500, (d) => d.stats.reviews),
+  _count('lightning', 'Lightning Mind', 'Answer 100 aptitude questions right', 100, (d) => d.aptCorrect),
+  HunterTitle('ashes', 'Risen from Ashes', 'Come back after a broken streak', (d, _) => (done: _risen(d) ? 1 : 0, total: 1), secret: true),
 ];
+
+/// The locked title you are closest to (by share done), to chase next. Null once all are earned.
+({HunterTitle title, Progress progress})? nextTitle(Deeds d, Sheet? a2z) {
+  ({HunterTitle title, Progress progress})? best;
+  for (final t in titles.where((t) => !t.secret)) {
+    final p = t.progress(d, a2z);
+    if (p.total == 0 || p.done >= p.total) continue;
+    if (best == null || p.done / p.total > best.progress.done / best.progress.total) best = (title: t, progress: p);
+  }
+  return best;
+}
 
 /// A gap of 3+ days, then a run of 3+ days after it.
 bool _risen(Deeds d) {
@@ -142,4 +163,4 @@ Set<String> earnedTitles(Deeds d, Sheet? a2z) => {
     if (t.earned(d, a2z)) t.id,
 };
 
-Title? titleById(String? id) => titles.where((t) => t.id == id).firstOrNull;
+HunterTitle? titleById(String? id) => titles.where((t) => t.id == id).firstOrNull;

@@ -8,6 +8,7 @@ import '../data/store.dart';
 import '../logic/models.dart';
 import '../logic/srs.dart';
 import 'aptitude_page.dart';
+import 'ascension_view.dart';
 import 'coach.dart';
 import 'interview_page.dart';
 import 'motion.dart';
@@ -140,6 +141,8 @@ class _TodayPageState extends State<TodayPage> {
               return ListView(
                 padding: const EdgeInsets.only(top: 4, bottom: 32),
                 children: [
+                  const Rise(child: PowerCard()),
+                  const SizedBox(height: 14),
                   Rise(
                     child: KeyedSubtree(key: _heroKey, child: hero),
                   ),
