@@ -445,63 +445,143 @@ class _ShineIconState extends State<_ShineIcon> with SingleTickerProviderStateMi
   );
 }
 
-/// Slim dark home strip: badge with aura, level, rank and XP left to the next level.
-class PowerStrip extends StatelessWidget {
+/// Card colours per rank: soft at the bottom, fierce at the top.
+const _rankFill = <Rank, List<Color>>{
+  Rank.awakened: [Color(0xFF9B8CFF), Color(0xFF6C4EF5)], // calm violet
+  Rank.shadowInitiate: [Color(0xFF64748B), Color(0xFF1E293B)], // smoke
+  Rank.bladeOfLogic: [Color(0xFF38BDF8), Color(0xFF334155)], // steel edge
+  Rank.voidArchitect: [Color(0xFF06B6D4), Color(0xFF1E3A8A)], // deep crystal blue
+  Rank.abyssSovereign: [Color(0xFFD946EF), Color(0xFF4C1D95)], // abyss purple
+  Rank.eclipseEmperor: [Color(0xFFF59E0B), Color(0xFF7C2D12)], // burning eclipse
+  Rank.monarch: [Color(0xFFFFD700), Color(0xFFDC2626), Color(0xFF450A0A)], // gold fire
+};
+
+/// Home strip in your rank's colours, with an energy line racing around the edge.
+/// Higher ranks: a thicker, brighter, faster edge.
+class PowerStrip extends StatefulWidget {
   const PowerStrip({super.key});
+
+  @override
+  State<PowerStrip> createState() => _PowerStripState();
+}
+
+class _PowerStripState extends State<PowerStrip> with SingleTickerProviderStateMixin {
+  late final _spin = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat();
+
+  @override
+  void dispose() {
+    _spin.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) => ValueListenableBuilder(
     valueListenable: power,
     builder: (context, p, _) {
       if (p == null) return const SizedBox.shrink();
-      final glow = p.rank.colors.first;
-      return Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16),
-        padding: const EdgeInsets.fromLTRB(6, 6, 14, 6),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          color: const Color(0xFF0B0C16),
-          border: Border.all(color: glow.withValues(alpha: 0.5)),
-        ),
-        child: Row(
-          children: [
-            RankBadge(rank: p.rank, level: p.level.level, size: 58, glow: false),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+      final fill = _rankFill[p.rank]!;
+      final power = p.rank.index; // 0..6
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: AnimatedBuilder(
+          animation: _spin,
+          builder: (context, child) => CustomPaint(
+            foregroundPainter: _EdgePainter(t: (_spin.value * (1 + power * 0.35)) % 1, color: p.rank.colors.first, power: power),
+            child: child,
+          ),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(6, 6, 14, 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(colors: fill, begin: Alignment.topLeft, end: Alignment.bottomRight),
+            ),
+            child: Row(
+              children: [
+                RankBadge(rank: p.rank, level: p.level.level, size: 58, glow: false),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'LV ${p.level.level}  ',
-                        style: const TextStyle(color: _system, fontWeight: FontWeight.w900, letterSpacing: 1.2, fontSize: 12),
-                      ),
-                      Flexible(
-                        child: Text(
-                          p.rank.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: glow, fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 0.5),
+                        'LV ${p.level.level}  ·  ${p.rank.title.toUpperCase()}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.85),
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                          fontSize: 11,
                         ),
                       ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${p.level.needed - p.level.into} XP more to Level ${p.level.level + 1}',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16),
+                      ),
+                      const SizedBox(height: 6),
+                      _Bar(value: p.level.into / p.level.needed, color: Colors.white),
                     ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${p.level.needed - p.level.into} XP more to Level ${p.level.level + 1}',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15),
-                  ),
-                  const SizedBox(height: 6),
-                  _Bar(value: p.level.into / p.level.needed, color: _system),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       );
     },
   );
+}
+
+/// A bright streak running around the rounded border, sharp (no blur). Its length and width grow with rank.
+class _EdgePainter extends CustomPainter {
+  _EdgePainter({required this.t, required this.color, required this.power});
+
+  final double t;
+  final Color color;
+  final int power;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = (Offset.zero & size).deflate(1);
+    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(20));
+    canvas.drawRRect(
+      rrect,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2
+        ..color = Colors.white.withValues(alpha: 0.35),
+    );
+    final head = 0.12 + power * 0.04; // share of the sweep the streak covers
+    canvas.drawRRect(
+      rrect,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2 + power * 0.4
+        ..shader = SweepGradient(
+          colors: [Colors.transparent, color, Colors.white, Colors.transparent],
+          stops: [0, head * 0.8, head, head + 0.01],
+          transform: GradientRotation(t * 2 * pi),
+        ).createShader(rect),
+    );
+    if (power >= 4) {
+      // Top ranks: a second streak chasing from the other side.
+      canvas.drawRRect(
+        rrect,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2 + power * 0.4
+          ..shader = SweepGradient(
+            colors: [Colors.transparent, color, Colors.white, Colors.transparent],
+            stops: [0, head * 0.8, head, head + 0.01],
+            transform: GradientRotation(t * 2 * pi + pi),
+          ).createShader(rect),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_EdgePainter old) => old.t != t || old.color != color || old.power != power;
 }
 
 class _Bar extends StatelessWidget {
@@ -517,7 +597,7 @@ class _Bar extends StatelessWidget {
       tween: Tween(begin: 0, end: value.clamp(0.0, 1.0)),
       duration: const Duration(milliseconds: 900),
       curve: Curves.easeOutCubic,
-      builder: (context, v, _) => LinearProgressIndicator(value: v, minHeight: 6, color: color, backgroundColor: Colors.white12),
+      builder: (context, v, _) => LinearProgressIndicator(value: v, minHeight: 6, color: color, backgroundColor: Colors.white24),
     ),
   );
 }
