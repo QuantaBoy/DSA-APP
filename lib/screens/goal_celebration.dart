@@ -4,7 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Full-screen party when today's goal is done: a dancer cheers you on, confetti rains,
+/// Full-screen party when today's goal is done: a big check pops in, confetti rains,
 /// and the streak flame counts up.
 class GoalCelebration extends StatefulWidget {
   const GoalCelebration({super.key, required this.streak, required this.solvedToday});
@@ -23,7 +23,6 @@ class _GoalCelebrationState extends State<GoalCelebration> with TickerProviderSt
   late final _intro = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400))..forward();
   late final Timer _cheerTimer;
   int _cheer = 0;
-  final _dancer = 'assets/dance/dance${Random().nextInt(2) + 1}.webp';
 
   @override
   void initState() {
@@ -107,8 +106,24 @@ class _GoalCelebrationState extends State<GoalCelebration> with TickerProviderSt
                             ),
                           ),
                         ),
-                        // A dancer cut out of a green-screen clip (animated WebP with transparency).
-                        Image.asset(_dancer, height: 320, fit: BoxFit.contain, gaplessPlayback: true),
+                        // A big check that pops in, ringed by the streak colour.
+                        TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0, end: 1),
+                          duration: const Duration(milliseconds: 900),
+                          curve: Curves.elasticOut,
+                          builder: (context, v, child) => Transform.scale(scale: v, child: child),
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 28),
+                            width: 150,
+                            height: 150,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [BoxShadow(color: Colors.white.withValues(alpha: 0.4), blurRadius: 30, spreadRadius: 6)],
+                            ),
+                            child: const Icon(Icons.check_rounded, size: 100, color: Color(0xFF6C4EF5)),
+                          ),
+                        ),
                         const SizedBox(height: 8),
                         SlideTransition(
                           position: Tween(begin: const Offset(0, 0.6), end: Offset.zero).animate(rise),

@@ -23,7 +23,6 @@ typedef Power = ({
 
 final power = ValueNotifier<Power?>(null);
 
-const _gold = Color(0xFFFFD54F);
 
 /// The rank badge: a hexagon with the level, wrapped in a living aura that gets wilder each rank.
 class RankBadge extends StatefulWidget {
@@ -200,8 +199,8 @@ Future<void> celebrate(BuildContext context, Power before, Power now) async {
       context,
       fire: _fire[now.rank]!,
       tag: 'LEVEL UP',
-      header: 'LEVEL ${now.level.level}',
-      lines: ['Your power grows.', 'Keep hunting.'],
+      header: 'You reached Level ${now.level.level}',
+      lines: ['Your power grows. Keep going.'],
       big: '${now.level.level}',
     );
   }
@@ -210,8 +209,8 @@ Future<void> celebrate(BuildContext context, Power before, Power now) async {
       context,
       fire: _fire[now.rank]!,
       tag: 'RANK UP',
-      header: 'YOU HAVE ASCENDED',
-      lines: [now.rank.title.toUpperCase()],
+      header: now.rank.title,
+      lines: ['You have ascended to a new rank.'],
       badge: now,
     );
   }
@@ -222,8 +221,8 @@ Future<void> celebrate(BuildContext context, Power before, Power now) async {
       context,
       fire: _goldFire,
       tag: 'TITLE ACQUIRED',
-      header: t.name.toUpperCase(),
-      lines: ['${t.topic} conquered.'],
+      header: t.name,
+      lines: ['${t.topic} conquered. Wear it with pride.'],
       titleId: t.id,
     );
   }
@@ -245,18 +244,13 @@ Future<void> _systemWindow(
     context: context,
     barrierDismissible: true,
     barrierLabel: tag,
-    barrierColor: Colors.black.withValues(alpha: 0.92),
+    barrierColor: Colors.black.withValues(alpha: 0.75),
     transitionDuration: const Duration(milliseconds: 500),
     transitionBuilder: (context, a, _, child) {
-      // Slams in: drops from slightly too big, with a flicker at the start.
-      final v = Curves.easeOutBack.transform(a.value);
+      final v = Curves.easeOutCubic.transform(a.value);
       return Opacity(
-        opacity: a.value < 0.15
-            ? (a.value * 40).floor().isEven
-                  ? 1
-                  : 0.3
-            : 1,
-        child: Transform.scale(scale: 1.4 - 0.4 * v, child: child),
+        opacity: a.value,
+        child: Transform.scale(scale: 0.92 + 0.08 * v, child: child),
       );
     },
     pageBuilder: (context, _, _) =>
@@ -288,132 +282,116 @@ class _SystemWindow extends StatefulWidget {
 }
 
 class _SystemWindowState extends State<_SystemWindow> with SingleTickerProviderStateMixin {
-  late final _burn = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600))..repeat();
+  // One light sweep across the card as it lands.
+  late final _sweep = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400))..forward();
 
   @override
   void dispose() {
-    _burn.dispose();
+    _sweep.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final (deep, flame, hot) = widget.fire;
+    final (_, flame, hot) = widget.fire;
     final text = widget.lines.join('\n');
+    final width = min(320.0, MediaQuery.sizeOf(context).width - 48);
     return Center(
       child: Material(
         color: Colors.transparent,
-        child: AnimatedBuilder(
-          animation: _burn,
-          builder: (context, child) => CustomPaint(
-            painter: _WindowFirePainter(t: _burn.value, flame: flame, hot: hot),
-            child: child,
+        child: Container(
+          width: width,
+          decoration: BoxDecoration(
+            color: const Color(0xFF0E0F1A),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: flame.withValues(alpha: 0.45)),
+            boxShadow: [BoxShadow(color: flame.withValues(alpha: 0.35), blurRadius: 40, spreadRadius: 2)],
           ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(36, 70, 36, 28), // room for the flames around the box
-            child: Container(
-              width: min(300, MediaQuery.sizeOf(context).width - 80),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color.lerp(deep, Colors.black, 0.35)!, const Color(0xFF06040C)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(22),
+            child: Stack(
+              children: [
+                // Accent bar along the top.
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    height: 4,
+                    decoration: BoxDecoration(gradient: LinearGradient(colors: [flame, hot, flame])),
+                  ),
                 ),
-                border: Border.all(color: flame, width: 2),
-              ),
-              child: CustomPaint(
-                foregroundPainter: _BracketPainter(hot),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 26, 24, 20),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Slanted tag like a game HUD.
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: ClipPath(
-                          clipper: _SlantClipper(),
-                          child: Container(
-                            color: flame,
-                            padding: const EdgeInsets.fromLTRB(10, 4, 22, 4),
-                            child: Text(
-                              'SYSTEM · ${widget.tag}',
-                              style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w900, letterSpacing: 2, fontSize: 11),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      if (widget.big != null)
-                        TweenAnimationBuilder<double>(
-                          tween: Tween(begin: 2.6, end: 1),
-                          duration: const Duration(milliseconds: 800),
-                          curve: Curves.elasticOut,
-                          builder: (context, s, child) => Transform.scale(scale: s, child: child),
-                          child: Text(
-                            widget.big!,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 96,
-                              height: 1,
-                              fontWeight: FontWeight.w900,
-                              fontStyle: FontStyle.italic,
-                              shadows: [
-                                Shadow(color: flame, offset: const Offset(4, 4)),
-                                Shadow(color: hot, blurRadius: 24),
-                              ],
-                            ),
-                          ),
-                        ),
-                      if (widget.badge != null)
-                        TweenAnimationBuilder<double>(
-                          tween: Tween(begin: 0, end: 1),
-                          duration: const Duration(milliseconds: 1100),
-                          curve: Curves.elasticOut,
-                          builder: (context, s, child) => Transform.scale(scale: s, child: child),
-                          child: RankBadge(rank: widget.badge!.rank, level: widget.badge!.level.level, size: 150),
-                        ),
-                      if (widget.titleId != null) const _ShineIcon(),
-                      const SizedBox(height: 8),
-                      Text(
-                        widget.header,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: hot,
-                          fontSize: widget.titleId != null ? 24 : 22,
-                          fontWeight: FontWeight.w900,
-                          fontStyle: FontStyle.italic,
-                          letterSpacing: 1.5,
-                          shadows: const [Shadow(color: Colors.black, offset: Offset(2, 2))],
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      // Typed out letter by letter, like a System message.
-                      TweenAnimationBuilder<int>(
-                        tween: IntTween(begin: 0, end: text.length),
-                        duration: Duration(milliseconds: 40 * text.length),
-                        builder: (context, n, _) => Text(
-                          text.substring(0, n),
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700, height: 1.5),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                        decoration: BoxDecoration(color: flame.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
+                        child: Text(
+                          widget.tag,
+                          style: TextStyle(color: hot, fontWeight: FontWeight.w800, letterSpacing: 2, fontSize: 11),
                         ),
                       ),
                       const SizedBox(height: 18),
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0.6, end: 1),
+                        duration: const Duration(milliseconds: 700),
+                        curve: Curves.easeOutBack,
+                        builder: (context, s, child) => Transform.scale(scale: s, child: child),
+                        child: switch (widget) {
+                          _SystemWindow(:final big?) => ShaderMask(
+                            shaderCallback: (r) => LinearGradient(
+                              colors: [hot, flame],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ).createShader(r),
+                            child: Text(
+                              big,
+                              style: const TextStyle(color: Colors.white, fontSize: 84, height: 1, fontWeight: FontWeight.w900),
+                            ),
+                          ),
+                          _SystemWindow(:final badge?) => RankBadge(rank: badge.rank, level: badge.level.level, size: 130, glow: false),
+                          _ => Container(
+                            width: 96,
+                            height: 96,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: LinearGradient(colors: [hot, flame], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                            ),
+                            child: const Icon(Icons.military_tech_rounded, color: Colors.white, size: 54),
+                          ),
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        widget.header,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: 0.3),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        text,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 14, height: 1.45),
+                      ),
+                      const SizedBox(height: 22),
                       Row(
                         children: [
                           if (widget.titleId != null) ...[
                             Expanded(
                               child: OutlinedButton(
                                 style: OutlinedButton.styleFrom(
-                                  foregroundColor: hot,
-                                  side: BorderSide(color: hot, width: 1.5),
-                                  shape: const BeveledRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
+                                  foregroundColor: Colors.white,
+                                  side: BorderSide(color: Colors.white.withValues(alpha: 0.25)),
+                                  minimumSize: const Size.fromHeight(46),
                                 ),
                                 onPressed: () {
                                   Prefs.equipTitle(widget.titleId);
                                   Navigator.pop(context);
                                 },
-                                child: const Text('EQUIP', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2)),
+                                child: const Text('Equip', style: TextStyle(fontWeight: FontWeight.w700)),
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -422,11 +400,11 @@ class _SystemWindowState extends State<_SystemWindow> with SingleTickerProviderS
                             child: FilledButton(
                               style: FilledButton.styleFrom(
                                 backgroundColor: flame,
-                                foregroundColor: Colors.black,
-                                shape: const BeveledRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
+                                foregroundColor: Colors.white,
+                                minimumSize: const Size.fromHeight(46),
                               ),
                               onPressed: () => Navigator.pop(context),
-                              child: const Text('ACCEPT', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2)),
+                              child: const Text('Continue', style: TextStyle(fontWeight: FontWeight.w700)),
                             ),
                           ),
                         ],
@@ -434,7 +412,28 @@ class _SystemWindowState extends State<_SystemWindow> with SingleTickerProviderS
                     ],
                   ),
                 ),
-              ),
+                // Light sweep, once.
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: AnimatedBuilder(
+                      animation: _sweep,
+                      builder: (context, _) => FractionalTranslation(
+                        translation: Offset(-1.2 + 2.4 * Curves.easeInOut.transform(_sweep.value), 0),
+                        child: Transform.rotate(
+                          angle: 0.3,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [Colors.transparent, Colors.white.withValues(alpha: 0.12), Colors.transparent],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -533,88 +532,6 @@ class _WindowFirePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_WindowFirePainter old) => old.t != t || old.flame != flame;
-}
-
-/// HUD corner brackets inside the box.
-class _BracketPainter extends CustomPainter {
-  _BracketPainter(this.color);
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final p = Paint()
-      ..color = color
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke;
-    const l = 16.0, m = 6.0;
-    for (final (x, y, dx, dy) in [
-      (m, m, 1.0, 1.0),
-      (size.width - m, m, -1.0, 1.0),
-      (m, size.height - m, 1.0, -1.0),
-      (size.width - m, size.height - m, -1.0, -1.0),
-    ]) {
-      canvas.drawPath(
-        Path()
-          ..moveTo(x, y + l * dy)
-          ..lineTo(x, y)
-          ..lineTo(x + l * dx, y),
-        p,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_BracketPainter old) => old.color != color;
-}
-
-class _SlantClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size s) => Path()
-    ..lineTo(s.width, 0)
-    ..lineTo(s.width - 12, s.height)
-    ..lineTo(0, s.height)
-    ..close();
-
-  @override
-  bool shouldReclip(_SlantClipper old) => false;
-}
-
-/// A medal with a light sweep running across it.
-class _ShineIcon extends StatefulWidget {
-  const _ShineIcon();
-
-  @override
-  State<_ShineIcon> createState() => _ShineIconState();
-}
-
-class _ShineIconState extends State<_ShineIcon> with SingleTickerProviderStateMixin {
-  late final _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600));
-
-  @override
-  void initState() {
-    super.initState();
-    unawaited(_c.repeat());
-  }
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-    animation: _c,
-    builder: (context, child) => ShaderMask(
-      shaderCallback: (r) => LinearGradient(
-        colors: const [_gold, Colors.white, _gold],
-        stops: [(_c.value - 0.2).clamp(0, 1), _c.value, (_c.value + 0.2).clamp(0, 1)],
-      ).createShader(r),
-      child: child,
-    ),
-    child: const Icon(Icons.military_tech_rounded, size: 90, color: Colors.white),
-  );
 }
 
 /// Fire colours per rank: (deep glow, flame, white-hot core). Violet fire at the start, gold and crimson at the top.
