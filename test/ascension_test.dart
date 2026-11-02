@@ -36,4 +36,12 @@ void main() {
     expect(earnedTitles(solved(8), sheet), containsAll(['patterns', 'a2z']));
     expect(nextTitle(solved(3), sheet)!.progress, (done: 3, total: 8));
   });
+
+  test('a solve with no review still lights the heatmap and keeps the streak', () {
+    final day = DateTime.utc(2026, 1, 1);
+    final p = _p('x', 'Easy');
+    expect(activityPerDay([p], const Stats()), {day: 1});
+    expect(activityPerDay([p], Stats(days: {day: 2})), {day: 3});
+    expect(activeDays([p], const Stats()), {day});
+  });
 }

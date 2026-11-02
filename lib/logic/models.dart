@@ -359,3 +359,13 @@ Set<DateTime> activeDays(Iterable<Problem> problems, Stats stats) => {
   ...stats.days.keys.map(dateOnly),
   for (final p in problems) dateOnly(p.solvedOn),
 };
+
+/// Things done per day: reviews plus new problems solved. Feeds the activity heatmap.
+Map<DateTime, int> activityPerDay(Iterable<Problem> problems, Stats stats) {
+  final days = {for (final e in stats.days.entries) dateOnly(e.key): e.value};
+  for (final p in problems) {
+    final d = dateOnly(p.solvedOn);
+    days[d] = (days[d] ?? 0) + 1;
+  }
+  return days;
+}
