@@ -42,7 +42,6 @@ Future<void> phone(WidgetTester t, Widget home, String name, {Size size = const 
   t.view.devicePixelRatio = 3;
   addTearDown(t.view.reset);
   await t.pumpWidget(MaterialApp(debugShowCheckedModeBanner: false, theme: appTheme(Brightness.light), home: home));
-  await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 400))); // decode art
   await t.pump(const Duration(milliseconds: 1500));
   await expectLater(find.byType(MaterialApp), matchesGoldenFile('game/$name.png'));
 }
@@ -67,36 +66,10 @@ void main() {
     });
   }
 
-  for (final (name, worn) in [('home_top_title', 'arrays'), ('home_top_none', null)]) {
-    testWidgets(name, (t) async {
-      power.value = at(Rank.bladeOfLogic, 12, titles: {'patterns', 'arrays'});
-      Prefs.equippedTitle.value = worn;
-      await phone(
-        t,
-        Scaffold(
-          appBar: AppBar(
-            title: const Text('Hi, Mohammed'),
-            actions: const [Padding(padding: EdgeInsets.only(right: 12), child: TitlePill())],
-          ),
-          body: const Column(children: [SizedBox(height: 8), PowerStrip()]),
-        ),
-        name,
-        size: const Size(1170, 900),
-      );
-    });
-  }
-
   testWidgets('roadmap', (t) async {
     power.value = at(Rank.shadowInitiate, 6, titles: {'patterns'});
     Prefs.equippedTitle.value = 'patterns';
-    await phone(t, const RoadmapPage(), 'ranks');
-    await t.tap(find.text('Titles'));
-    for (var i = 0; i < 10; i++) {
-      await t.pump(const Duration(milliseconds: 100));
-    }
-    await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 400)));
-    await t.pump(const Duration(milliseconds: 300));
-    await expectLater(find.byType(MaterialApp), matchesGoldenFile('game/roadmap.png'));
+    await phone(t, const RoadmapPage(), 'roadmap');
   });
 
   for (final (name, before, after) in [
@@ -123,7 +96,6 @@ void main() {
       );
       await t.tap(find.text('go'));
       await t.pump();
-      await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 400)));
       await t.pump(const Duration(seconds: 3));
       await expectLater(find.byType(MaterialApp), matchesGoldenFile('game/system_$name.png'));
     });

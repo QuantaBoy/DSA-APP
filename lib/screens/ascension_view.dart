@@ -23,7 +23,9 @@ typedef Power = ({
 
 final power = ValueNotifier<Power?>(null);
 
-/// The rank badge: the rank's emblem with a level plate, wrapped in a living aura that gets wilder each rank.
+const _gold = Color(0xFFFFD54F);
+
+/// The rank badge: a hexagon with the level, wrapped in a living aura that gets wilder each rank.
 class RankBadge extends StatefulWidget {
   const RankBadge({super.key, required this.rank, required this.level, this.size = 120, this.animate = true, this.glow = true});
 
@@ -54,7 +56,7 @@ class _RankBadgeState extends State<RankBadge> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
-    final glow = widget.rank.colors.first;
+    final [glow, core] = widget.rank.colors;
     return SizedBox.square(
       dimension: widget.size,
       child: AnimatedBuilder(
@@ -63,31 +65,46 @@ class _RankBadgeState extends State<RankBadge> with SingleTickerProviderStateMix
           painter: _AuraPainter(t: _spin.value, glow: glow, power: widget.rank.index, soft: widget.glow),
           child: child,
         ),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Image.asset('assets/art/rank_${widget.rank.index}.png', width: widget.size * 0.72, height: widget.size * 0.72),
-            // Level plate under the emblem.
-            Positioned(
-              bottom: widget.size * 0.06,
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: widget.size * 0.07, vertical: 1),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.8),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: glow, width: 1.2),
-                ),
-                child: Text(
-                  '${widget.level}',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: max(9, widget.size * 0.15), height: 1.2),
+        child: Center(
+          child: ClipPath(
+            clipper: _Hexagon(),
+            child: Container(
+              width: widget.size * 0.62,
+              height: widget.size * 0.62,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: [glow, core], begin: Alignment.topLeft, end: Alignment.bottomRight),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                '${widget.level}',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: widget.size * 0.22,
+                  shadows: [Shadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 6)],
                 ),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
   }
+}
+
+class _Hexagon extends CustomClipper<Path> {
+  @override
+  Path getClip(Size s) => Path()
+    ..moveTo(s.width / 2, 0)
+    ..lineTo(s.width, s.height * 0.25)
+    ..lineTo(s.width, s.height * 0.75)
+    ..lineTo(s.width / 2, s.height)
+    ..lineTo(0, s.height * 0.75)
+    ..lineTo(0, s.height * 0.25)
+    ..close();
+
+  @override
+  bool shouldReclip(_Hexagon old) => false;
 }
 
 /// Glow that breathes, a spinning energy ring, then sparks (rank 2+), orbiting shards (3+) and rising flames (4+).
@@ -356,7 +373,7 @@ class _SystemWindowState extends State<_SystemWindow> with SingleTickerProviderS
                           builder: (context, s, child) => Transform.scale(scale: s, child: child),
                           child: RankBadge(rank: widget.badge!.rank, level: widget.badge!.level.level, size: 150),
                         ),
-                      if (widget.titleId != null) _ShineIcon(asset: 'assets/art/badge_${widget.titleId}.webp'),
+                      if (widget.titleId != null) const _ShineIcon(),
                       const SizedBox(height: 8),
                       Text(
                         widget.header,
@@ -531,11 +548,9 @@ class _SlantClipper extends CustomClipper<Path> {
   bool shouldReclip(_SlantClipper old) => false;
 }
 
-/// The title badge art with a light sweep running across it.
+/// A medal with a light sweep running across it.
 class _ShineIcon extends StatefulWidget {
-  const _ShineIcon({required this.asset});
-
-  final String asset;
+  const _ShineIcon();
 
   @override
   State<_ShineIcon> createState() => _ShineIconState();
@@ -560,22 +575,13 @@ class _ShineIconState extends State<_ShineIcon> with SingleTickerProviderStateMi
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: _c,
     builder: (context, child) => ShaderMask(
-      blendMode: BlendMode.srcATop,
       shaderCallback: (r) => LinearGradient(
-        colors: [Colors.transparent, Colors.white.withValues(alpha: 0.55), Colors.transparent],
-        stops: [(_c.value - 0.12).clamp(0, 1), _c.value, (_c.value + 0.12).clamp(0, 1)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
+        colors: const [_gold, Colors.white, _gold],
+        stops: [(_c.value - 0.2).clamp(0, 1), _c.value, (_c.value + 0.2).clamp(0, 1)],
       ).createShader(r),
       child: child,
     ),
-    child: TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: const Duration(milliseconds: 900),
-      curve: Curves.elasticOut,
-      builder: (context, v, child) => Transform.scale(scale: v, child: child),
-      child: Image.asset(widget.asset, width: 150, height: 150),
-    ),
+    child: const Icon(Icons.military_tech_rounded, size: 90, color: Colors.white),
   );
 }
 
@@ -630,76 +636,66 @@ class _PowerStripState extends State<PowerStrip> with SingleTickerProviderStateM
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF05030A),
-                  image: DecorationImage(
-                    image: AssetImage('assets/art/scene_${p.rank.index}.webp'),
-                    fit: BoxFit.cover,
-                    alignment: Alignment.centerRight,
-                  ),
+              child: AnimatedBuilder(
+                animation: _spin,
+                builder: (context, child) => CustomPaint(
+                  painter: _FirePainter(t: _spin.value, deep: deep, flame: flame, hot: hot, strength: strength),
+                  foregroundPainter: _EdgePainter(t: (_spin.value * (1 + strength * 0.3)) % 1, color: hot, power: strength),
+                  child: child,
                 ),
-                child: AnimatedBuilder(
-                  animation: _spin,
-                  builder: (context, child) => CustomPaint(
-                    painter: _FirePainter(t: _spin.value, deep: deep, flame: flame, hot: hot, strength: strength),
-                    foregroundPainter: _EdgePainter(t: (_spin.value * (1 + strength * 0.3)) % 1, color: hot, power: strength),
-                    child: child,
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 10, 16, 12),
-                    child: Row(
-                      children: [
-                        RankBadge(rank: p.rank, level: p.level.level, size: 62, glow: false),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'LV ${p.level.level}  ·  ${p.rank.title.toUpperCase()}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(color: hot, fontWeight: FontWeight.w900, letterSpacing: 2, fontSize: 11),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 10, 16, 12),
+                  child: Row(
+                    children: [
+                      RankBadge(rank: p.rank, level: p.level.level, size: 62, glow: false),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'LV ${p.level.level}  ·  ${p.rank.title.toUpperCase()}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: hot, fontWeight: FontWeight.w900, letterSpacing: 2, fontSize: 11),
+                            ),
+                            const SizedBox(height: 2),
+                            Text.rich(
+                              TextSpan(
+                                children: [
+                                  TextSpan(
+                                    text: '$left XP ',
+                                    style: TextStyle(color: hot, fontSize: 24),
+                                  ),
+                                  TextSpan(text: 'TO LEVEL ${p.level.level + 1}'),
+                                ],
                               ),
-                              const SizedBox(height: 2),
-                              Text.rich(
-                                TextSpan(
-                                  children: [
-                                    TextSpan(
-                                      text: '$left XP ',
-                                      style: TextStyle(color: hot, fontSize: 24),
-                                    ),
-                                    TextSpan(text: 'TO LEVEL ${p.level.level + 1}'),
-                                  ],
-                                ),
-                                maxLines: 1,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w900,
-                                  fontStyle: FontStyle.italic,
-                                  letterSpacing: 0.5,
-                                  shadows: [Shadow(color: Colors.black, offset: Offset(2, 2))],
-                                ),
+                              maxLines: 1,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                                fontStyle: FontStyle.italic,
+                                letterSpacing: 0.5,
+                                shadows: [Shadow(color: Colors.black, offset: Offset(2, 2))],
                               ),
-                              const SizedBox(height: 6),
-                              _Bar(value: p.level.into / p.level.needed, from: flame, to: hot, t: _spin),
-                              const SizedBox(height: 6),
-                              Text(
-                                _cry,
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.8),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 1.6,
-                                ),
+                            ),
+                            const SizedBox(height: 6),
+                            _Bar(value: p.level.into / p.level.needed, from: flame, to: hot, t: _spin),
+                            const SizedBox(height: 6),
+                            Text(
+                              _cry,
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.8),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.6,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -726,9 +722,10 @@ class _FirePainter extends CustomPainter {
       rect,
       Paint()
         ..shader = LinearGradient(
-          // Dark behind the text, the rank's scene showing through on the right.
-          colors: [const Color(0xF205030A), deep.withValues(alpha: 0.55), Colors.transparent],
-          stops: const [0.25, 0.55, 1],
+          colors: [const Color(0xFF05030A), deep, const Color(0xFF05030A)],
+          stops: const [0.15, 0.6, 1],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ).createShader(rect),
     );
     // Speed lines slashing across, like a power-up.
@@ -849,74 +846,4 @@ class _BarPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_BarPainter old) => old.v != v || old.shine != shine || old.from != from;
-}
-
-/// Top-right of Home: the title you wear (badge art + name) in a dark pill with a gold streak racing
-/// round its edge. Before any title, it shows your rank emblem and "Claim a title". Opens Ascension.
-class TitlePill extends StatefulWidget {
-  const TitlePill({super.key});
-
-  @override
-  State<TitlePill> createState() => _TitlePillState();
-}
-
-class _TitlePillState extends State<TitlePill> with SingleTickerProviderStateMixin {
-  late final _spin = AnimationController(vsync: this, duration: const Duration(seconds: 3))..repeat();
-
-  @override
-  void dispose() {
-    _spin.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => ListenableBuilder(
-    listenable: Listenable.merge([power, Prefs.equippedTitle]),
-    builder: (context, _) {
-      final p = power.value;
-      if (p == null) return const SizedBox.shrink();
-      final worn = p.titles.contains(Prefs.equippedTitle.value) ? titleById(Prefs.equippedTitle.value) : null;
-      const gold = Color(0xFFFDE047);
-      final edge = worn == null ? _fire[p.rank]!.$3 : gold;
-      return GestureDetector(
-        onTap: () =>
-            unawaited(Navigator.push(context, MaterialPageRoute<void>(builder: (_) => RoadmapPage(initialTab: worn == null ? 1 : 0)))),
-        child: AnimatedBuilder(
-          animation: _spin,
-          builder: (context, child) => CustomPaint(
-            foregroundPainter: _EdgePainter(t: _spin.value, color: edge, power: 2),
-            child: child,
-          ),
-          child: Container(
-            height: 44,
-            constraints: const BoxConstraints(maxWidth: 190),
-            padding: const EdgeInsets.fromLTRB(4, 2, 14, 2),
-            decoration: BoxDecoration(color: const Color(0xFF0B0A14), borderRadius: BorderRadius.circular(20)),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                worn == null
-                    ? Image.asset('assets/art/rank_${p.rank.index}.png', width: 38, height: 38)
-                    : Image.asset('assets/art/badge_${worn.id}.webp', width: 40, height: 40),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    worn?.name ?? 'Claim a title',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: worn == null ? Colors.white70 : gold,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 13,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    },
-  );
 }

@@ -22,7 +22,7 @@ import 'streak_page.dart';
 import 'widgets.dart';
 
 /// Shown in Profile → About. Keep in step with `version:` in pubspec.yaml.
-const appVersion = '1.21.0';
+const appVersion = '1.22.0';
 
 /// First name for greetings, falling back to the email name.
 String firstName(User user) {
@@ -142,8 +142,8 @@ class ProfilePage extends StatelessWidget {
               valueListenable: power,
               builder: (context, p, _) => ListTile(
                 leading: const Icon(Icons.route_rounded),
-                title: const Text('Ascension: ranks & titles'),
-                subtitle: Text('${p?.titles.length ?? 0} of ${titles.length} titles unlocked'),
+                title: const Text('Titles roadmap'),
+                subtitle: Text('${p?.titles.length ?? 0} of ${titles.length} unlocked'),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => open(const RoadmapPage()),
               ),
