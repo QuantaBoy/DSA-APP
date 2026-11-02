@@ -14,6 +14,7 @@ import '../data/sheet.dart';
 import '../data/store.dart';
 import '../logic/srs.dart';
 import 'add_problem_page.dart';
+import 'aptitude_page.dart';
 import 'library_page.dart';
 import 'motion.dart';
 import 'profile_page.dart';
@@ -173,7 +174,7 @@ class _HomePageState extends State<HomePage> {
         return Scaffold(
           body: Row(
             children: [
-              _Sidebar(user: widget.user, tab: _tab, onTab: _go),
+              _Sidebar(user: widget.user, tab: _tab, onTab: _go, onScan: () => showScanSheet(context, store)),
               Expanded(
                 child: Column(
                   children: [
@@ -195,23 +196,167 @@ class _HomePageState extends State<HomePage> {
         appBar: AppBar(title: title, actions: [if (_tab != _profile) avatar]),
         body: content,
         floatingActionButton: fab,
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: _tab,
-          onDestinationSelected: _go,
-          destinations: [for (final t in _tabs) NavigationDestination(icon: Icon(t.icon), selectedIcon: Icon(t.selected), label: t.title)],
-        ),
+        bottomNavigationBar: _BottomBar(tab: _tab, onTab: _go, onScan: () => showScanSheet(context, store)),
       );
     },
   );
 }
 
+/// Phone bottom bar: two tabs each side of a raised scan button, on a floating card with a bump.
+class _BottomBar extends StatelessWidget {
+  const _BottomBar({required this.tab, required this.onTab, required this.onScan});
+
+  final int tab;
+  final ValueChanged<int> onTab;
+  final VoidCallback onScan;
+
+  static const _height = 68.0, _bump = 14.0, _button = 60.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final dark = theme.brightness == Brightness.dark;
+    Widget item(int i) {
+      final t = _tabs[i];
+      final on = i == tab;
+      return Expanded(
+        child: Semantics(
+          selected: on,
+          button: true,
+          label: t.title,
+          child: InkResponse(
+            onTap: () => onTab(i),
+            radius: 32,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedScale(
+                  scale: on ? 1.12 : 1,
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOutBack,
+                  child: Icon(on ? t.selected : t.icon, color: on ? colors.onSurface : colors.onSurfaceVariant, size: 26),
+                ),
+                const SizedBox(height: 6),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOut,
+                  width: on ? 6 : 0,
+                  height: 6,
+                  decoration: BoxDecoration(color: colors.primary, shape: BoxShape.circle),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+        child: SizedBox(
+          height: _height + _bump,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.bottomCenter,
+            children: [
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _BarPainter(
+                    color: dark ? const Color(0xFF1A1B26) : Colors.white,
+                    shadow: Colors.black.withValues(alpha: dark ? 0.5 : 0.1),
+                    bump: _bump,
+                  ),
+                ),
+              ),
+              SizedBox(
+                height: _height,
+                child: Row(
+                  children: [
+                    item(0),
+                    item(1),
+                    const SizedBox(width: _button + 24),
+                    item(2),
+                    item(3),
+                  ],
+                ),
+              ),
+              Positioned(
+                top: _bump - _button / 2 + 6,
+                child: Semantics(
+                  button: true,
+                  label: 'Scan an aptitude question',
+                  child: Pressable(
+                    onTap: onScan,
+                    child: Container(
+                      width: _button,
+                      height: _button,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF8B73FF), Color(0xFF5B3FE6)],
+                        ),
+                        boxShadow: [BoxShadow(color: colors.primary.withValues(alpha: 0.45), blurRadius: 18, offset: const Offset(0, 6))],
+                      ),
+                      child: const Icon(Icons.document_scanner_rounded, color: Colors.white, size: 28),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The bar's card: rounded rectangle whose top edge rises in a smooth bump behind the centre button.
+class _BarPainter extends CustomPainter {
+  const _BarPainter({required this.color, required this.shadow, required this.bump});
+
+  final Color color;
+  final Color shadow;
+  final double bump;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const r = 26.0, half = 62.0;
+    final w = size.width, h = size.height, top = bump, cx = w / 2;
+    final path = Path()
+      ..moveTo(0, top + r)
+      ..quadraticBezierTo(0, top, r, top)
+      ..lineTo(cx - half, top)
+      ..cubicTo(cx - half / 2, top, cx - half / 2, 0, cx, 0)
+      ..cubicTo(cx + half / 2, 0, cx + half / 2, top, cx + half, top)
+      ..lineTo(w - r, top)
+      ..quadraticBezierTo(w, top, w, top + r)
+      ..lineTo(w, h - r)
+      ..quadraticBezierTo(w, h, w - r, h)
+      ..lineTo(r, h)
+      ..quadraticBezierTo(0, h, 0, h - r)
+      ..close();
+    canvas
+      ..drawShadow(path, shadow, 10, false)
+      ..drawPath(path, Paint()..color = color);
+  }
+
+  @override
+  bool shouldRepaint(_BarPainter old) => old.color != color || old.shadow != shadow;
+}
+
 /// Desktop sidebar: logo, the four sections, dark mode switch and who is signed in.
 class _Sidebar extends StatelessWidget {
-  const _Sidebar({required this.user, required this.tab, required this.onTab});
+  const _Sidebar({required this.user, required this.tab, required this.onTab, required this.onScan});
 
   final User user;
   final int tab;
   final ValueChanged<int> onTab;
+  final VoidCallback onScan;
 
   @override
   Widget build(BuildContext context) {
@@ -237,7 +382,14 @@ class _Sidebar extends StatelessWidget {
               Text('Memory Stack', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
             ],
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 24),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+            onPressed: onScan,
+            icon: const Icon(Icons.document_scanner_rounded),
+            label: const Text('Scan question'),
+          ),
+          const SizedBox(height: 16),
           for (final (i, t) in _tabs.indexed)
             Padding(
               padding: const EdgeInsets.only(bottom: 4),

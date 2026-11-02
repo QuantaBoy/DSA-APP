@@ -56,8 +56,16 @@ class AptitudeView extends StatelessWidget {
                         icon: const Icon(Icons.play_arrow_rounded),
                         label: const Text('Review'),
                       ),
-                    _HeroButton(icon: Icons.photo_camera_rounded, label: 'Scan', onPressed: () => _scan(context, ImageSource.camera)),
-                    _HeroButton(icon: Icons.photo_library_rounded, label: 'Photo', onPressed: () => _scan(context, ImageSource.gallery)),
+                    _HeroButton(
+                      icon: Icons.photo_camera_rounded,
+                      label: 'Scan',
+                      onPressed: () => scanAptitude(context, store, ImageSource.camera),
+                    ),
+                    _HeroButton(
+                      icon: Icons.photo_library_rounded,
+                      label: 'Photo',
+                      onPressed: () => scanAptitude(context, store, ImageSource.gallery),
+                    ),
                     _HeroButton(
                       icon: Icons.edit_rounded,
                       label: 'Type',
@@ -101,60 +109,103 @@ class AptitudeView extends StatelessWidget {
   );
 
   void _push(BuildContext context, Widget page) => unawaited(Navigator.push(context, MaterialPageRoute<void>(builder: (_) => page)));
+}
 
-  Future<void> _scan(BuildContext context, ImageSource source) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-    final XFile? photo;
-    try {
-      photo = await ImagePicker().pickImage(source: source, maxWidth: 2000, maxHeight: 2000, imageQuality: 85);
-    } on PlatformException {
-      messenger.showSnackBar(const SnackBar(content: Text('Could not open the camera or photos. Check the app permissions.')));
-      return;
+/// Opens the camera or photos, has the AI read the questions, then shows each one to check and save.
+Future<void> scanAptitude(BuildContext context, Store store, ImageSource source) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final navigator = Navigator.of(context);
+  final XFile? photo;
+  try {
+    photo = await ImagePicker().pickImage(source: source, maxWidth: 2000, maxHeight: 2000, imageQuality: 85);
+  } on PlatformException {
+    messenger.showSnackBar(const SnackBar(content: Text('Could not open the camera or photos. Check the app permissions.')));
+    return;
+  }
+  if (photo == null || !context.mounted) return;
+  unawaited(
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 20),
+            Expanded(child: Text('Reading and solving…')),
+          ],
+        ),
+      ),
+    ),
+  );
+  List<ScannedQuestion> found;
+  try {
+    found = await scanQuestions(await photo.readAsBytes(), mimeType: photo.mimeType ?? 'image/jpeg');
+  } on ScanException catch (e) {
+    navigator.pop();
+    messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    return;
+  }
+  navigator.pop();
+  if (found.isEmpty) {
+    messenger.showSnackBar(const SnackBar(content: Text('No multiple-choice question found in that photo.')));
+    return;
+  }
+  var saved = 0;
+  for (final (i, q) in found.indexed) {
+    final ok = await navigator.push<bool>(
+      MaterialPageRoute(
+        builder: (_) => AptEditPage(store: store, scanned: q, position: found.length > 1 ? '${i + 1} of ${found.length}' : null),
+      ),
+    );
+    if (ok ?? false) saved++;
+  }
+  if (saved > 0) {
+    messenger.showSnackBar(SnackBar(content: Text('$saved ${saved == 1 ? 'question' : 'questions'} added. First review tomorrow.')));
+  }
+}
+
+/// The three ways to add an aptitude question, from the centre button of the bottom bar.
+Future<void> showScanSheet(BuildContext context, Store store) => showModalBottomSheet<void>(
+  context: context,
+  showDragHandle: true,
+  builder: (sheet) {
+    void go(Future<void> Function() action) {
+      Navigator.pop(sheet);
+      unawaited(action());
     }
-    if (photo == null || !context.mounted) return;
-    unawaited(
-      showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => const AlertDialog(
-          content: Row(
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 20),
-              Expanded(child: Text('Reading and solving…')),
-            ],
-          ),
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Add an aptitude question', style: Theme.of(sheet).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_rounded),
+              title: const Text('Take a photo'),
+              subtitle: const Text('AI reads, solves and explains it'),
+              onTap: () => go(() => scanAptitude(context, store, ImageSource.camera)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.screenshot_rounded),
+              title: const Text('Pick a screenshot'),
+              subtitle: const Text('From your photos'),
+              onTap: () => go(() => scanAptitude(context, store, ImageSource.gallery)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit_rounded),
+              title: const Text('Type it'),
+              onTap: () => go(() => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => AptEditPage(store: store)))),
+            ),
+          ],
         ),
       ),
     );
-    List<ScannedQuestion> found;
-    try {
-      found = await scanQuestions(await photo.readAsBytes(), mimeType: photo.mimeType ?? 'image/jpeg');
-    } on ScanException catch (e) {
-      navigator.pop();
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
-      return;
-    }
-    navigator.pop();
-    if (found.isEmpty) {
-      messenger.showSnackBar(const SnackBar(content: Text('No multiple-choice question found in that photo.')));
-      return;
-    }
-    var saved = 0;
-    for (final (i, q) in found.indexed) {
-      final ok = await navigator.push<bool>(
-        MaterialPageRoute(
-          builder: (_) => AptEditPage(store: store, scanned: q, position: found.length > 1 ? '${i + 1} of ${found.length}' : null),
-        ),
-      );
-      if (ok ?? false) saved++;
-    }
-    if (saved > 0) {
-      messenger.showSnackBar(SnackBar(content: Text('$saved ${saved == 1 ? 'question' : 'questions'} added. First review tomorrow.')));
-    }
-  }
-}
+  },
+);
 
 class _HeroButton extends StatelessWidget {
   const _HeroButton({required this.icon, required this.label, required this.onPressed});
