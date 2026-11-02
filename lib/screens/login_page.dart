@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -57,10 +58,26 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _google() => _run(() async {
-    final provider = GoogleAuthProvider();
     final auth = FirebaseAuth.instance;
-    await (kIsWeb ? auth.signInWithPopup(provider) : auth.signInWithProvider(provider));
+    if (kIsWeb) {
+      await auth.signInWithPopup(GoogleAuthProvider());
+    } else if (defaultTargetPlatform == TargetPlatform.android) {
+      // Native account picker: the browser redirect flow loses its state in some Android browsers.
+      try {
+        await (_googleSignIn ??= GoogleSignIn.instance.initialize(serverClientId: _webClientId));
+        final account = await GoogleSignIn.instance.authenticate();
+        await auth.signInWithCredential(GoogleAuthProvider.credential(idToken: account.authentication.idToken));
+      } on GoogleSignInException catch (e) {
+        if (e.code != GoogleSignInExceptionCode.canceled && mounted) setState(() => _error = 'Google sign-in failed. Try again.');
+      }
+    } else {
+      await auth.signInWithProvider(GoogleAuthProvider());
+    }
   });
+
+  // Web OAuth client from google-services.json (client_type 3); Google signs the ID token for it.
+  static const _webClientId = '153577681363-g3gdo2gn53d42ef4h6l9f5q9dr8o3722.apps.googleusercontent.com';
+  static Future<void>? _googleSignIn;
 
   Future<void> _forgotPassword() async {
     final email = _email.text.trim();
