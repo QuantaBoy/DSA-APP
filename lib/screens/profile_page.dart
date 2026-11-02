@@ -9,18 +9,20 @@ import '../data/leetcode.dart';
 import '../data/prefs.dart';
 import '../data/reminder.dart';
 import '../data/store.dart';
+import '../logic/ascension.dart';
 import '../logic/models.dart';
 import '../logic/srs.dart';
 import 'ascension_view.dart';
 import 'leaderboard_page.dart';
 import 'motion.dart';
 import 'open_link.dart';
+import 'roadmap_page.dart';
 import 'stats_page.dart';
 import 'streak_page.dart';
 import 'widgets.dart';
 
 /// Shown in Profile → About. Keep in step with `version:` in pubspec.yaml.
-const appVersion = '1.17.0';
+const appVersion = '1.18.0';
 
 /// First name for greetings, falling back to the email name.
 String firstName(User user) {
@@ -131,7 +133,20 @@ class ProfilePage extends StatelessWidget {
           ),
         ),
         const SectionTitle('Titles'),
-        const TitlesList(),
+        _SettingsCard(
+          children: [
+            ValueListenableBuilder(
+              valueListenable: power,
+              builder: (context, p, _) => ListTile(
+                leading: const Icon(Icons.route_rounded),
+                title: const Text('Titles roadmap'),
+                subtitle: Text('${p?.titles.length ?? 0} of ${titles.length} unlocked'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => open(const RoadmapPage()),
+              ),
+            ),
+          ],
+        ),
         const SectionTitle('Goal & reminder'),
         _SettingsCard(
           children: [

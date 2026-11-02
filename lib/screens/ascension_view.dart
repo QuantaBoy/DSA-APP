@@ -6,12 +6,20 @@ import 'package:flutter/services.dart';
 
 import '../data/prefs.dart';
 import '../logic/ascension.dart';
+import 'roadmap_page.dart';
 
 /// The worn title's name, or null.
 String? wornLabel(String? id, Set<String> earned) => earned.contains(id) ? titleById(id)?.name : null;
 
 /// Your current power, worked out on the home screen from your data. Null until the data loads.
-typedef Power = ({int xp, Level level, Rank rank, Set<String> titles, ({HunterTitle title, Progress progress})? next});
+typedef Power = ({
+  int xp,
+  Level level,
+  Rank rank,
+  Set<String> titles,
+  ({HunterTitle title, Progress progress})? next,
+  Map<String, Progress> progress, // per title id
+});
 
 final power = ValueNotifier<Power?>(null);
 
@@ -180,54 +188,6 @@ class _AuraPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_AuraPainter old) => old.t != t || old.glow != glow || old.power != power;
-}
-
-/// Every topic title, for the profile: earned ones in gold (tap Equip to wear), locked ones say how to earn them.
-class TitlesList extends StatelessWidget {
-  const TitlesList({super.key});
-
-  @override
-  Widget build(BuildContext context) => ListenableBuilder(
-    listenable: Listenable.merge([Prefs.equippedTitle, power]),
-    builder: (context, _) {
-      final worn = Prefs.equippedTitle.value;
-      final earned = power.value?.titles ?? const <String>{};
-      final colors = Theme.of(context).colorScheme;
-      const gold = Color(0xFFD4A017);
-      return Card(
-        margin: const EdgeInsets.symmetric(horizontal: 16),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          children: [
-            for (final (i, t) in titles.indexed) ...[
-              if (i > 0) const Divider(height: 1, indent: 56),
-              Builder(
-                builder: (context) {
-                  final has = earned.contains(t.id);
-                  return ListTile(
-                    leading: Icon(has ? Icons.military_tech_rounded : Icons.lock_outline_rounded, color: has ? gold : colors.outline),
-                    title: Text(
-                      t.name,
-                      style: TextStyle(fontWeight: FontWeight.w800, color: has ? null : colors.onSurfaceVariant),
-                    ),
-                    subtitle: Text(has ? '${t.topic} cleared' : howToEarn(t)),
-                    trailing: !has
-                        ? null
-                        : worn == t.id
-                        ? const Text(
-                            'WORN',
-                            style: TextStyle(color: gold, fontWeight: FontWeight.w900),
-                          )
-                        : TextButton(onPressed: () => Prefs.equipTitle(t.id), child: const Text('Equip')),
-                  );
-                },
-              ),
-            ],
-          ],
-        ),
-      );
-    },
-  );
 }
 
 /// Shows each level-up, rank-up and new title since last time, one System window after another.
@@ -487,73 +447,76 @@ class _PowerStripState extends State<PowerStrip> with SingleTickerProviderStateM
       final left = p.level.needed - p.level.into;
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [BoxShadow(color: flame.withValues(alpha: 0.45), offset: const Offset(0, 6), blurRadius: 18)],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: AnimatedBuilder(
-              animation: _spin,
-              builder: (context, child) => CustomPaint(
-                painter: _FirePainter(t: _spin.value, deep: deep, flame: flame, hot: hot, strength: strength),
-                foregroundPainter: _EdgePainter(t: (_spin.value * (1 + strength * 0.3)) % 1, color: hot, power: strength),
-                child: child,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(8, 10, 16, 12),
-                child: Row(
-                  children: [
-                    RankBadge(rank: p.rank, level: p.level.level, size: 62, glow: false),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'LV ${p.level.level}  ·  ${p.rank.title.toUpperCase()}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(color: hot, fontWeight: FontWeight.w900, letterSpacing: 2, fontSize: 11),
-                          ),
-                          const SizedBox(height: 2),
-                          Text.rich(
-                            TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: '$left XP ',
-                                  style: TextStyle(color: hot, fontSize: 24),
-                                ),
-                                TextSpan(text: 'TO LEVEL ${p.level.level + 1}'),
-                              ],
+        child: GestureDetector(
+          onTap: () => unawaited(Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const RoadmapPage()))),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [BoxShadow(color: flame.withValues(alpha: 0.45), offset: const Offset(0, 6), blurRadius: 18)],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: AnimatedBuilder(
+                animation: _spin,
+                builder: (context, child) => CustomPaint(
+                  painter: _FirePainter(t: _spin.value, deep: deep, flame: flame, hot: hot, strength: strength),
+                  foregroundPainter: _EdgePainter(t: (_spin.value * (1 + strength * 0.3)) % 1, color: hot, power: strength),
+                  child: child,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 10, 16, 12),
+                  child: Row(
+                    children: [
+                      RankBadge(rank: p.rank, level: p.level.level, size: 62, glow: false),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'LV ${p.level.level}  ·  ${p.rank.title.toUpperCase()}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: hot, fontWeight: FontWeight.w900, letterSpacing: 2, fontSize: 11),
                             ),
-                            maxLines: 1,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w900,
-                              fontStyle: FontStyle.italic,
-                              letterSpacing: 0.5,
-                              shadows: [Shadow(color: Colors.black, offset: Offset(2, 2))],
+                            const SizedBox(height: 2),
+                            Text.rich(
+                              TextSpan(
+                                children: [
+                                  TextSpan(
+                                    text: '$left XP ',
+                                    style: TextStyle(color: hot, fontSize: 24),
+                                  ),
+                                  TextSpan(text: 'TO LEVEL ${p.level.level + 1}'),
+                                ],
+                              ),
+                              maxLines: 1,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                                fontStyle: FontStyle.italic,
+                                letterSpacing: 0.5,
+                                shadows: [Shadow(color: Colors.black, offset: Offset(2, 2))],
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 6),
-                          _Bar(value: p.level.into / p.level.needed, from: flame, to: hot, t: _spin),
-                          const SizedBox(height: 6),
-                          Text(
-                            _cry,
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.8),
-                              fontSize: 10,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 1.6,
+                            const SizedBox(height: 6),
+                            _Bar(value: p.level.into / p.level.needed, from: flame, to: hot, t: _spin),
+                            const SizedBox(height: 6),
+                            Text(
+                              _cry,
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.8),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.6,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

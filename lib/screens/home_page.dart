@@ -95,7 +95,14 @@ class _HomePageState extends State<HomePage> {
     final xp = totalXp(deeds);
     final level = levelFor(xp);
     final a2z = await _a2z;
-    final now = (xp: xp, level: level, rank: Rank.of(level.level), titles: earnedTitles(deeds, a2z), next: nextTitle(deeds, a2z));
+    final now = (
+      xp: xp,
+      level: level,
+      rank: Rank.of(level.level),
+      titles: earnedTitles(deeds, a2z),
+      next: nextTitle(deeds, a2z),
+      progress: {for (final t in titles) t.id: t.progress(deeds, a2z)},
+    );
     power.value = now;
     _publishLeaderboard();
     // Celebrate what is new since the last look. Seen never goes down, so a slow first load
@@ -104,7 +111,14 @@ class _HomePageState extends State<HomePage> {
     final fresh = now.level.level > seenLevel || !Prefs.seenTitles.containsAll(now.titles);
     if (!fresh || _celebrating || !mounted) return;
     _celebrating = true;
-    final before = (xp: 0, level: (level: seenLevel, into: 0, needed: 0), rank: Rank.of(seenLevel), titles: Prefs.seenTitles, next: null);
+    final before = (
+      xp: 0,
+      level: (level: seenLevel, into: 0, needed: 0),
+      rank: Rank.of(seenLevel),
+      titles: Prefs.seenTitles,
+      next: null,
+      progress: const <String, Progress>{},
+    );
     Prefs.markSeen(max(seenLevel, now.level.level), {...Prefs.seenTitles, ...now.titles});
     await celebrate(context, before, now);
     _celebrating = false;
