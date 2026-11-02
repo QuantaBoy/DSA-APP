@@ -4,10 +4,13 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_code_editor/flutter_code_editor.dart';
+import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
+import '../data/leetcode.dart';
 import '../data/runner.dart';
 import '../data/sheet.dart';
+import '../data/statements.dart';
 import '../data/store.dart';
 import '../logic/models.dart';
 import '../logic/srs.dart';
@@ -35,6 +38,10 @@ class _SolvePageState extends State<SolvePage> {
   final _code = CodeController();
   final _padKey = GlobalKey(), _doneKey = GlobalKey();
   bool? _verdict; // last run: all expected outputs matched, one failed, or none checked
+  late final Future<String?> _statement = switch (leetCodeSlug(widget.problem.url)) {
+    final slug? => leetCodeStatement(slug),
+    null => Future.value(),
+  };
 
   @override
   void initState() {
@@ -175,8 +182,8 @@ class _SolvePageState extends State<SolvePage> {
                     children: [
                       OutlinedButton.icon(
                         onPressed: _showQuestion,
-                        icon: const Icon(Icons.description_outlined),
-                        label: const Text('Question'),
+                        icon: const Icon(Icons.open_in_new_rounded),
+                        label: Text('Open on ${p.platform}'),
                       ),
                       if (p.video != null)
                         OutlinedButton.icon(
@@ -186,6 +193,8 @@ class _SolvePageState extends State<SolvePage> {
                         ),
                     ],
                   ),
+                  const SizedBox(height: 16),
+                  _QuestionCard(statement: _statement, platform: p.platform, onOpen: _showQuestion),
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -212,7 +221,7 @@ class _SolvePageState extends State<SolvePage> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                'Open the Question, copy an example into Input and its answer into Expected, then Run. '
+                                'Copy an example from the question into Input and its answer into Expected, then Run. '
                                 'Add your own edge cases too. When every case passes, tap I solved it.',
                                 style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
                               ),
@@ -238,6 +247,73 @@ class _SolvePageState extends State<SolvePage> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The problem statement, shown above the editor. LeetCode statements are kept on the device after the
+/// first view; other sites (and LeetCode on the web) get a button that opens the page.
+class _QuestionCard extends StatelessWidget {
+  const _QuestionCard({required this.statement, required this.platform, required this.onOpen});
+
+  final Future<String?> statement;
+  final String platform;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: FutureBuilder<String?>(
+          future: statement,
+          builder: (context, snap) {
+            if (snap.connectionState != ConnectionState.done) {
+              return const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            final html = snap.data;
+            if (html == null) {
+              return Row(
+                children: [
+                  Icon(Icons.description_outlined, color: colors.onSurfaceVariant),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text('The question opens on $platform.', style: TextStyle(color: colors.onSurfaceVariant)),
+                  ),
+                  TextButton(onPressed: onOpen, child: const Text('Open')),
+                ],
+              );
+            }
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Question', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 8),
+                HtmlWidget(
+                  html,
+                  textStyle: theme.textTheme.bodyMedium?.copyWith(height: 1.5),
+                  customStylesBuilder: (e) => switch (e.localName) {
+                    'pre' => {'background-color': '#80808022', 'padding': '10px', 'white-space': 'pre-wrap'},
+                    'code' => {'font-family': 'monospace'},
+                    _ => null,
+                  },
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'From LeetCode, saved on this device for offline use.',
+                  style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );

@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../data/leetcode.dart';
 import '../data/prefs.dart';
 import '../data/sheet.dart';
+import '../data/statements.dart';
 import '../data/store.dart';
 import '../logic/models.dart';
 import '../logic/srs.dart';
@@ -102,6 +104,10 @@ class _SheetPageState extends State<SheetPage> {
         final solved = {for (final p in widget.problems) p.id};
         final done = sheet.problems.where((p) => solved.contains(p.id)).length;
         final next = sheet.nextUnsolved(solved);
+        // Save the next questions while online, so Solve shows them offline too.
+        unawaited(
+          prefetchStatements(sheet.problems.where((p) => !solved.contains(p.id)).take(10).map((p) => leetCodeSlug(p.url)).nonNulls),
+        );
         final theme = Theme.of(context);
 
         return ListView(
