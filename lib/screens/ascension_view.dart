@@ -466,6 +466,25 @@ class _WindowFirePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final box = inset.deflateRect(Offset.zero & size).deflate(radius * 0.3);
     final (top, side, bottom) = heights;
+    if (top == 0) {
+      // No tongues on top: a glowing heat haze instead, pulsing with the fire.
+      final pulse = 0.6 + 0.4 * sin(t * 2 * pi * 2);
+      final haze = Rect.fromLTRB(box.left + 8, box.top - 14, box.right - 8, box.top + 2);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(haze, const Radius.circular(8)),
+        Paint()
+          ..shader = LinearGradient(
+            colors: [
+              flame.withValues(alpha: 0),
+              flame.withValues(alpha: 0.55 * pulse),
+              hot.withValues(alpha: 0.9 * pulse),
+            ],
+            stops: const [0, 0.6, 1],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ).createShader(haze),
+      );
+    }
     for (final (layer, color, scale) in [(0, flame.withValues(alpha: 0.85), 1.0), (1, hot.withValues(alpha: 0.9), 0.5)]) {
       final paint = Paint()..color = color;
       // Top edge burns tallest; sides and bottom shorter.
@@ -640,7 +659,7 @@ class _PowerStripState extends State<PowerStrip> with SingleTickerProviderStateM
       final left = p.level.needed - p.level.into;
       // Flames burn around the outside of the card, taller and wilder each rank.
       final (top, side, bottom) = (0.0, 9.0 + strength * 2, 12.0 + strength * 3); // sides and bottom only
-      final room = EdgeInsets.fromLTRB(side + 2, 2, side + 2, bottom + 2);
+      final room = EdgeInsets.fromLTRB(side + 2, 14, side + 2, bottom + 2);
       return Padding(
         padding: EdgeInsets.symmetric(horizontal: 16 - side - 2 > 4 ? 16 - side - 2 : 4),
         child: AnimatedBuilder(
