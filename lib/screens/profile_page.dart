@@ -11,6 +11,7 @@ import '../data/reminder.dart';
 import '../data/store.dart';
 import '../logic/models.dart';
 import '../logic/srs.dart';
+import 'ascension_view.dart';
 import 'leaderboard_page.dart';
 import 'motion.dart';
 import 'open_link.dart';
@@ -129,6 +130,8 @@ class ProfilePage extends StatelessWidget {
             style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
           ),
         ),
+        const SectionTitle('Titles'),
+        const TitlesList(),
         const SectionTitle('Goal & reminder'),
         _SettingsCard(
           children: [

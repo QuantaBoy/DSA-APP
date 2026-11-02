@@ -180,66 +180,52 @@ class _AuraPainter extends CustomPainter {
   bool shouldRepaint(_AuraPainter old) => old.t != t || old.glow != glow || old.power != power;
 }
 
-/// Every topic title with its stars: earned ones in gold (tap to wear), locked ones show how to earn them.
-class TitlesPage extends StatelessWidget {
-  const TitlesPage({super.key});
+/// Every topic title with its stars, for the profile: earned ones in gold (tap Equip to wear), locked ones say how to earn them.
+class TitlesList extends StatelessWidget {
+  const TitlesList({super.key});
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: const Color(0xFF07080F),
-    appBar: AppBar(
-      backgroundColor: const Color(0xFF07080F),
-      foregroundColor: Colors.white,
-      title: const Text(
-        'Titles',
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
-      ),
-    ),
-    body: ValueListenableBuilder(
-      valueListenable: Prefs.equippedTitle,
-      builder: (context, worn, _) {
-        final earned = power.value?.titles ?? const {};
-        return ListView(
-          padding: const EdgeInsets.all(16),
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: Listenable.merge([Prefs.equippedTitle, power]),
+    builder: (context, _) {
+      final worn = Prefs.equippedTitle.value;
+      final earned = power.value?.titles ?? const <String>{};
+      final colors = Theme.of(context).colorScheme;
+      const gold = Color(0xFFD4A017);
+      return Card(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
           children: [
-            for (final t in titles)
+            for (final (i, t) in titles.indexed) ...[
+              if (i > 0) const Divider(height: 1, indent: 56),
               Builder(
                 builder: (context) {
                   final tier = tierOf(t.id, earned);
                   final has = tier > 0;
-                  return Card(
-                    color: has ? const Color(0xFF1A1630) : const Color(0xFF12131C),
-                    margin: const EdgeInsets.only(bottom: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(color: worn == t.id ? _gold : (has ? _gold.withValues(alpha: 0.3) : Colors.white10)),
+                  return ListTile(
+                    leading: Icon(has ? Icons.military_tech_rounded : Icons.lock_outline_rounded, color: has ? gold : colors.outline),
+                    title: Text(
+                      has ? titleLabel(t, tier) : t.name,
+                      style: TextStyle(fontWeight: FontWeight.w800, color: has ? null : colors.onSurfaceVariant),
                     ),
-                    child: ListTile(
-                      leading: Icon(has ? Icons.military_tech_rounded : Icons.lock_rounded, color: has ? _gold : Colors.white24),
-                      title: Text(
-                        has ? titleLabel(t, tier) : t.name,
-                        style: TextStyle(color: has ? _gold : Colors.white38, fontWeight: FontWeight.w900),
-                      ),
-                      subtitle: Text(
-                        has ? '${t.topic} · tier $tier of ${t.fullOnly ? 1 : 3}' : howToEarn(t),
-                        style: const TextStyle(color: Colors.white38),
-                      ),
-                      trailing: !has
-                          ? null
-                          : worn == t.id
-                          ? const Text(
-                              'WORN',
-                              style: TextStyle(color: _gold, fontWeight: FontWeight.w900),
-                            )
-                          : TextButton(onPressed: () => Prefs.equipTitle(t.id), child: const Text('Equip')),
-                    ),
+                    subtitle: Text(has ? '${t.topic} · tier $tier of ${t.fullOnly ? 1 : 3}' : howToEarn(t)),
+                    trailing: !has
+                        ? null
+                        : worn == t.id
+                        ? const Text(
+                            'WORN',
+                            style: TextStyle(color: gold, fontWeight: FontWeight.w900),
+                          )
+                        : TextButton(onPressed: () => Prefs.equipTitle(t.id), child: const Text('Equip')),
                   );
                 },
               ),
+            ],
           ],
-        );
-      },
-    ),
+        ),
+      );
+    },
   );
 }
 
@@ -460,7 +446,7 @@ class _ShineIconState extends State<_ShineIcon> with SingleTickerProviderStateMi
 }
 
 /// Home card in the app's own style: an XP ring around your level, your rank, XP left, and the next title.
-/// Tap to see your titles.
+/// Titles live in Profile.
 class PowerStrip extends StatelessWidget {
   const PowerStrip({super.key});
 
@@ -477,7 +463,6 @@ class PowerStrip extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 16),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: () => unawaited(Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const TitlesPage()))),
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Row(
@@ -553,7 +538,6 @@ class PowerStrip extends StatelessWidget {
                     ],
                   ),
                 ),
-                Icon(Icons.chevron_right_rounded, color: colors.onSurfaceVariant),
               ],
             ),
           ),
