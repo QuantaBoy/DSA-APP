@@ -93,6 +93,16 @@ List<ScannedQuestion> parseScan(String json) {
   return result;
 }
 
+/// Google's long error text, cut down to one short line.
+String scanErrorMessage(String raw) => switch (raw.toLowerCase()) {
+  final m when m.contains('app check') => 'This app could not prove it is genuine. Update it from the Play Store.',
+  final m when m.contains('has not been used') || m.contains('is disabled') => 'AI is not switched on for this app yet. Try again later.',
+  final m when m.contains('quota') || m.contains('resource exhausted') =>
+    'Daily AI limit reached. Try again tomorrow, or type the question.',
+  final m when m.contains('not found') && m.contains('model') => 'This AI model was retired. Update the app.',
+  _ => 'The AI could not read this photo. Try a clearer one.',
+};
+
 /// Reads the aptitude questions in a photo and solves them.
 Future<List<ScannedQuestion>> scanQuestions(Uint8List image, {String mimeType = 'image/jpeg'}) async {
   final model = FirebaseAI.googleAI().generativeModel(
@@ -111,7 +121,7 @@ Future<List<ScannedQuestion>> scanQuestions(Uint8List image, {String mimeType = 
   } on ServiceApiNotEnabled {
     throw const ScanException('AI is not switched on for this app yet (Firebase console → AI Logic).');
   } on FirebaseAIException catch (e) {
-    throw ScanException('The AI could not read this photo (${e.message}).');
+    throw ScanException(scanErrorMessage(e.message));
   } on Exception {
     throw const ScanException('Could not reach the AI. Check your internet.');
   }

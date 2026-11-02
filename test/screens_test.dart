@@ -42,7 +42,7 @@ void main() {
   testWidgets('Today lists due problems with a start button, and upcoming ones', (tester) async {
     tall(tester);
     final problems = [solved('a', 3), solved('b', 1), solved('c', 0)]; // a overdue, b due today, c due tomorrow
-    await tester.pumpWidget(app(TodayPage(store: Store('test'), problems: problems, stats: const Stats(), onOpenSheet: () {})));
+    await tester.pumpWidget(app(TodayPage(store: Store('test', db: FakeFirebaseFirestore()), problems: problems, stats: const Stats(), onOpenSheet: () {})));
     expect(find.text('2 problems to review'), findsOneWidget);
     expect(find.text('2 days overdue'), findsOneWidget);
     expect(find.text('Due today'), findsOneWidget);
@@ -52,7 +52,7 @@ void main() {
   testWidgets('Today with an empty stack points to the sheet', (tester) async {
     var opened = false;
     await tester.pumpWidget(
-      app(TodayPage(store: Store('test'), problems: const [], stats: const Stats(), onOpenSheet: () => opened = true)),
+      app(TodayPage(store: Store('test', db: FakeFirebaseFirestore()), problems: const [], stats: const Stats(), onOpenSheet: () => opened = true)),
     );
     expect(find.text('Start the A2Z sheet'), findsOneWidget);
     await tester.tap(find.text('Open the sheet'));

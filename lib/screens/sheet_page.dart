@@ -180,7 +180,6 @@ class _SheetPageState extends State<SheetPage> {
                     problem: next,
                     onSolveHere: () => _solve(sheet, next, false),
                     onOpen: () => openLink(context, next.url),
-                    onVideo: next.video == null ? null : () => openLink(context, next.video!, inApp: false),
                     onSolved: () => _markSolved(sheet, next, askForCard: true),
                   ),
                 ),
@@ -272,7 +271,6 @@ class _ContinueCard extends StatelessWidget {
     required this.problem,
     required this.onSolveHere,
     required this.onOpen,
-    required this.onVideo,
     required this.onSolved,
   });
 
@@ -280,7 +278,6 @@ class _ContinueCard extends StatelessWidget {
   final SheetProblem problem;
   final VoidCallback onSolveHere;
   final VoidCallback onOpen;
-  final VoidCallback? onVideo;
   final VoidCallback onSolved;
 
   @override
@@ -339,16 +336,6 @@ class _ContinueCard extends StatelessWidget {
                 onPressed: onOpen,
                 icon: const Icon(Icons.open_in_new_rounded),
               ),
-              if (onVideo != null)
-                IconButton.outlined(
-                  style: IconButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: BorderSide(color: Colors.white.withValues(alpha: 0.5)),
-                  ),
-                  tooltip: 'Watch video',
-                  onPressed: onVideo,
-                  icon: const Icon(Icons.play_arrow_rounded),
-                ),
             ],
           ),
         ],

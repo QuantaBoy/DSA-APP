@@ -7,6 +7,7 @@ import '../data/sheet.dart';
 import '../data/store.dart';
 import '../logic/models.dart';
 import '../logic/srs.dart';
+import 'aptitude_page.dart';
 import 'coach.dart';
 import 'interview_page.dart';
 import 'motion.dart';
@@ -213,6 +214,7 @@ class _TodayPageState extends State<TodayPage> {
                       ),
                     ),
                   ),
+                  _AptitudeDue(store: widget.store),
                   if (twoColumns)
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -416,4 +418,67 @@ class _ProblemCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Shown only when aptitude questions are due: opens a review of them.
+class _AptitudeDue extends StatelessWidget {
+  const _AptitudeDue({required this.store});
+
+  final Store store;
+
+  @override
+  Widget build(BuildContext context) => StreamBuilder<List<AptCard>>(
+    stream: store.aptCards(),
+    builder: (context, snap) {
+      final now = today();
+      final due = [...?snap.data?.where((c) => c.isDue(now))]..sort((a, b) => a.nextDue.compareTo(b.nextDue));
+      if (due.isEmpty) return const SizedBox.shrink();
+      final theme = Theme.of(context);
+      return Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: Pressable(
+          onTap: () => unawaited(
+            Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                builder: (_) => AptReviewPage(store: store, cards: due),
+              ),
+            ),
+          ),
+          child: Card(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(color: Accent.orange.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(14)),
+                    child: const Icon(Icons.calculate_rounded, color: Accent.orange),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${due.length} aptitude ${due.length == 1 ? 'question' : 'questions'} due',
+                          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                        Text(
+                          'Pick the right option before it fades',
+                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right_rounded),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
 }

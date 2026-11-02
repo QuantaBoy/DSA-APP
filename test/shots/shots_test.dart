@@ -177,7 +177,17 @@ void main() {
   testWidgets('flashcard', (t) async {
     final store = Store('u', db: FakeFirebaseFirestore());
     final p = problems.first.copyWith(patterns: ['Hashing', 'Two Pointers']);
-    await t.runAsync(() => store.addProblem(p, solution: const Solution(idea: 'Store value → index; for each x look up target − x', time: 'O(n)', space: 'O(n)', mistake: 'Returned values instead of indices')));
+    await t.runAsync(
+      () => store.addProblem(
+        p,
+        solution: const Solution(
+          idea: 'Store value → index; for each x look up target − x',
+          time: 'O(n)',
+          space: 'O(n)',
+          mistake: 'Returned values instead of indices',
+        ),
+      ),
+    );
     await page(t, 'flashcard_front', ReviewPage(store: store, queue: [p, problems[1]]));
     await t.tap(find.text('Show my solution'));
     await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));

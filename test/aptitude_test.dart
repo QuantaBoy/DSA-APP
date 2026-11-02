@@ -20,8 +20,21 @@ void main() {
           'topic': 'Percentages',
         },
         {'question': 'No options', 'options': <String>[], 'answer': 0, 'explanation': '', 'topic': 'x'},
-        {'question': 'Answer out of range', 'options': ['a', 'b'], 'answer': 5, 'explanation': '', 'topic': 'x'},
-        {'question': 'Photo disagrees', 'options': ['a', 'b'], 'answer': 0, 'photoAnswer': 1, 'explanation': '', 'topic': ''},
+        {
+          'question': 'Answer out of range',
+          'options': ['a', 'b'],
+          'answer': 5,
+          'explanation': '',
+          'topic': 'x',
+        },
+        {
+          'question': 'Photo disagrees',
+          'options': ['a', 'b'],
+          'answer': 0,
+          'photoAnswer': 1,
+          'explanation': '',
+          'topic': '',
+        },
       ],
     });
     final found = parseScan(json);
@@ -57,5 +70,11 @@ void main() {
     expect(() => store.saveApt(card.copyWith(options: ['only one'])), throwsArgumentError);
     await store.deleteApt(card.id);
     expect(await store.aptCards().first, isEmpty);
+  });
+
+  test('scan errors become one short line', () {
+    expect(scanErrorMessage('Firebase App Check token is invalid.'), contains('genuine'));
+    expect(scanErrorMessage('Firebase AI Logic API has not been used in project 1 before or it is disabled.'), contains('not switched on'));
+    expect(scanErrorMessage('something odd'), 'The AI could not read this photo. Try a clearer one.');
   });
 }

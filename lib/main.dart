@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'data/prefs.dart';
@@ -14,6 +16,14 @@ import 'screens/onboarding_page.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // Proves requests come from the real app, so others cannot spend the AI quota. Android only for now:
+  // web needs a reCAPTCHA key and iOS an Apple developer account. Keep it unenforced in the console
+  // until the Play Store build is out, because sideloaded APKs fail Play Integrity.
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    await FirebaseAppCheck.instance.activate(
+      providerAndroid: kDebugMode ? const AndroidDebugProvider() : const AndroidPlayIntegrityProvider(),
+    );
+  }
   // Keep a device copy of the data so the app works offline (already the default on Android, not on web).
   FirebaseFirestore.instance.settings = const Settings(persistenceEnabled: true);
   await Prefs.load();

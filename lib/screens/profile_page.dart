@@ -19,7 +19,7 @@ import 'streak_page.dart';
 import 'widgets.dart';
 
 /// Shown in Profile → About. Keep in step with `version:` in pubspec.yaml.
-const appVersion = '1.12.0';
+const appVersion = '1.13.0';
 
 /// First name for greetings, falling back to the email name.
 String firstName(User user) {
@@ -205,6 +205,12 @@ class ProfilePage extends StatelessWidget {
           children: [
             ListTile(leading: const Icon(Icons.logout_rounded), title: const Text('Sign out'), onTap: () => _confirmSignOut(context)),
             ListTile(
+              leading: const Icon(Icons.restart_alt_rounded),
+              title: const Text('Reset progress'),
+              subtitle: const Text('Start fresh, keep the account'),
+              onTap: () => _resetProgress(context),
+            ),
+            ListTile(
               leading: Icon(Icons.delete_forever_rounded, color: colors.error),
               title: Text('Delete account', style: TextStyle(color: colors.error)),
               onTap: () => _deleteAccount(context),
@@ -241,6 +247,30 @@ class ProfilePage extends StatelessWidget {
       ),
     );
     if (ok == true) await FirebaseAuth.instance.signOut();
+  }
+
+  Future<void> _resetProgress(BuildContext context) async {
+    final ok = await showAdaptiveDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog.adaptive(
+        title: const Text('Reset all progress?'),
+        content: const Text(
+          'Your streak, solved problems, solution cards and aptitude questions are deleted for good. Your account stays. This cannot be undone.',
+        ),
+        actions: [
+          adaptiveAction(context, 'Cancel', () => Navigator.pop(context, false)),
+          adaptiveAction(context, 'Reset', () => Navigator.pop(context, true), destructive: true),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await store.deleteEverything();
+      messenger.showSnackBar(const SnackBar(content: Text('Progress reset. Fresh start!')));
+    } on FirebaseException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Could not reset (${e.code}). Check your internet and retry.')));
+    }
   }
 
   Future<void> _deleteAccount(BuildContext context) async {

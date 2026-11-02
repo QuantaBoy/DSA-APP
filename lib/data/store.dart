@@ -109,7 +109,7 @@ class Store {
       s.time.length <= Limits.complexityLength &&
       s.space.length <= Limits.complexityLength;
 
-  /// Deletes every problem, note and total: used when the account is deleted.
+  /// Deletes every problem, note, aptitude card and review day: used to reset progress and when the account is deleted.
   Future<void> deleteEverything() async {
     final docs = [
       ...(await _notes.get()).docs,
