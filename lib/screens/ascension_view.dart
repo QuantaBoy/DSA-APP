@@ -23,7 +23,6 @@ typedef Power = ({
 
 final power = ValueNotifier<Power?>(null);
 
-const _system = Color(0xFF38BDF8); // the System window blue
 const _gold = Color(0xFFFFD54F);
 
 /// The rank badge: a hexagon with the level, wrapped in a living aura that gets wilder each rank.
@@ -190,28 +189,50 @@ class _AuraPainter extends CustomPainter {
   bool shouldRepaint(_AuraPainter old) => old.t != t || old.glow != glow || old.power != power;
 }
 
+/// Gold fire for titles.
+const _goldFire = (Color(0xFF7C2D12), Color(0xFFF59E0B), Color(0xFFFDE047));
+
 /// Shows each level-up, rank-up and new title since last time, one System window after another.
+/// Level-ups burn in your rank's fire (violet at the start), rank-ups in the new rank's fire, titles in gold.
 Future<void> celebrate(BuildContext context, Power before, Power now) async {
   if (now.level.level > before.level.level) {
     await _systemWindow(
       context,
-      header: 'LEVEL UP',
-      lines: ['You have reached Level ${now.level.level}.', 'Your power grows.'],
+      fire: _fire[now.rank]!,
+      tag: 'LEVEL UP',
+      header: 'LEVEL ${now.level.level}',
+      lines: ['Your power grows.', 'Keep hunting.'],
       big: '${now.level.level}',
     );
   }
   if (now.rank.index > before.rank.index && context.mounted) {
-    await _systemWindow(context, header: 'RANK UP', lines: ['You have ascended.', 'You are now: ${now.rank.title}.'], badge: now);
+    await _systemWindow(
+      context,
+      fire: _fire[now.rank]!,
+      tag: 'RANK UP',
+      header: 'YOU HAVE ASCENDED',
+      lines: [now.rank.title.toUpperCase()],
+      badge: now,
+    );
   }
   for (final id in now.titles.difference(before.titles)) {
     final t = titleById(id);
     if (t == null || !context.mounted) continue;
-    await _systemWindow(context, header: 'TITLE ACQUIRED', lines: [t.name], titleId: t.id);
+    await _systemWindow(
+      context,
+      fire: _goldFire,
+      tag: 'TITLE ACQUIRED',
+      header: t.name.toUpperCase(),
+      lines: ['${t.topic} conquered.'],
+      titleId: t.id,
+    );
   }
 }
 
 Future<void> _systemWindow(
   BuildContext context, {
+  required (Color, Color, Color) fire,
+  required String tag,
   required String header,
   required List<String> lines,
   String? big,
@@ -223,28 +244,39 @@ Future<void> _systemWindow(
   return showGeneralDialog<void>(
     context: context,
     barrierDismissible: true,
-    barrierLabel: header,
-    barrierColor: Colors.black.withValues(alpha: 0.9),
-    transitionDuration: const Duration(milliseconds: 450),
+    barrierLabel: tag,
+    barrierColor: Colors.black.withValues(alpha: 0.92),
+    transitionDuration: const Duration(milliseconds: 500),
     transitionBuilder: (context, a, _, child) {
-      // Glitch in: a thin line that snaps open, with a flicker.
-      final v = Curves.easeOutExpo.transform(a.value);
+      // Slams in: drops from slightly too big, with a flicker at the start.
+      final v = Curves.easeOutBack.transform(a.value);
       return Opacity(
         opacity: a.value < 0.15
             ? (a.value * 40).floor().isEven
                   ? 1
                   : 0.3
             : 1,
-        child: Transform(alignment: Alignment.center, transform: Matrix4.diagonal3Values(1, max(0.02, v), 1), child: child),
+        child: Transform.scale(scale: 1.4 - 0.4 * v, child: child),
       );
     },
-    pageBuilder: (context, _, _) => _SystemWindow(header: header, lines: lines, big: big, badge: badge, titleId: titleId),
+    pageBuilder: (context, _, _) =>
+        _SystemWindow(fire: fire, tag: tag, header: header, lines: lines, big: big, badge: badge, titleId: titleId),
   );
 }
 
-class _SystemWindow extends StatelessWidget {
-  const _SystemWindow({required this.header, required this.lines, this.big, this.badge, this.titleId});
+class _SystemWindow extends StatefulWidget {
+  const _SystemWindow({
+    required this.fire,
+    required this.tag,
+    required this.header,
+    required this.lines,
+    this.big,
+    this.badge,
+    this.titleId,
+  });
 
+  final (Color, Color, Color) fire;
+  final String tag;
   final String header;
   final List<String> lines;
   final String? big;
@@ -252,120 +284,268 @@ class _SystemWindow extends StatelessWidget {
   final String? titleId;
 
   @override
+  State<_SystemWindow> createState() => _SystemWindowState();
+}
+
+class _SystemWindowState extends State<_SystemWindow> with SingleTickerProviderStateMixin {
+  late final _burn = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600))..repeat();
+
+  @override
+  void dispose() {
+    _burn.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final text = lines.join('\n');
-    final accent = titleId != null ? _gold : (badge?.rank.colors.first ?? _system);
+    final (deep, flame, hot) = widget.fire;
+    final text = widget.lines.join('\n');
     return Center(
       child: Material(
         color: Colors.transparent,
-        child: Container(
-          width: 320,
-          padding: const EdgeInsets.fromLTRB(22, 18, 22, 14),
-          decoration: BoxDecoration(
-            color: const Color(0xEE050A18),
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: accent, width: 1.5),
-            boxShadow: [
-              BoxShadow(color: accent.withValues(alpha: 0.7), blurRadius: 30),
-              BoxShadow(color: accent.withValues(alpha: 0.3), blurRadius: 80, spreadRadius: 10),
-            ],
+        child: AnimatedBuilder(
+          animation: _burn,
+          builder: (context, child) => CustomPaint(
+            painter: _WindowFirePainter(t: _burn.value, flame: flame, hot: hot),
+            child: child,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.priority_high_rounded, color: accent, size: 18),
-                  const SizedBox(width: 6),
-                  Text(
-                    'SYSTEM',
-                    style: TextStyle(color: accent, fontWeight: FontWeight.w900, letterSpacing: 4, fontSize: 12),
-                  ),
-                ],
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(36, 70, 36, 28), // room for the flames around the box
+            child: Container(
+              width: min(300, MediaQuery.sizeOf(context).width - 80),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color.lerp(deep, Colors.black, 0.35)!, const Color(0xFF06040C)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+                border: Border.all(color: flame, width: 2),
               ),
-              Divider(color: accent.withValues(alpha: 0.5)),
-              const SizedBox(height: 6),
-              Text(
-                header,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 30,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 4,
-                  shadows: [Shadow(color: accent, blurRadius: 18)],
+              child: CustomPaint(
+                foregroundPainter: _BracketPainter(hot),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Slanted tag like a game HUD.
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: ClipPath(
+                          clipper: _SlantClipper(),
+                          child: Container(
+                            color: flame,
+                            padding: const EdgeInsets.fromLTRB(10, 4, 22, 4),
+                            child: Text(
+                              'SYSTEM · ${widget.tag}',
+                              style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w900, letterSpacing: 2, fontSize: 11),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      if (widget.big != null)
+                        TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 2.6, end: 1),
+                          duration: const Duration(milliseconds: 800),
+                          curve: Curves.elasticOut,
+                          builder: (context, s, child) => Transform.scale(scale: s, child: child),
+                          child: Text(
+                            widget.big!,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 96,
+                              height: 1,
+                              fontWeight: FontWeight.w900,
+                              fontStyle: FontStyle.italic,
+                              shadows: [
+                                Shadow(color: flame, offset: const Offset(4, 4)),
+                                Shadow(color: hot, blurRadius: 24),
+                              ],
+                            ),
+                          ),
+                        ),
+                      if (widget.badge != null)
+                        TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0, end: 1),
+                          duration: const Duration(milliseconds: 1100),
+                          curve: Curves.elasticOut,
+                          builder: (context, s, child) => Transform.scale(scale: s, child: child),
+                          child: RankBadge(rank: widget.badge!.rank, level: widget.badge!.level.level, size: 150),
+                        ),
+                      if (widget.titleId != null) const _ShineIcon(),
+                      const SizedBox(height: 8),
+                      Text(
+                        widget.header,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: hot,
+                          fontSize: widget.titleId != null ? 24 : 22,
+                          fontWeight: FontWeight.w900,
+                          fontStyle: FontStyle.italic,
+                          letterSpacing: 1.5,
+                          shadows: const [Shadow(color: Colors.black, offset: Offset(2, 2))],
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      // Typed out letter by letter, like a System message.
+                      TweenAnimationBuilder<int>(
+                        tween: IntTween(begin: 0, end: text.length),
+                        duration: Duration(milliseconds: 40 * text.length),
+                        builder: (context, n, _) => Text(
+                          text.substring(0, n),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700, height: 1.5),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
+                        children: [
+                          if (widget.titleId != null) ...[
+                            Expanded(
+                              child: OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: hot,
+                                  side: BorderSide(color: hot, width: 1.5),
+                                  shape: const BeveledRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
+                                ),
+                                onPressed: () {
+                                  Prefs.equipTitle(widget.titleId);
+                                  Navigator.pop(context);
+                                },
+                                child: const Text('EQUIP', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2)),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                          ],
+                          Expanded(
+                            child: FilledButton(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: flame,
+                                foregroundColor: Colors.black,
+                                shape: const BeveledRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
+                              ),
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('ACCEPT', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              if (big != null)
-                TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 2.4, end: 1),
-                  duration: const Duration(milliseconds: 700),
-                  curve: Curves.elasticOut,
-                  builder: (context, s, child) => Transform.scale(scale: s, child: child),
-                  child: Text(
-                    big!,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 84,
-                      fontWeight: FontWeight.w900,
-                      height: 1.1,
-                      shadows: [
-                        Shadow(color: accent, blurRadius: 30),
-                        Shadow(color: accent, blurRadius: 60),
-                      ],
-                    ),
-                  ),
-                ),
-              if (badge != null)
-                TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0, end: 1),
-                  duration: const Duration(milliseconds: 1100),
-                  curve: Curves.elasticOut,
-                  builder: (context, s, child) => Transform.scale(scale: s, child: child),
-                  child: RankBadge(rank: badge!.rank, level: badge!.level.level, size: 170),
-                ),
-              if (titleId != null) const _ShineIcon(),
-              const SizedBox(height: 10),
-              // Typed out letter by letter, like a System message.
-              TweenAnimationBuilder<int>(
-                tween: IntTween(begin: 0, end: text.length),
-                duration: Duration(milliseconds: 35 * text.length),
-                builder: (context, n, _) => Text(
-                  text.substring(0, n),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: titleId != null ? _gold : Colors.white,
-                    fontSize: titleId != null ? 22 : 16,
-                    fontWeight: titleId != null ? FontWeight.w900 : FontWeight.w600,
-                    height: 1.5,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  if (titleId != null)
-                    TextButton(
-                      onPressed: () {
-                        Prefs.equipTitle(titleId);
-                        Navigator.pop(context);
-                      },
-                      style: TextButton.styleFrom(foregroundColor: _gold),
-                      child: const Text('EQUIP', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2)),
-                    ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: TextButton.styleFrom(foregroundColor: accent),
-                    child: const Text('ACCEPT', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2)),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+/// Flames licking outward from all four sides of the box, plus embers floating up.
+class _WindowFirePainter extends CustomPainter {
+  _WindowFirePainter({required this.t, required this.flame, required this.hot});
+
+  final double t;
+  final Color flame, hot;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final box = Rect.fromLTRB(36, 70, size.width - 36, size.height - 28);
+    for (final (layer, color, scale) in [(0, flame.withValues(alpha: 0.85), 1.0), (1, hot.withValues(alpha: 0.9), 0.5)]) {
+      final paint = Paint()..color = color;
+      // Top edge burns tallest; sides and bottom shorter.
+      _edge(canvas, paint, box.topLeft, box.topRight, const Offset(0, -1), 64 * scale, layer, 0);
+      _edge(canvas, paint, box.topRight, box.bottomRight, const Offset(1, 0), 28 * scale, layer, 1);
+      _edge(canvas, paint, box.bottomRight, box.bottomLeft, const Offset(0, 1), 20 * scale, layer, 2);
+      _edge(canvas, paint, box.bottomLeft, box.topLeft, const Offset(-1, 0), 28 * scale, layer, 3);
+    }
+    // Embers rising above the box.
+    final rnd = Random(3);
+    for (var i = 0; i < 18; i++) {
+      final x = box.left + rnd.nextDouble() * box.width;
+      final life = (t + rnd.nextDouble()) % 1;
+      final y = box.top - 20 - life * 90;
+      canvas.drawCircle(
+        Offset(x + sin(life * 6 + i) * 6, y),
+        2.5 * (1 - life),
+        Paint()..color = Color.lerp(hot, flame, life)!.withValues(alpha: 1 - life),
+      );
+    }
+  }
+
+  /// Pointed flame tongues along one edge, each its own height, flickering and leaning in the heat.
+  void _edge(Canvas canvas, Paint paint, Offset a, Offset b, Offset out, double tall, int layer, int side) {
+    final length = (b - a).distance;
+    final count = max(5, (length / 22).round());
+    final along = (b - a) / length;
+    final rnd = Random(side * 31 + layer);
+    final path = Path()..moveTo(a.dx, a.dy);
+    for (var i = 0; i < count; i++) {
+      final p0 = a + along * (length * i / count);
+      final p1 = a + along * (length * (i + 1) / count);
+      final mid = (p0 + p1) / 2;
+      final flicker = 0.5 + 0.5 * sin(t * 2 * pi * (2 + layer) + i * 2.3 + side * 1.3).abs();
+      final h = tall * (0.55 + 0.45 * rnd.nextDouble()) * flicker;
+      final lean = along * sin(t * 2 * pi + i) * h * 0.25;
+      final tip = mid + out * h + lean;
+      // Curved sides meeting in a sharp tip, like a real flame.
+      path
+        ..quadraticBezierTo(p0.dx + out.dx * h * 0.5, p0.dy + out.dy * h * 0.5, tip.dx, tip.dy)
+        ..quadraticBezierTo(p1.dx + out.dx * h * 0.5, p1.dy + out.dy * h * 0.5, p1.dx, p1.dy);
+    }
+    path.close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(_WindowFirePainter old) => old.t != t || old.flame != flame;
+}
+
+/// HUD corner brackets inside the box.
+class _BracketPainter extends CustomPainter {
+  _BracketPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()
+      ..color = color
+      ..strokeWidth = 3
+      ..style = PaintingStyle.stroke;
+    const l = 16.0, m = 6.0;
+    for (final (x, y, dx, dy) in [
+      (m, m, 1.0, 1.0),
+      (size.width - m, m, -1.0, 1.0),
+      (m, size.height - m, 1.0, -1.0),
+      (size.width - m, size.height - m, -1.0, -1.0),
+    ]) {
+      canvas.drawPath(
+        Path()
+          ..moveTo(x, y + l * dy)
+          ..lineTo(x, y)
+          ..lineTo(x + l * dx, y),
+        p,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_BracketPainter old) => old.color != color;
+}
+
+class _SlantClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size s) => Path()
+    ..lineTo(s.width, 0)
+    ..lineTo(s.width - 12, s.height)
+    ..lineTo(0, s.height)
+    ..close();
+
+  @override
+  bool shouldReclip(_SlantClipper old) => false;
 }
 
 /// A medal with a light sweep running across it.
