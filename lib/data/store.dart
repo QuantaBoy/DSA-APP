@@ -26,6 +26,7 @@ class Store {
 
   DocumentReference<Map<String, dynamic>> get _user => _db.collection('users').doc(uid);
   CollectionReference<Map<String, dynamic>> get _notes => _user.collection('notes');
+  CollectionReference<Map<String, dynamic>> get _apt => _user.collection('apt');
 
   Stream<UserData> data() => _user.snapshots().map((s) {
     final m = s.data() ?? const {};
@@ -112,6 +113,7 @@ class Store {
   Future<void> deleteEverything() async {
     final docs = [
       ...(await _notes.get()).docs,
+      ...(await _apt.get()).docs,
       ...(await _user.collection('problems').get()).docs, // version 1 data, if never moved
       ...(await _user.collection('reviews').get()).docs,
     ];
@@ -125,6 +127,29 @@ class Store {
     }
     await _user.delete();
   }
+
+  /// Your aptitude cards. ponytail: one document per card, so opening the list reads every card;
+  /// move the schedule into the user document (like problems) if decks grow past a few hundred.
+  Stream<List<AptCard>> aptCards() => _apt.snapshots().map((s) => [for (final d in s.docs) AptCard.fromMap(d.id, d.data())]);
+
+  String newAptId() => _apt.doc().id;
+
+  /// Saves a new or edited card. Throws [ArgumentError] when it breaks the limits (the rules would reject it).
+  Future<void> saveApt(AptCard card) {
+    if (!card.isValid) throw ArgumentError('Aptitude card is empty or too long');
+    return _apt.doc(card.id).set(card.toMap());
+  }
+
+  /// Reschedules the card and counts the review for the streak, in one batch.
+  Future<void> reviewApt(AptCard card, {required bool correct}) =>
+      (_db.batch()
+            ..set(_apt.doc(card.id), card.review(correct: correct, on: today()).toMap())
+            ..set(_user, {
+              'days': {dayKey(today()): FieldValue.increment(1)},
+            }, SetOptions(merge: true)))
+          .commit();
+
+  Future<void> deleteApt(String id) => _apt.doc(id).delete();
 
   /// Moves version 1 data (a document per problem and per review) into the version 2 layout, once.
   Future<void> upgrade() async {

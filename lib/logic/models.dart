@@ -11,6 +11,10 @@ abstract final class Limits {
   static const shortTextLength = 500; // idea, mistake
   static const complexityLength = 40;
   static const maxPatterns = 8;
+  static const aptQuestionLength = 2000;
+  static const aptOptionLength = 300;
+  static const aptExplanationLength = 3000;
+  static const minOptions = 2, maxOptions = 6;
 }
 
 const difficulties = ['Easy', 'Medium', 'Hard'];
@@ -235,3 +239,117 @@ DateTime parseDay(String key) => dateOnly(DateTime.parse(key));
 /// "26 Oct 2026"
 String prettyDay(DateTime d) =>
     '${d.day} ${const ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.month - 1]} ${d.year}';
+
+/// An aptitude question (multiple choice), revised like a problem: right moves it up a stage, wrong drops it.
+class AptCard {
+  const AptCard({
+    required this.id,
+    required this.question,
+    required this.options,
+    required this.answer,
+    this.explanation = '',
+    this.topic = 'General',
+    required this.stage,
+    required this.nextDue,
+    this.reviews = 0,
+    this.remembered = 0,
+  });
+
+  /// A new card: first review tomorrow.
+  factory AptCard.fresh({
+    required String id,
+    required String question,
+    required List<String> options,
+    required int answer,
+    String explanation = '',
+    String topic = 'General',
+  }) => AptCard(
+    id: id,
+    question: question,
+    options: options,
+    answer: answer,
+    explanation: explanation,
+    topic: topic,
+    stage: 0,
+    nextDue: firstDue(today()),
+  );
+
+  final String id;
+  final String question;
+  final List<String> options;
+  final int answer; // index into options
+  final String explanation;
+  final String topic;
+  final int stage;
+  final DateTime nextDue;
+  final int reviews;
+  final int remembered;
+
+  bool isDue(DateTime on) => !nextDue.isAfter(on);
+
+  /// Within the limits the security rules enforce.
+  bool get isValid =>
+      question.trim().isNotEmpty &&
+      question.length <= Limits.aptQuestionLength &&
+      options.length >= Limits.minOptions &&
+      options.length <= Limits.maxOptions &&
+      options.every((o) => o.trim().isNotEmpty && o.length <= Limits.aptOptionLength) &&
+      answer >= 0 &&
+      answer < options.length &&
+      explanation.length <= Limits.aptExplanationLength &&
+      topic.trim().isNotEmpty &&
+      topic.length <= Limits.topicLength;
+
+  AptCard review({required bool correct, required DateTime on}) {
+    final (stage, nextDue) = afterReview(this.stage, correct ? Grade.good : Grade.again, on);
+    return copyWith(stage: stage, nextDue: nextDue, reviews: reviews + 1, remembered: remembered + (correct ? 1 : 0));
+  }
+
+  AptCard copyWith({
+    String? question,
+    List<String>? options,
+    int? answer,
+    String? explanation,
+    String? topic,
+    int? stage,
+    DateTime? nextDue,
+    int? reviews,
+    int? remembered,
+  }) => AptCard(
+    id: id,
+    question: question ?? this.question,
+    options: options ?? this.options,
+    answer: answer ?? this.answer,
+    explanation: explanation ?? this.explanation,
+    topic: topic ?? this.topic,
+    stage: stage ?? this.stage,
+    nextDue: nextDue ?? this.nextDue,
+    reviews: reviews ?? this.reviews,
+    remembered: remembered ?? this.remembered,
+  );
+
+  Map<String, dynamic> toMap() => {
+    'question': question,
+    'options': options,
+    'answer': answer,
+    'explanation': explanation,
+    'topic': topic,
+    'stage': stage,
+    'nextDue': dayKey(nextDue),
+    'reviews': reviews,
+    'remembered': remembered,
+  };
+
+  factory AptCard.fromMap(String id, Map<String, dynamic> m) => AptCard(
+    id: id,
+    question: m['question'] as String,
+    options: (m['options'] as List).cast<String>(),
+    answer: m['answer'] as int,
+    explanation: m['explanation'] as String? ?? '',
+    topic: m['topic'] as String? ?? 'General',
+    stage: m['stage'] as int? ?? 0,
+    nextDue: parseDay(m['nextDue'] as String),
+    reviews: m['reviews'] as int? ?? 0,
+    remembered: m['remembered'] as int? ?? 0,
+  );
+}

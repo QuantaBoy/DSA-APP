@@ -4,6 +4,7 @@ rules_version = '2';
 //
 //   users/{uid}               v, problems (map by id), days (reviews per day), topics (results per topic)
 //   users/{uid}/notes/{id}    solution card: text (code), idea, time, space, mistake
+//   users/{uid}/apt/{id}      aptitude question with its options, answer, explanation and schedule
 //   users/{uid}/problems/{id} and /reviews/{id} — old (v1) layout: read and delete only, so the app can move it
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -36,6 +37,20 @@ service cloud.firestore {
         && optionalString(data, 'space', 40);
     }
 
+    // Aptitude card. Limits match Limits in lib/logic/models.dart.
+    function isValidApt(data) {
+      return data.keys().hasOnly(['question', 'options', 'answer', 'explanation', 'topic', 'stage', 'nextDue', 'reviews', 'remembered'])
+        && data.question is string && data.question.size() > 0 && data.question.size() <= 2000
+        && data.options is list && data.options.size() >= 2 && data.options.size() <= 6
+        && data.answer is int && data.answer >= 0 && data.answer < data.options.size()
+        && data.explanation is string && data.explanation.size() <= 3000
+        && data.topic is string && data.topic.size() > 0 && data.topic.size() <= 60
+        && data.stage is int && data.stage >= 0 && data.stage < 20
+        && data.nextDue is string && data.nextDue.size() == 10
+        && data.reviews is int && data.reviews >= 0
+        && data.remembered is int && data.remembered >= 0;
+    }
+
     // Opt-in leaderboard: anyone signed in can read; you can only write your own entry, with sane values.
     // ponytail: the numbers are reported by the app, so a modified client could inflate them;
     // server-side verification needs Cloud Functions (Blaze plan).
@@ -60,6 +75,11 @@ service cloud.firestore {
       match /notes/{problemId} {
         allow read, delete: if isOwner(uid);
         allow create, update: if isOwner(uid) && problemId.size() <= 64 && isValidNote(request.resource.data);
+      }
+
+      match /apt/{id} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && id.size() <= 64 && isValidApt(request.resource.data);
       }
 
       match /problems/{id} {

@@ -9,7 +9,7 @@ Memory Stack helps you revise data-structures and algorithms problems with space
 ## What we collect
 
 - **Account details:** your email address and, if you give one, your name. If you sign in with Google, we receive your name and email from Google.
-- **Your study data:** the problems you mark as solved, your notes and code, your review dates, and how many reviews you remembered.
+- **Your study data:** the problems you mark as solved, your notes and code, your aptitude questions, your review dates, and how many reviews you remembered.
 
 We do not collect your location or contacts, and we do not use advertising or analytics trackers.
 
@@ -28,6 +28,10 @@ When you tap **Run**, the code and input you typed are sent to a code-execution 
 ## Leaderboard (optional)
 
 Only if you choose **Join the leaderboard**, your first name, streak and number of solved problems are shown to other signed-in users. Never your email, notes or code. Leaving the leaderboard deletes your entry.
+
+## Scanning questions with AI (optional)
+
+If you scan an aptitude question, the photo is sent to Google's Gemini AI (through Firebase AI Logic) to read the question and work out the answer. The photo is not stored by us; only the question, options, answer and explanation you save are kept in your account. On Google's free tier, Google may use what is sent to improve its services, so do not scan anything personal.
 
 ## LeetCode import (optional)
 

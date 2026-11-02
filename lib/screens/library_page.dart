@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/store.dart';
 import '../logic/models.dart';
+import 'aptitude_page.dart';
 import 'motion.dart';
 import 'open_link.dart';
 import 'stack_page.dart';
@@ -16,7 +17,7 @@ class LibraryPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => DefaultTabController(
-    length: 2,
+    length: 3,
     child: Column(
       children: [
         const Padding(
@@ -26,6 +27,7 @@ class LibraryPage extends StatelessWidget {
             tabs: [
               Tab(text: 'Problems'),
               Tab(text: 'Patterns'),
+              Tab(text: 'Aptitude'),
             ],
           ),
         ),
@@ -34,6 +36,7 @@ class LibraryPage extends StatelessWidget {
             children: [
               StackPage(store: store, problems: problems),
               PatternsView(problems: problems),
+              AptitudeView(store: store),
             ],
           ),
         ),

@@ -81,6 +81,37 @@ describe('notes', () => {
   });
 });
 
+describe('aptitude cards', () => {
+  const card = { question: 'What is 20% of 50?', options: ['5', '10', '15', '20'], answer: 1, explanation: '50 × 0.2 = 10',
+    topic: 'Percentages', stage: 0, nextDue: '2026-11-03', reviews: 0, remembered: 0 };
+
+  it('owner can save, list, review and delete a card', async () => {
+    const ref = doc(alice(), 'users/alice/apt/c1');
+    await assertSucceeds(setDoc(ref, card));
+    await assertSucceeds(getDocs(collection(alice(), 'users/alice/apt')));
+    await assertSucceeds(setDoc(ref, { ...card, stage: 1, nextDue: '2026-11-06', reviews: 1, remembered: 1 }));
+    await assertSucceeds(deleteDoc(ref));
+  });
+
+  it('others cannot read or write it', async () => {
+    await env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), 'users/alice/apt/c1'), card));
+    await assertFails(getDoc(doc(bob(), 'users/alice/apt/c1')));
+    await assertFails(getDocs(collection(bob(), 'users/alice/apt')));
+    await assertFails(setDoc(doc(bob(), 'users/alice/apt/c2'), card));
+    await assertFails(setDoc(doc(guest(), 'users/alice/apt/c2'), card));
+  });
+
+  it('rejects bad answers, option counts, sizes and extra fields', async () => {
+    const ref = doc(alice(), 'users/alice/apt/c1');
+    await assertFails(setDoc(ref, { ...card, answer: 4 }));
+    await assertFails(setDoc(ref, { ...card, options: ['only one'], answer: 0 }));
+    await assertFails(setDoc(ref, { ...card, options: ['1', '2', '3', '4', '5', '6', '7'] }));
+    await assertFails(setDoc(ref, { ...card, question: 'x'.repeat(2001) }));
+    await assertFails(setDoc(ref, { ...card, explanation: 'x'.repeat(3001) }));
+    await assertFails(setDoc(ref, { ...card, admin: true }));
+  });
+});
+
 describe('old layout and anything else', () => {
   it('old problems/reviews can be read and deleted but never written', async () => {
     await env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), 'users/alice/problems/p1'), problem));
