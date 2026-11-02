@@ -658,8 +658,8 @@ class _PowerStripState extends State<PowerStrip> with SingleTickerProviderStateM
       final strength = p.rank.index; // 0..6
       final left = p.level.needed - p.level.into;
       // Flames burn around the outside of the card, taller and wilder each rank.
-      final (top, side, bottom) = (0.0, 9.0 + strength * 2, 12.0 + strength * 3); // sides and bottom only
-      final room = EdgeInsets.fromLTRB(side + 2, 14, side + 2, bottom + 2);
+      final (top, side, bottom) = (14.0 + strength * 3, 9.0 + strength * 2, 12.0 + strength * 3);
+      final room = EdgeInsets.fromLTRB(side + 2, top + 2, side + 2, bottom + 2);
       return Padding(
         padding: EdgeInsets.symmetric(horizontal: 16 - side - 2 > 4 ? 16 - side - 2 : 4),
         child: AnimatedBuilder(
