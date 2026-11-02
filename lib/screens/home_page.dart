@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -12,9 +13,12 @@ import '../data/prefs.dart';
 import '../data/reminder.dart';
 import '../data/sheet.dart';
 import '../data/store.dart';
+import '../logic/ascension.dart';
+import '../logic/models.dart';
 import '../logic/srs.dart';
 import 'add_problem_page.dart';
 import 'aptitude_page.dart';
+import 'ascension_view.dart';
 import 'library_page.dart';
 import 'motion.dart';
 import 'profile_page.dart';
@@ -52,23 +56,75 @@ class _HomePageState extends State<HomePage> {
     // Neither may ever break the app: a missing reminder or a failed upgrade is retried next launch.
     unawaited(scheduleDailyReminder(Prefs.reminderMinutes.value).catchError((Object _) {}));
     unawaited(store.upgrade().catchError((Object _) {}));
-    // Keep the home screen widget and (if joined) the leaderboard entry current.
+    // Keep the home screen widget, your level and (if joined) the leaderboard entry current.
     _widgetFeed = store.data().listen((d) {
+      _last = d;
       final now = today();
-      final streak = streakWithFreezes(d.stats.days.keys, now);
-      unawaited(updateHomeWidget(due: d.problems.where((p) => p.isDue(now)).length, streak: streak));
-      _publishLeaderboard(streak, d.problems.length);
+      unawaited(updateHomeWidget(due: d.problems.where((p) => p.isDue(now)).length, streak: streakWithFreezes(d.stats.days.keys, now)));
+      unawaited(_updatePower());
       _syncLeetCode();
     }, onError: (Object _) {});
+    _aptFeed = store.aptCards().listen((c) {
+      _apt = c;
+      unawaited(_updatePower());
+    }, onError: (Object _) {});
+    Prefs.equippedTitle.addListener(_publishLeaderboard);
   }
 
-  (int, int)? _published; // last numbers sent to the leaderboard, so unchanged numbers cost no write
+  UserData? _last;
+  List<AptCard> _apt = const [];
+  late final StreamSubscription<List<AptCard>> _aptFeed;
+  late final Future<Sheet?> _a2z = loadSheet('a2z').then<Sheet?>((s) => s, onError: (Object _) => null);
+  bool _celebrating = false;
 
-  void _publishLeaderboard(int streak, int solved) {
-    if (!Prefs.leaderboard.value || _published == (streak, solved)) return;
-    _published = (streak, solved);
+  Future<void> _updatePower() async {
+    final d = _last;
+    if (d == null) return;
+    final aptCorrect = _apt.fold(0, (a, c) => a + c.remembered);
+    final deeds = (
+      problems: d.problems,
+      stats: d.stats,
+      aptCorrect: aptCorrect,
+      aptWrong: _apt.fold(0, (a, c) => a + c.reviews) - aptCorrect,
+    );
+    final xp = totalXp(deeds);
+    final level = levelFor(xp);
+    final now = (xp: xp, level: level, rank: Rank.of(level.level), titles: earnedTitles(deeds, await _a2z));
+    power.value = now;
+    _publishLeaderboard();
+    // Celebrate what is new since the last look. Seen never goes down, so a slow first load
+    // (or a reset) does not replay old level-ups.
+    final seenLevel = max(Prefs.seenLevel, 1);
+    final fresh = now.level.level > seenLevel || !Prefs.seenTitles.containsAll(now.titles);
+    if (!fresh || _celebrating || !mounted) return;
+    _celebrating = true;
+    final before = (xp: 0, level: (level: seenLevel, into: 0, needed: 0), rank: Rank.of(seenLevel), titles: Prefs.seenTitles);
+    Prefs.markSeen(max(seenLevel, now.level.level), {...Prefs.seenTitles, ...now.titles});
+    await celebrate(context, before, now);
+    _celebrating = false;
+  }
+
+  (int, int, int, String?)? _published; // last values sent to the leaderboard, so unchanged ones cost no write
+
+  void _publishLeaderboard() {
+    final d = _last, p = power.value;
+    if (d == null || p == null || !Prefs.leaderboard.value) return;
+    final streak = streakWithFreezes(d.stats.days.keys, today());
+    final title = titleById(Prefs.equippedTitle.value)?.name;
+    final values = (streak, d.problems.length, p.level.level, title);
+    if (_published == values) return;
+    _published = values;
     unawaited(
-      Leaderboard().publish(uid: widget.user.uid, name: firstName(widget.user), streak: streak, solved: solved).catchError((Object _) {}),
+      Leaderboard()
+          .publish(
+            uid: widget.user.uid,
+            name: firstName(widget.user),
+            streak: streak,
+            solved: d.problems.length,
+            level: p.level.level,
+            title: title,
+          )
+          .catchError((Object _) {}),
     );
   }
 
@@ -92,6 +148,8 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     unawaited(_widgetFeed.cancel());
+    unawaited(_aptFeed.cancel());
+    Prefs.equippedTitle.removeListener(_publishLeaderboard);
     super.dispose();
   }
 
@@ -193,7 +251,18 @@ class _HomePageState extends State<HomePage> {
         );
       }
       return Scaffold(
-        appBar: AppBar(title: title, actions: [if (_tab != _profile) avatar]),
+        appBar: AppBar(
+          title: title,
+          actions: [
+            if (_tab == _home)
+              Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: LevelChip(onTap: () => _go(_profile)),
+              )
+            else if (_tab != _profile)
+              avatar,
+          ],
+        ),
         body: content,
         floatingActionButton: fab,
         bottomNavigationBar: _BottomBar(tab: _tab, onTab: _go, onScan: () => showScanSheet(context, store)),

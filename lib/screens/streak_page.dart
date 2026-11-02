@@ -506,7 +506,13 @@ class _StreakCelebrationState extends State<StreakCelebration> {
                     'day streak',
                     style: TextStyle(color: _orange, fontSize: 26, fontWeight: FontWeight.w900),
                   ),
-                  const SizedBox(height: 36),
+                  const SizedBox(height: 10),
+                  Text(
+                    streakCry(after),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: _red, fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 1.2),
+                  ),
+                  const SizedBox(height: 26),
                   Row(
                     children: [
                       for (final (i, d) in week.indexed)
@@ -603,3 +609,13 @@ class _DayDot extends StatelessWidget {
     ),
   );
 }
+
+/// A battle cry that grows with the streak.
+String streakCry(int days) => switch (days) {
+  < 3 => 'THE FIRE IS LIT.',
+  < 7 => 'THE FLAME GROWS. DO NOT LET IT DIE.',
+  < 14 => 'YOUR FIRE BURNS HOT. NOTHING STOPS YOU.',
+  < 30 => 'RAGE OF A WARRIOR. THEY CANNOT KEEP UP.',
+  < 100 => 'UNYIELDING. YOUR WILL IS IRON.',
+  _ => 'ETERNAL FLAME. YOU ARE A LEGEND.',
+};

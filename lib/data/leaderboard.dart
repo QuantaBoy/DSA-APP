@@ -1,10 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// One person on the leaderboard. Only what they chose to share: first name and two numbers.
-typedef LeaderboardEntry = ({String uid, String name, int streak, int solved});
+/// One person on the leaderboard. Only what they chose to share: first name, streak, solved count, level and title.
+typedef LeaderboardEntry = ({String uid, String name, int streak, int solved, int level, String? title});
 
 /// What the leaderboard can be sorted by.
 enum Ranking {
+  level('Level'),
   streak('Streak'),
   solved('Solved');
 
@@ -12,7 +13,7 @@ enum Ranking {
   final String label;
 }
 
-/// Opt-in leaderboard in leaderboard/{uid}. Joining publishes your first name, streak and solved count;
+/// Opt-in leaderboard in leaderboard/{uid}. Joining publishes your first name, streak, solved count, level and worn title;
 /// leaving deletes the entry. Firestore rules allow reading only when signed in and writing only your own entry.
 class Leaderboard {
   Leaderboard({FirebaseFirestore? db}) : _dbOverride = db;
@@ -35,16 +36,27 @@ class Leaderboard {
               name: d.data()['name'] as String? ?? '?',
               streak: d.data()['streak'] as int? ?? 0,
               solved: d.data()['solved'] as int? ?? 0,
+              level: d.data()['level'] as int? ?? 1,
+              title: d.data()['title'] as String?,
             ),
         ],
       );
 
   Future<bool> isJoined(String uid) async => (await _entries.doc(uid).get()).exists;
 
-  Future<void> publish({required String uid, required String name, required int streak, required int solved}) => _entries.doc(uid).set({
+  Future<void> publish({
+    required String uid,
+    required String name,
+    required int streak,
+    required int solved,
+    int level = 1,
+    String? title,
+  }) => _entries.doc(uid).set({
     'name': name.trim().isEmpty ? 'Coder' : name.trim().substring(0, name.trim().length.clamp(0, 30)),
     'streak': streak.clamp(0, 5000),
     'solved': solved.clamp(0, 5000),
+    'level': level.clamp(1, 1000),
+    'title': ?title,
     'updatedAt': FieldValue.serverTimestamp(),
   });
 

@@ -27,7 +27,7 @@ When you tap **Run**, the code and input you typed are sent to a code-execution 
 
 ## Leaderboard (optional)
 
-Only if you choose **Join the leaderboard**, your first name, streak and number of solved problems are shown to other signed-in users. Never your email, notes or code. Leaving the leaderboard deletes your entry.
+Only if you choose **Join the leaderboard**, your first name, streak, number of solved problems, level and the title you wear are shown to other signed-in users. Never your email, notes or code. Leaving the leaderboard deletes your entry.
 
 ## Scanning questions with AI (optional)
 

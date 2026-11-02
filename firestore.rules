@@ -55,10 +55,12 @@ service cloud.firestore {
     // ponytail: the numbers are reported by the app, so a modified client could inflate them;
     // server-side verification needs Cloud Functions (Blaze plan).
     function isValidEntry(data) {
-      return data.keys().hasOnly(['name', 'streak', 'solved', 'updatedAt'])
+      return data.keys().hasOnly(['name', 'streak', 'solved', 'level', 'title', 'updatedAt'])
         && data.name is string && data.name.size() > 0 && data.name.size() <= 30
         && data.streak is int && data.streak >= 0 && data.streak <= 5000
         && data.solved is int && data.solved >= 0 && data.solved <= 5000
+        && (!('level' in data) || (data.level is int && data.level >= 1 && data.level <= 1000))
+        && optionalString(data, 'title', 40)
         && data.updatedAt == request.time;
     }
 

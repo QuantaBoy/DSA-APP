@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 
 import '../data/leaderboard.dart';
 import '../data/prefs.dart';
+import '../logic/ascension.dart';
+import 'ascension_view.dart';
 import 'motion.dart';
 import 'widgets.dart';
 
@@ -26,13 +28,20 @@ class LeaderboardPage extends StatefulWidget {
 
 class _LeaderboardPageState extends State<LeaderboardPage> {
   late final _board = widget.board ?? Leaderboard();
-  Ranking _by = Ranking.streak;
+  Ranking _by = Ranking.level;
   late final Map<Ranking, Stream<List<LeaderboardEntry>>> _streams = {for (final r in Ranking.values) r: _board.top(r)};
 
   Future<void> _join() async {
     unawaited(HapticFeedback.mediumImpact());
     Prefs.setLeaderboard(true);
-    await _board.publish(uid: widget.uid, name: widget.name, streak: widget.streak, solved: widget.solved);
+    await _board.publish(
+      uid: widget.uid,
+      name: widget.name,
+      streak: widget.streak,
+      solved: widget.solved,
+      level: power.value?.level.level ?? 1,
+      title: titleById(Prefs.equippedTitle.value)?.name,
+    );
   }
 
   Future<void> _leave() async {
@@ -104,6 +113,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
                       const SizedBox(height: 10),
                       Text('Name: ${widget.name}'),
                       Text('Streak: ${widget.streak} days · Solved: ${widget.solved}'),
+                      const Text('Your level and the title you wear'),
                       const SizedBox(height: 8),
                       Text(
                         'Never your email, notes or code. Leave any time and your entry is deleted.',
@@ -145,8 +155,16 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
             if (snap.hasError) return const Center(child: Text('Could not load the leaderboard.'));
             final entries = snap.data;
             if (entries == null) return const Center(child: CircularProgressIndicator());
-            int value(LeaderboardEntry e) => _by == Ranking.streak ? e.streak : e.solved;
-            final unit = _by == Ranking.streak ? 'days' : 'solved';
+            int value(LeaderboardEntry e) => switch (_by) {
+              Ranking.level => e.level,
+              Ranking.streak => e.streak,
+              Ranking.solved => e.solved,
+            };
+            final unit = switch (_by) {
+              Ranking.level => 'level',
+              Ranking.streak => 'days',
+              Ranking.solved => 'solved',
+            };
             return ListView(
               padding: const EdgeInsets.only(bottom: 24),
               children: [
@@ -220,7 +238,8 @@ class _Podium extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontWeight: FontWeight.w800),
                   ),
-                  Text('${value(top[i])} $unit', style: theme.textTheme.bodySmall),
+                  _TitleLine(top[i]),
+                  Text(_amount(value(top[i]), unit), style: theme.textTheme.bodySmall),
                   const SizedBox(height: 6),
                   Container(
                     height: [92.0, 66.0, 48.0][i],
@@ -264,17 +283,41 @@ class _Row extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       color: isMe ? colors.primaryContainer : null,
       child: ListTile(
-        leading: SizedBox(
-          width: 32,
-          child: Text(
-            '$rank',
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
-          ),
+        leading: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 28,
+              child: Text(
+                '$rank',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+              ),
+            ),
+            RankBadge(rank: Rank.of(entry.level), level: entry.level, size: 44),
+          ],
         ),
         title: Text(isMe ? '${entry.name} (you)' : entry.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-        trailing: Text('$value $unit', style: const TextStyle(fontWeight: FontWeight.w800)),
+        subtitle: _TitleLine(entry),
+        trailing: Text(_amount(value, unit), style: const TextStyle(fontWeight: FontWeight.w800)),
       ),
     );
   }
 }
+
+/// "Lv 12 · Array Executioner", coloured by rank.
+class _TitleLine extends StatelessWidget {
+  const _TitleLine(this.entry);
+
+  final LeaderboardEntry entry;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    'Lv ${entry.level}${entry.title == null ? '' : ' · ${entry.title}'}',
+    maxLines: 1,
+    overflow: TextOverflow.ellipsis,
+    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Rank.of(entry.level).colors.last),
+  );
+}
+
+String _amount(int value, String unit) => unit == 'level' ? 'Lv $value' : '$value $unit';

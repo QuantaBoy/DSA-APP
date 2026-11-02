@@ -150,6 +150,9 @@ describe('leaderboard', () => {
     await assertFails(setDoc(ref, entry({ solved: -1 })));
     await assertFails(setDoc(ref, entry({ name: 'x'.repeat(31) })));
     await assertFails(setDoc(ref, entry({ email: 'a@b.c' })));
+    await assertSucceeds(setDoc(ref, entry({ level: 12, title: 'Pattern Reaper' })));
+    await assertFails(setDoc(ref, entry({ level: 0 })));
+    await assertFails(setDoc(ref, entry({ title: 'x'.repeat(41) })));
     await assertFails(setDoc(ref, { name: 'Alice', streak: 5, solved: 2, updatedAt: new Date(0) }));
   });
 });

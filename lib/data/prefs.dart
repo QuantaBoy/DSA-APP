@@ -24,11 +24,19 @@ abstract final class Prefs {
   /// LeetCode username whose accepted problems are imported, or null.
   static final leetcodeUser = ValueNotifier<String?>(null);
 
+  /// Title you wear (an id from ascension.dart), or null.
+  static final equippedTitle = ValueNotifier<String?>(null);
+
+  /// Level and titles already celebrated, so each level-up shows once. -1 before the first look.
+  static int seenLevel = -1;
+  static Set<String> seenTitles = const {};
+
   /// Ids of walkthrough tips already shown.
   static final seenTips = ValueNotifier<Set<String>>(const {});
 
   static const _theme = 'themeMode', _onboarding = 'seenOnboarding', _reminder = 'reminderMinutes';
   static const _goal = 'dailyNewGoal', _tips = 'seenTips', _sheet = 'sheetId', _board = 'leaderboard', _leetcode = 'leetcodeUser';
+  static const _title = 'equippedTitle', _seenLevel = 'seenLevel', _seenTitles = 'seenTitles';
   static const _reminderOff = -1;
 
   static Future<SharedPreferences?> _prefs() async {
@@ -51,6 +59,25 @@ abstract final class Prefs {
     sheetId.value = p.getString(_sheet) ?? 'a2z';
     leaderboard.value = p.getBool(_board) ?? false;
     leetcodeUser.value = p.getString(_leetcode);
+    equippedTitle.value = p.getString(_title);
+    seenLevel = p.getInt(_seenLevel) ?? -1;
+    seenTitles = {...?p.getStringList(_seenTitles)};
+  }
+
+  static void equipTitle(String? id) {
+    equippedTitle.value = id;
+    unawaited(_prefs().then((p) => id == null ? p?.remove(_title) : p?.setString(_title, id)));
+  }
+
+  static void markSeen(int level, Set<String> titles) {
+    seenLevel = level;
+    seenTitles = titles;
+    unawaited(
+      _prefs().then((p) async {
+        await p?.setInt(_seenLevel, level);
+        await p?.setStringList(_seenTitles, titles.toList());
+      }),
+    );
   }
 
   static void setThemeMode(ThemeMode mode) {

@@ -41,6 +41,6 @@ void main() {
     }
     expect(find.text('Asha (you)'), findsOneWidget);
     expect(find.text('Bilal'), findsOneWidget);
-    expect(find.text('30 days'), findsOneWidget);
+    expect(find.text('Lv 1'), findsWidgets);
   });
 }

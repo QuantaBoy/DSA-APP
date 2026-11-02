@@ -11,6 +11,7 @@ import '../data/reminder.dart';
 import '../data/store.dart';
 import '../logic/models.dart';
 import '../logic/srs.dart';
+import 'ascension_view.dart';
 import 'leaderboard_page.dart';
 import 'motion.dart';
 import 'open_link.dart';
@@ -19,7 +20,7 @@ import 'streak_page.dart';
 import 'widgets.dart';
 
 /// Shown in Profile → About. Keep in step with `version:` in pubspec.yaml.
-const appVersion = '1.13.0';
+const appVersion = '1.14.0';
 
 /// First name for greetings, falling back to the email name.
 String firstName(User user) {
@@ -79,6 +80,7 @@ class ProfilePage extends StatelessWidget {
             ),
           ),
         ),
+        const PowerCard(),
         const SizedBox(height: 16),
         Rise(
           index: 1,
