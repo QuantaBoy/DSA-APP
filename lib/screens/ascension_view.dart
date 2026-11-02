@@ -20,12 +20,13 @@ const _gold = Color(0xFFFFD54F);
 
 /// The rank badge: a hexagon with the level, wrapped in a living aura that gets wilder each rank.
 class RankBadge extends StatefulWidget {
-  const RankBadge({super.key, required this.rank, required this.level, this.size = 120, this.animate = true});
+  const RankBadge({super.key, required this.rank, required this.level, this.size = 120, this.animate = true, this.glow = true});
 
   final Rank rank;
   final int level;
   final double size;
   final bool animate;
+  final bool glow; // soft blurred light behind the badge
 
   @override
   State<RankBadge> createState() => _RankBadgeState();
@@ -54,7 +55,7 @@ class _RankBadgeState extends State<RankBadge> with SingleTickerProviderStateMix
       child: AnimatedBuilder(
         animation: _spin,
         builder: (context, child) => CustomPaint(
-          painter: _AuraPainter(t: _spin.value, glow: glow, power: widget.rank.index),
+          painter: _AuraPainter(t: _spin.value, glow: glow, power: widget.rank.index, soft: widget.glow),
           child: child,
         ),
         child: Center(
@@ -101,7 +102,9 @@ class _Hexagon extends CustomClipper<Path> {
 
 /// Glow that breathes, a spinning energy ring, then sparks (rank 2+), orbiting shards (3+) and rising flames (4+).
 class _AuraPainter extends CustomPainter {
-  _AuraPainter({required this.t, required this.glow, required this.power});
+  _AuraPainter({required this.t, required this.glow, required this.power, this.soft = true});
+
+  final bool soft;
 
   final double t; // 0..1, loops
   final Color glow;
@@ -112,13 +115,15 @@ class _AuraPainter extends CustomPainter {
     final c = size.center(Offset.zero);
     final r = size.shortestSide / 2;
     final breathe = 0.5 + 0.5 * sin(t * 2 * pi * 2);
-    canvas.drawCircle(
-      c,
-      r * (0.62 + 0.06 * breathe),
-      Paint()
-        ..color = glow.withValues(alpha: 0.25 + 0.08 * power + 0.15 * breathe)
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, r * 0.25),
-    );
+    if (soft) {
+      canvas.drawCircle(
+        c,
+        r * (0.62 + 0.06 * breathe),
+        Paint()
+          ..color = glow.withValues(alpha: 0.25 + 0.08 * power + 0.15 * breathe)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, r * 0.25),
+      );
+    }
     canvas.drawArc(
       Rect.fromCircle(center: c, radius: r * 0.78),
       t * 2 * pi,
@@ -455,17 +460,12 @@ class PowerStrip extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(6, 6, 14, 6),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          gradient: RadialGradient(
-            center: const Alignment(-0.9, 0),
-            radius: 2.2,
-            colors: [glow.withValues(alpha: 0.35), const Color(0xFF0A0B16), const Color(0xFF040509)],
-            stops: const [0, 0.4, 1],
-          ),
+          color: const Color(0xFF0B0C16),
           border: Border.all(color: glow.withValues(alpha: 0.5)),
         ),
         child: Row(
           children: [
-            RankBadge(rank: p.rank, level: p.level.level, size: 58),
+            RankBadge(rank: p.rank, level: p.level.level, size: 58, glow: false),
             const SizedBox(width: 6),
             Expanded(
               child: Column(
