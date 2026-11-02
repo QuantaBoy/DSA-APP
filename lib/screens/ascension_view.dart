@@ -655,3 +655,83 @@ class _GridPainter extends CustomPainter {
   @override
   bool shouldRepaint(_GridPainter old) => old.color != color;
 }
+
+/// Slim home strip: badge, level, XP left to the next level. Tap for the full power card.
+class PowerStrip extends StatelessWidget {
+  const PowerStrip({super.key});
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: power,
+    builder: (context, p, _) {
+      if (p == null) return const SizedBox.shrink();
+      final glow = p.rank.colors.first;
+      return GestureDetector(
+        onTap: () => unawaited(
+          Navigator.push(
+            context,
+            MaterialPageRoute<void>(
+              builder: (_) => Scaffold(
+                backgroundColor: const Color(0xFF07080F),
+                appBar: AppBar(backgroundColor: const Color(0xFF07080F), foregroundColor: Colors.white, title: const Text('Your power')),
+                body: ListView(children: const [PowerCard()]),
+              ),
+            ),
+          ),
+        ),
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.fromLTRB(6, 6, 14, 6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: RadialGradient(
+              center: const Alignment(-0.9, 0),
+              radius: 2.2,
+              colors: [glow.withValues(alpha: 0.35), const Color(0xFF0A0B16), const Color(0xFF040509)],
+              stops: const [0, 0.4, 1],
+            ),
+            border: Border.all(color: glow.withValues(alpha: 0.5)),
+          ),
+          child: Row(
+            children: [
+              RankBadge(rank: p.rank, level: p.level.level, size: 58),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'LV ${p.level.level}  ',
+                          style: const TextStyle(color: _system, fontWeight: FontWeight.w900, letterSpacing: 1.2, fontSize: 12),
+                        ),
+                        Flexible(
+                          child: Text(
+                            p.rank.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: glow, fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 0.5),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${p.level.needed - p.level.into} XP more to Level ${p.level.level + 1}',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15),
+                    ),
+                    const SizedBox(height: 6),
+                    _Bar(value: p.level.into / p.level.needed, color: _system),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.chevron_right_rounded, color: Colors.white54),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}

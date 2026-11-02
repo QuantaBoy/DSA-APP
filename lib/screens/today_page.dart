@@ -141,7 +141,7 @@ class _TodayPageState extends State<TodayPage> {
               return ListView(
                 padding: const EdgeInsets.only(top: 4, bottom: 32),
                 children: [
-                  const Rise(child: PowerCard()),
+                  const Rise(child: PowerStrip()),
                   const SizedBox(height: 14),
                   Rise(
                     child: KeyedSubtree(key: _heroKey, child: hero),
