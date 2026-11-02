@@ -57,11 +57,38 @@ void main() {
       power.value = at(rank, rank.fromLevel);
       await phone(
         t,
-        const Scaffold(
-          body: Column(children: [SizedBox(height: 16), PowerStrip()]),
-        ),
+        const Scaffold(body: Column(children: [SizedBox(height: 16), PowerStrip()])),
         'strip_${rank.index}_${rank.name}',
         size: const Size(1290, 640),
+      );
+    });
+  }
+
+  for (final (name, earned) in [
+    ('pill_title', {'patterns'}),
+    ('pill_none', <String>{}),
+  ]) {
+    testWidgets(name, (t) async {
+      final base = at(Rank.awakened, 3, titles: earned);
+      power.value = (
+        xp: base.xp,
+        level: base.level,
+        rank: base.rank,
+        titles: base.titles,
+        next: (title: titles[1], progress: (done: 4, total: 7)),
+        progress: base.progress,
+      );
+      Prefs.equippedTitle.value = null;
+      await phone(
+        t,
+        Scaffold(
+          appBar: AppBar(
+            title: const Text('Hi, Alone'),
+            actions: const [Padding(padding: EdgeInsets.only(right: 12), child: TitlePill())],
+          ),
+        ),
+        name,
+        size: const Size(1170, 300),
       );
     });
   }

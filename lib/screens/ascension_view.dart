@@ -884,3 +884,90 @@ class _BarPainter extends CustomPainter {
   @override
   bool shouldRepaint(_BarPainter old) => old.v != v || old.shine != shine || old.from != from;
 }
+
+/// Top-right of Home: your title (the one you wear, else the latest earned) in a dark pill with a gold
+/// streak racing round it. With no title yet it shows how close the next one is. Tap: the titles roadmap slides in.
+class TitlePill extends StatefulWidget {
+  const TitlePill({super.key});
+
+  @override
+  State<TitlePill> createState() => _TitlePillState();
+}
+
+class _TitlePillState extends State<TitlePill> with SingleTickerProviderStateMixin {
+  late final _spin = AnimationController(vsync: this, duration: const Duration(seconds: 3))..repeat();
+
+  @override
+  void dispose() {
+    _spin.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: Listenable.merge([power, Prefs.equippedTitle]),
+    builder: (context, _) {
+      final p = power.value;
+      if (p == null) return const SizedBox.shrink();
+      final worn = titleById(Prefs.equippedTitle.value);
+      final title = worn != null && p.titles.contains(worn.id) ? worn : titles.where((t) => p.titles.contains(t.id)).lastOrNull;
+      final next = p.next;
+      const gold = Color(0xFFFDE047);
+      final label = title?.name ?? (next == null ? 'Titles' : '${next.progress.total - next.progress.done} more to ${next.title.name}');
+      return GestureDetector(
+        onTap: () => unawaited(
+          Navigator.push(
+            context,
+            PageRouteBuilder<void>(
+              pageBuilder: (_, _, _) => const RoadmapPage(),
+              transitionsBuilder: (_, a, _, child) => SlideTransition(
+                position: Tween(
+                  begin: const Offset(1, 0),
+                  end: Offset.zero,
+                ).animate(CurvedAnimation(parent: a, curve: Curves.easeOutCubic)),
+                child: child,
+              ),
+            ),
+          ),
+        ),
+        child: AnimatedBuilder(
+          animation: _spin,
+          builder: (context, child) => CustomPaint(
+            foregroundPainter: _EdgePainter(t: _spin.value, color: title == null ? Colors.white54 : gold, power: 2),
+            child: child,
+          ),
+          child: Container(
+            height: 40,
+            constraints: const BoxConstraints(maxWidth: 200),
+            padding: const EdgeInsets.fromLTRB(10, 0, 14, 0),
+            decoration: BoxDecoration(color: const Color(0xFF0B0A14), borderRadius: BorderRadius.circular(20)),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  title == null ? Icons.lock_outline_rounded : Icons.military_tech_rounded,
+                  color: title == null ? Colors.white54 : gold,
+                  size: 20,
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: title == null ? Colors.white70 : gold,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 12.5,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}

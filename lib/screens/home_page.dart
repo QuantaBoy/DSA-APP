@@ -256,7 +256,16 @@ class _HomePageState extends State<HomePage> {
               Expanded(
                 child: Column(
                   children: [
-                    AppBar(title: title, automaticallyImplyLeading: false, actions: [if (_tab != _profile) avatar]),
+                    AppBar(
+                      title: title,
+                      automaticallyImplyLeading: false,
+                      actions: [
+                        if (_tab == _home)
+                          const Padding(padding: EdgeInsets.only(right: 12), child: TitlePill())
+                        else if (_tab != _profile)
+                          avatar,
+                      ],
+                    ),
                     Expanded(
                       child: Center(
                         child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 900), child: content),
@@ -271,7 +280,12 @@ class _HomePageState extends State<HomePage> {
         );
       }
       return Scaffold(
-        appBar: AppBar(title: title, actions: [if (_tab != _profile) avatar]),
+        appBar: AppBar(
+          title: title,
+          actions: [
+            if (_tab == _home) const Padding(padding: EdgeInsets.only(right: 12), child: TitlePill()) else if (_tab != _profile) avatar,
+          ],
+        ),
         body: content,
         floatingActionButton: fab,
         bottomNavigationBar: _BottomBar(tab: _tab, onTab: _go, onScan: () => showScanSheet(context, store)),
