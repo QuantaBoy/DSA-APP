@@ -19,7 +19,7 @@ import 'streak_page.dart';
 import 'widgets.dart';
 
 /// Shown in Profile → About. Keep in step with `version:` in pubspec.yaml.
-const appVersion = '1.14.0';
+const appVersion = '1.15.0';
 
 /// First name for greetings, falling back to the email name.
 String firstName(User user) {
@@ -153,9 +153,16 @@ class ProfilePage extends StatelessWidget {
               builder: (context, minutes, _) => ListTile(
                 leading: const Icon(Icons.notifications_active_rounded),
                 title: const Text('Daily reminder'),
-                subtitle: Text(minutes == null ? 'Off' : TimeOfDay(hour: minutes ~/ 60, minute: minutes % 60).format(context)),
+                subtitle: Text(
+                  minutes == null
+                      ? 'Off. Switch on and pick your time'
+                      : TimeOfDay(hour: minutes ~/ 60, minute: minutes % 60).format(context),
+                ),
                 onTap: minutes == null ? null : () => _pickReminder(context, minutes),
-                trailing: Switch.adaptive(value: minutes != null, onChanged: (on) => _setReminder(on ? 10 * 60 : null)),
+                trailing: Switch.adaptive(
+                  value: minutes != null,
+                  onChanged: (on) => on ? _pickReminder(context, 20 * 60) : _setReminder(null),
+                ),
               ),
             ),
           ],

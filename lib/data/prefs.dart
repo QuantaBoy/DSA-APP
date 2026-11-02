@@ -10,7 +10,7 @@ abstract final class Prefs {
   static final seenOnboarding = ValueNotifier(false);
 
   /// Daily reminder time as minutes after midnight, or null when switched off.
-  static final reminderMinutes = ValueNotifier<int?>(10 * 60);
+  static final reminderMinutes = ValueNotifier<int?>(null);
 
   /// New problems to solve each day (reviews due are always part of the day's goal).
   static final dailyNewGoal = ValueNotifier(1);
@@ -53,7 +53,7 @@ abstract final class Prefs {
     themeMode.value = ThemeMode.values.firstWhere((m) => m.name == p.getString(_theme), orElse: () => ThemeMode.light);
     seenOnboarding.value = p.getBool(_onboarding) ?? false;
     final minutes = p.getInt(_reminder);
-    reminderMinutes.value = minutes == null ? 10 * 60 : (minutes == _reminderOff ? null : minutes);
+    reminderMinutes.value = minutes == null || minutes == _reminderOff ? null : minutes; // off until you switch it on
     dailyNewGoal.value = (p.getInt(_goal) ?? 1).clamp(0, 10);
     seenTips.value = {...?p.getStringList(_tips)};
     sheetId.value = p.getString(_sheet) ?? 'a2z';

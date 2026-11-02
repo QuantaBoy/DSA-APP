@@ -66,6 +66,8 @@ class _SheetPageState extends State<SheetPage> {
         SnackBar(
           content: Text('${p.title} added. First review ${prettyDay(problem.nextDue)}.'),
           action: SnackBarAction(label: 'Undo', onPressed: () => unawaited(widget.store.deleteProblem(problem))),
+          persist: false, // with an action, snack bars otherwise stay until tapped
+          duration: const Duration(seconds: 5),
         ),
       );
   }
