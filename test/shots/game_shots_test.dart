@@ -58,10 +58,10 @@ void main() {
       await phone(
         t,
         const Scaffold(
-          body: Padding(padding: EdgeInsets.only(top: 24), child: PowerStrip()),
+          body: Column(children: [SizedBox(height: 16), PowerStrip()]),
         ),
         'strip_${rank.index}_${rank.name}',
-        size: const Size(1290, 480),
+        size: const Size(1290, 640),
       );
     });
   }

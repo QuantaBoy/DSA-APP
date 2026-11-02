@@ -445,28 +445,41 @@ class _SystemWindowState extends State<_SystemWindow> with SingleTickerProviderS
 
 /// Flames licking outward from all four sides of the box, plus embers floating up.
 class _WindowFirePainter extends CustomPainter {
-  _WindowFirePainter({required this.t, required this.flame, required this.hot});
+  _WindowFirePainter({
+    required this.t,
+    required this.flame,
+    required this.hot,
+    this.inset = const EdgeInsets.fromLTRB(36, 70, 36, 28),
+    this.heights = const (64, 28, 20), // top, sides, bottom
+    this.radius = 0,
+    this.embers = 18,
+  });
 
   final double t;
   final Color flame, hot;
+  final EdgeInsets inset; // where the box sits inside the painted area
+  final (double, double, double) heights;
+  final double radius; // rounded box: flames start inside the corners
+  final int embers;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final box = Rect.fromLTRB(36, 70, size.width - 36, size.height - 28);
+    final box = inset.deflateRect(Offset.zero & size).deflate(radius * 0.3);
+    final (top, side, bottom) = heights;
     for (final (layer, color, scale) in [(0, flame.withValues(alpha: 0.85), 1.0), (1, hot.withValues(alpha: 0.9), 0.5)]) {
       final paint = Paint()..color = color;
       // Top edge burns tallest; sides and bottom shorter.
-      _edge(canvas, paint, box.topLeft, box.topRight, const Offset(0, -1), 64 * scale, layer, 0);
-      _edge(canvas, paint, box.topRight, box.bottomRight, const Offset(1, 0), 28 * scale, layer, 1);
-      _edge(canvas, paint, box.bottomRight, box.bottomLeft, const Offset(0, 1), 20 * scale, layer, 2);
-      _edge(canvas, paint, box.bottomLeft, box.topLeft, const Offset(-1, 0), 28 * scale, layer, 3);
+      _edge(canvas, paint, box.topLeft, box.topRight, const Offset(0, -1), top * scale, layer, 0);
+      _edge(canvas, paint, box.topRight, box.bottomRight, const Offset(1, 0), side * scale, layer, 1);
+      _edge(canvas, paint, box.bottomRight, box.bottomLeft, const Offset(0, 1), bottom * scale, layer, 2);
+      _edge(canvas, paint, box.bottomLeft, box.topLeft, const Offset(-1, 0), side * scale, layer, 3);
     }
     // Embers rising above the box.
     final rnd = Random(3);
-    for (var i = 0; i < 18; i++) {
+    for (var i = 0; i < embers; i++) {
       final x = box.left + rnd.nextDouble() * box.width;
       final life = (t + rnd.nextDouble()) % 1;
-      final y = box.top - 20 - life * 90;
+      final y = box.top - top * 0.3 - life * top * 1.4;
       canvas.drawCircle(
         Offset(x + sin(life * 6 + i) * 6, y),
         2.5 * (1 - life),
@@ -625,77 +638,98 @@ class _PowerStripState extends State<PowerStrip> with SingleTickerProviderStateM
       final (deep, flame, hot) = _fire[p.rank]!;
       final strength = p.rank.index; // 0..6
       final left = p.level.needed - p.level.into;
+      // Flames burn around the outside of the card, taller and wilder each rank.
+      final (top, side, bottom) = (0.0, 9.0 + strength * 2, 12.0 + strength * 3); // sides and bottom only
+      final room = EdgeInsets.fromLTRB(side + 2, 2, side + 2, bottom + 2);
       return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: GestureDetector(
-          onTap: () => unawaited(Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const RoadmapPage()))),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [BoxShadow(color: flame.withValues(alpha: 0.45), offset: const Offset(0, 6), blurRadius: 18)],
+        padding: EdgeInsets.symmetric(horizontal: 16 - side - 2 > 4 ? 16 - side - 2 : 4),
+        child: AnimatedBuilder(
+          animation: _spin,
+          builder: (context, child) => CustomPaint(
+            painter: _WindowFirePainter(
+              t: _spin.value,
+              flame: flame,
+              hot: hot,
+              inset: room,
+              heights: (top, side, bottom),
+              radius: 20,
+              embers: 0,
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: AnimatedBuilder(
-                animation: _spin,
-                builder: (context, child) => CustomPaint(
-                  painter: _FirePainter(t: _spin.value, deep: deep, flame: flame, hot: hot, strength: strength),
-                  foregroundPainter: _EdgePainter(t: (_spin.value * (1 + strength * 0.3)) % 1, color: hot, power: strength),
-                  child: child,
+            child: child,
+          ),
+          child: Padding(
+            padding: room,
+            child: GestureDetector(
+              onTap: () => unawaited(Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const RoadmapPage()))),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: flame, width: 2),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 10, 16, 12),
-                  child: Row(
-                    children: [
-                      RankBadge(rank: p.rank, level: p.level.level, size: 62, glow: false),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'LV ${p.level.level}  ·  ${p.rank.title.toUpperCase()}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(color: hot, fontWeight: FontWeight.w900, letterSpacing: 2, fontSize: 11),
-                            ),
-                            const SizedBox(height: 2),
-                            Text.rich(
-                              TextSpan(
-                                children: [
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: AnimatedBuilder(
+                    animation: _spin,
+                    builder: (context, child) => CustomPaint(
+                      painter: _FirePainter(t: _spin.value, deep: deep, flame: flame, hot: hot, strength: strength),
+                      foregroundPainter: _EdgePainter(t: (_spin.value * (1 + strength * 0.3)) % 1, color: hot, power: strength),
+                      child: child,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 10, 16, 12),
+                      child: Row(
+                        children: [
+                          RankBadge(rank: p.rank, level: p.level.level, size: 62, glow: false),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'LV ${p.level.level}  ·  ${p.rank.title.toUpperCase()}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(color: hot, fontWeight: FontWeight.w900, letterSpacing: 2, fontSize: 11),
+                                ),
+                                const SizedBox(height: 2),
+                                Text.rich(
                                   TextSpan(
-                                    text: '$left XP ',
-                                    style: TextStyle(color: hot, fontSize: 24),
+                                    children: [
+                                      TextSpan(
+                                        text: '$left XP ',
+                                        style: TextStyle(color: hot, fontSize: 24),
+                                      ),
+                                      TextSpan(text: 'TO LEVEL ${p.level.level + 1}'),
+                                    ],
                                   ),
-                                  TextSpan(text: 'TO LEVEL ${p.level.level + 1}'),
-                                ],
-                              ),
-                              maxLines: 1,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w900,
-                                fontStyle: FontStyle.italic,
-                                letterSpacing: 0.5,
-                                shadows: [Shadow(color: Colors.black, offset: Offset(2, 2))],
-                              ),
+                                  maxLines: 1,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w900,
+                                    fontStyle: FontStyle.italic,
+                                    letterSpacing: 0.5,
+                                    shadows: [Shadow(color: Colors.black, offset: Offset(2, 2))],
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                _Bar(value: p.level.into / p.level.needed, from: flame, to: hot, t: _spin),
+                                const SizedBox(height: 6),
+                                Text(
+                                  _cry,
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.8),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 1.6,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 6),
-                            _Bar(value: p.level.into / p.level.needed, from: flame, to: hot, t: _spin),
-                            const SizedBox(height: 6),
-                            Text(
-                              _cry,
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.8),
-                                fontSize: 10,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1.6,
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -735,22 +769,6 @@ class _FirePainter extends CustomPainter {
     for (var i = 0; i < 7; i++) {
       final x = ((i / 7 + t) % 1) * size.width * 1.4 - size.width * 0.2;
       canvas.drawLine(Offset(x, size.height), Offset(x + size.height * 0.8, 0), lines);
-    }
-    // Flame tongues: an outer flame and a white-hot inner layer, each tongue flickering on its own.
-    final count = 14 + strength * 3;
-    final tall = size.height * (0.35 + strength * 0.07);
-    for (final (layer, color, scale) in [(0, flame.withValues(alpha: 0.55), 1.0), (1, hot.withValues(alpha: 0.5), 0.55)]) {
-      final path = Path()..moveTo(0, size.height);
-      for (var i = 1; i <= count; i++) {
-        final x = size.width * i / count;
-        final flicker = 0.55 + 0.45 * sin(t * 2 * pi * (2 + layer) + i * 1.7);
-        final h = tall * scale * flicker;
-        path.quadraticBezierTo(x - size.width / count / 2, size.height - h * 1.4, x, size.height - h * 0.2);
-      }
-      path
-        ..lineTo(size.width, size.height)
-        ..close();
-      canvas.drawPath(path, Paint()..color = color);
     }
   }
 
