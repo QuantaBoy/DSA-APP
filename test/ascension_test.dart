@@ -28,17 +28,12 @@ void main() {
     expect(Rank.of(80), Rank.monarch);
   });
 
-  test('topic titles come in tiers: 3 solved, half, all', () {
+  test('a topic title is earned only when all of the topic is solved', () {
     SheetProblem sp(String id) => SheetProblem.fromJson({'id': id, 's': 1, 'sec': 'Patterns', 't': id, 'p': 'LeetCode', 'u': 'u'});
     final sheet = Sheet(title: 'A2Z', source: '', steps: ['Beginner Problems'], problems: [for (var i = 0; i < 8; i++) sp('p$i')]);
     Deeds solved(int n) => (problems: [for (var i = 0; i < n; i++) _p('p$i', 'Easy')], stats: const Stats(), aptCorrect: 0, aptWrong: 0);
-    expect(earnedTitles(solved(2), sheet), isEmpty);
-    expect(tierOf('patterns', earnedTitles(solved(3), sheet)), 1);
-    expect(tierOf('patterns', earnedTitles(solved(4), sheet)), 2);
-    final all = earnedTitles(solved(8), sheet);
-    expect(tierOf('patterns', all), 3);
-    expect(tierOf('a2z', all), 1);
-    expect(titleLabel(titleById('patterns#3')!, 3), 'Pattern Reaper ★★★');
-    expect(nextTitle(solved(1), sheet)!.progress, (done: 1, total: 3));
+    expect(earnedTitles(solved(7), sheet), isEmpty);
+    expect(earnedTitles(solved(8), sheet), containsAll(['patterns', 'a2z']));
+    expect(nextTitle(solved(3), sheet)!.progress, (done: 3, total: 8));
   });
 }

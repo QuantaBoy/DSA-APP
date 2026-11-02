@@ -7,11 +7,8 @@ import 'package:flutter/services.dart';
 import '../data/prefs.dart';
 import '../logic/ascension.dart';
 
-/// The worn title with its stars, e.g. "Array Executioner ★★", or null.
-String? wornLabel(String? id, Set<String> earned) {
-  final t = titleById(id);
-  return t == null ? null : titleLabel(t, tierOf(t.id, earned));
-}
+/// The worn title's name, or null.
+String? wornLabel(String? id, Set<String> earned) => earned.contains(id) ? titleById(id)?.name : null;
 
 /// Your current power, worked out on the home screen from your data. Null until the data loads.
 typedef Power = ({int xp, Level level, Rank rank, Set<String> titles, ({HunterTitle title, Progress progress})? next});
@@ -180,7 +177,7 @@ class _AuraPainter extends CustomPainter {
   bool shouldRepaint(_AuraPainter old) => old.t != t || old.glow != glow || old.power != power;
 }
 
-/// Every topic title with its stars, for the profile: earned ones in gold (tap Equip to wear), locked ones say how to earn them.
+/// Every topic title, for the profile: earned ones in gold (tap Equip to wear), locked ones say how to earn them.
 class TitlesList extends StatelessWidget {
   const TitlesList({super.key});
 
@@ -201,15 +198,14 @@ class TitlesList extends StatelessWidget {
               if (i > 0) const Divider(height: 1, indent: 56),
               Builder(
                 builder: (context) {
-                  final tier = tierOf(t.id, earned);
-                  final has = tier > 0;
+                  final has = earned.contains(t.id);
                   return ListTile(
                     leading: Icon(has ? Icons.military_tech_rounded : Icons.lock_outline_rounded, color: has ? gold : colors.outline),
                     title: Text(
-                      has ? titleLabel(t, tier) : t.name,
+                      t.name,
                       style: TextStyle(fontWeight: FontWeight.w800, color: has ? null : colors.onSurfaceVariant),
                     ),
-                    subtitle: Text(has ? '${t.topic} · tier $tier of ${t.fullOnly ? 1 : 3}' : howToEarn(t)),
+                    subtitle: Text(has ? '${t.topic} cleared' : howToEarn(t)),
                     trailing: !has
                         ? null
                         : worn == t.id
@@ -244,9 +240,8 @@ Future<void> celebrate(BuildContext context, Power before, Power now) async {
   }
   for (final id in now.titles.difference(before.titles)) {
     final t = titleById(id);
-    final tier = int.parse(id.split('#').last);
-    if (t == null || tier < tierOf(t.id, now.titles) || !context.mounted) continue; // only the highest new tier
-    await _systemWindow(context, header: tier == 1 ? 'TITLE ACQUIRED' : 'TITLE UPGRADED', lines: [titleLabel(t, tier)], titleId: t.id);
+    if (t == null || !context.mounted) continue;
+    await _systemWindow(context, header: 'TITLE ACQUIRED', lines: [t.name], titleId: t.id);
   }
 }
 

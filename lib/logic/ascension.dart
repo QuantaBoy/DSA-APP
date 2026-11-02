@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/painting.dart';
 
 import '../data/sheet.dart';
@@ -59,21 +57,15 @@ enum Rank {
 
 typedef Progress = ({int done, int total});
 
-/// A topic title. Each one has up to three tiers, so the first comes quickly:
-/// ★ after 3 problems of the topic, ★★ at half of it, ★★★ when all of it is solved.
+/// A topic title, earned only when every problem of that topic in A2Z is solved.
 class HunterTitle {
-  const HunterTitle(this.id, this.name, this.topic, this.progress, {this.fullOnly = false});
+  const HunterTitle(this.id, this.name, this.topic, this.progress);
   final String id;
   final String name;
   final String topic; // shown while locked
   final Progress Function(Deeds d, Sheet? a2z) progress;
-  final bool fullOnly; // one tier only: everything solved
 
-  /// Problems needed for each tier, smallest first.
-  List<int> goals(int total) => fullOnly ? [total] : ({min(3, total), (total / 2).ceil(), total}.toList()..sort());
-
-  /// Tiers reached (0 = locked).
-  int tier(Progress p) => p.total == 0 ? 0 : goals(p.total).where((g) => p.done >= g).length;
+  bool earned(Progress p) => p.total > 0 && p.done >= p.total;
 }
 
 /// How much of an A2Z step (or section) is solved.
@@ -106,35 +98,27 @@ final titles = <HunterTitle>[
   _step('dp', 'Sage of Memory', 'Dynamic Programming'),
   _step('tries', 'Rootspeaker', 'Tries'),
   _step('strings', 'Threadweaver', 'Strings (Advanced Algo)'),
-  HunterTitle('a2z', 'The Unbound', "all of Striver's A2Z", (d, s) => _part(d, s, (_) => true), fullOnly: true),
+  HunterTitle('a2z', 'The Unbound', "all of Striver's A2Z", (d, s) => _part(d, s, (_) => true)),
 ];
 
 /// What a locked title needs, in words.
-String howToEarn(HunterTitle t) => t.fullOnly ? 'Solve ${t.topic}' : 'Solve 3 ${t.topic} problems in A2Z';
+String howToEarn(HunterTitle t) => t.id == 'a2z' ? 'Solve all of A2Z' : 'Solve every ${t.topic} problem in A2Z';
 
-/// Earned tiers as "id#tier", one entry per tier reached, so each new tier can be celebrated once.
+/// Ids of the titles you have earned.
 Set<String> earnedTitles(Deeds d, Sheet? a2z) => {
   for (final t in titles)
-    for (var n = 1; n <= t.tier(t.progress(d, a2z)); n++) '${t.id}#$n',
+    if (t.earned(t.progress(d, a2z))) t.id,
 };
 
-/// Highest tier of [id] in [earned] (from earnedTitles), 0 if none.
-int tierOf(String id, Set<String> earned) => earned.where((e) => e.startsWith('$id#')).length;
+HunterTitle? titleById(String? id) => titles.where((t) => t.id == id).firstOrNull;
 
-/// "Array Executioner ★★"
-String titleLabel(HunterTitle t, int tier) => tier == 0 ? t.name : '${t.name} ${'★' * tier}';
-
-HunterTitle? titleById(String? id) => titles.where((t) => t.id == id?.split('#').first).firstOrNull;
-
-/// The next tier you are closest to (by share done), to chase next. Null once everything is maxed.
+/// The title you are closest to (by share solved), to chase next. Null once all are earned.
 ({HunterTitle title, Progress progress})? nextTitle(Deeds d, Sheet? a2z) {
   ({HunterTitle title, Progress progress})? best;
   for (final t in titles) {
     final p = t.progress(d, a2z);
-    if (p.total == 0) continue;
-    final goal = t.goals(p.total).where((g) => g > p.done).firstOrNull;
-    if (goal == null) continue;
-    if (best == null || p.done / goal > best.progress.done / best.progress.total) best = (title: t, progress: (done: p.done, total: goal));
+    if (p.total == 0 || p.done >= p.total) continue;
+    if (best == null || p.done / p.total > best.progress.done / best.progress.total) best = (title: t, progress: p);
   }
   return best;
 }
