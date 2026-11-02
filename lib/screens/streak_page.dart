@@ -167,9 +167,9 @@ class _PopInState extends State<_PopIn> with SingleTickerProviderStateMixin {
 
 /// Streak details: flame and count, this week, the next challenge, record and milestones.
 class StreakPage extends StatelessWidget {
-  const StreakPage({super.key, required this.stats});
+  const StreakPage({super.key, required this.days});
 
-  final Stats stats;
+  final Set<DateTime> days; // active days, see activeDays
 
   @override
   Widget build(BuildContext context) {
@@ -177,7 +177,6 @@ class StreakPage extends StatelessWidget {
     final colors = theme.colorScheme;
     final dark = theme.brightness == Brightness.dark;
     final now = today();
-    final days = stats.days.keys.map(dateOnly).toSet();
     final info = streakInfo(days, now); // one missed day a week is forgiven
     final current = info.days;
     final record = longestStreak(days) > current ? longestStreak(days) : current;

@@ -60,7 +60,12 @@ class _HomePageState extends State<HomePage> {
     _widgetFeed = store.data().listen((d) {
       _last = d;
       final now = today();
-      unawaited(updateHomeWidget(due: d.problems.where((p) => p.isDue(now)).length, streak: streakWithFreezes(d.stats.days.keys, now)));
+      unawaited(
+        updateHomeWidget(
+          due: d.problems.where((p) => p.isDue(now)).length,
+          streak: streakWithFreezes(activeDays(d.problems, d.stats), now),
+        ),
+      );
       unawaited(_updatePower());
       _syncLeetCode();
     }, onError: (Object _) {});
@@ -110,7 +115,7 @@ class _HomePageState extends State<HomePage> {
   void _publishLeaderboard() {
     final d = _last, p = power.value;
     if (d == null || p == null || !Prefs.leaderboard.value) return;
-    final streak = streakWithFreezes(d.stats.days.keys, today());
+    final streak = streakWithFreezes(activeDays(d.problems, d.stats), today());
     final title = wornLabel(Prefs.equippedTitle.value, power.value?.titles ?? const {});
     final values = (streak, d.problems.length, p.level.level, title);
     if (_published == values) return;

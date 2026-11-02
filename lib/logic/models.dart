@@ -353,3 +353,9 @@ class AptCard {
     remembered: m['remembered'] as int? ?? 0,
   );
 }
+
+/// Days you did something: reviewed, or solved a new problem. The streak counts these.
+Set<DateTime> activeDays(Iterable<Problem> problems, Stats stats) => {
+  ...stats.days.keys.map(dateOnly),
+  for (final p in problems) dateOnly(p.solvedOn),
+};

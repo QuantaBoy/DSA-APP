@@ -135,7 +135,7 @@ void main() {
     tall(tester);
     final now = today();
     final stats = Stats(days: {for (var i = 0; i < 5; i++) addDays(now, -i): 1, addDays(now, -30): 1});
-    await tester.pumpWidget(MaterialApp(home: StreakPage(stats: stats)));
+    await tester.pumpWidget(MaterialApp(home: StreakPage(days: activeDays(const [], stats))));
     await tester.pump(const Duration(seconds: 2));
     expect(find.text('5'), findsWidgets);
     expect(find.text('7 days challenge'), findsOneWidget);

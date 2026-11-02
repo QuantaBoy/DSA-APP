@@ -43,7 +43,7 @@ class ProfilePage extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final now = today();
-    final days = streakWithFreezes(stats.days.keys, now);
+    final days = streakWithFreezes(activeDays(problems, stats), now);
     void open(Widget page) => unawaited(Navigator.push(context, MaterialPageRoute<void>(builder: (_) => page)));
 
     return ListView(
@@ -90,7 +90,7 @@ class ProfilePage extends StatelessWidget {
                 value: '$days',
                 label: 'Day streak',
                 color: Accent.orange,
-                onTap: () => open(StreakPage(stats: stats)),
+                onTap: () => open(StreakPage(days: activeDays(problems, stats))),
               ),
               StatTile(icon: Icons.check_circle_rounded, value: '${problems.length}', label: 'Solved', color: Accent.green),
               StatTile(

@@ -81,10 +81,11 @@ class _StatsPageState extends State<StatsPage> {
               ),
               StatTile(
                 icon: Icons.local_fire_department_rounded,
-                value: '${streakWithFreezes(stats.days.keys, now)}',
+                value: '${streakWithFreezes(activeDays(problems, stats), now)}',
                 label: 'Day streak',
                 color: Accent.orange,
-                onTap: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => StreakPage(stats: stats))),
+                onTap: () =>
+                    Navigator.push(context, MaterialPageRoute<void>(builder: (_) => StreakPage(days: activeDays(problems, stats)))),
               ),
             ],
           ),

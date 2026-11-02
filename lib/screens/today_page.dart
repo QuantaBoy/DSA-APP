@@ -66,7 +66,7 @@ class _TodayPageState extends State<TodayPage> {
           queue: queue,
           // First review of the day grows the streak: celebrate it when the session ends.
           streakBefore: firstToday ? streakNow : null,
-          reviewDays: {...widget.stats.days.keys.map(dateOnly), today()},
+          reviewDays: {...activeDays(widget.problems, widget.stats), today()},
         ),
       ),
     ),
@@ -91,7 +91,7 @@ class _TodayPageState extends State<TodayPage> {
       ..sort((a, b) => a.nextDue.compareTo(b.nextDue));
     final reviewedToday = stats.reviewsOn(now);
     final solvedToday = problems.where((p) => p.solvedOn == now).length;
-    final days = streakWithFreezes(stats.days.keys, now);
+    final days = streakWithFreezes(activeDays(problems, stats), now);
 
     return ValueListenableBuilder(
       valueListenable: Prefs.dailyNewGoal,
@@ -157,8 +157,9 @@ class _TodayPageState extends State<TodayPage> {
                           value: '$days',
                           label: 'Day streak',
                           color: Accent.orange,
-                          onTap: () =>
-                              unawaited(Navigator.push(context, MaterialPageRoute<void>(builder: (_) => StreakPage(stats: stats)))),
+                          onTap: () => unawaited(
+                            Navigator.push(context, MaterialPageRoute<void>(builder: (_) => StreakPage(days: activeDays(problems, stats)))),
+                          ),
                         ),
                         StatTile(
                           key: _goalKey,

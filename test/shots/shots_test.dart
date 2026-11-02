@@ -208,7 +208,7 @@ void main() {
     await page(t, 'leaderboard', LeaderboardPage(uid: 'me', name: 'Asha', streak: 30, solved: 98, board: board));
   });
   testWidgets('onboarding', (t) => page(t, 'onboarding', OnboardingPage(onDone: () {})));
-  testWidgets('streak', (t) => page(t, 'streak', StreakPage(stats: Stats(days: {for (var i = 0; i < 5; i++) addDays(today(), -i): 1}))));
+  testWidgets('streak', (t) => page(t, 'streak', StreakPage(days: {for (var i = 0; i < 5; i++) addDays(today(), -i)})));
   testWidgets(
     'streak celebration',
     (t) => page(t, 'streak_celebration', StreakCelebration(before: 4, reviewDays: {for (var i = 0; i < 5; i++) addDays(today(), -i)})),
