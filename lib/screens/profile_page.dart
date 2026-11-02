@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../data/leaderboard.dart';
+import '../data/leetcode.dart';
 import '../data/prefs.dart';
 import '../data/reminder.dart';
 import '../data/store.dart';
@@ -17,7 +19,7 @@ import 'streak_page.dart';
 import 'widgets.dart';
 
 /// Shown in Profile → About. Keep in step with `version:` in pubspec.yaml.
-const appVersion = '1.9.0';
+const appVersion = '1.10.0';
 
 /// First name for greetings, falling back to the email name.
 String firstName(User user) {
@@ -158,6 +160,8 @@ class ProfilePage extends StatelessWidget {
             ),
           ],
         ),
+        const SectionTitle('LeetCode'),
+        _SettingsCard(children: [_LeetCodeTile(store: store)]),
         const SectionTitle('App'),
         _SettingsCard(
           children: [
@@ -358,6 +362,114 @@ class ActivityHeatmap extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Connect a LeetCode username; problems accepted there are added to your stack.
+class _LeetCodeTile extends StatefulWidget {
+  const _LeetCodeTile({required this.store});
+
+  final Store store;
+
+  @override
+  State<_LeetCodeTile> createState() => _LeetCodeTileState();
+}
+
+class _LeetCodeTileState extends State<_LeetCodeTile> {
+  bool _busy = false;
+  String? _status;
+
+  Future<void> _sync(String username) async {
+    setState(() {
+      _busy = true;
+      _status = null;
+    });
+    String status;
+    try {
+      final added = await syncLeetCode(username: username, store: widget.store, sheetId: Prefs.sheetId.value);
+      status = switch (added) {
+        0 => 'Up to date',
+        1 => '1 new problem added',
+        _ => '$added new problems added',
+      };
+    } on LeetCodeException catch (e) {
+      status = e.message;
+    } on Exception {
+      status = 'You seem to be offline. Try again later.';
+    }
+    if (mounted) {
+      setState(() {
+        _busy = false;
+        _status = status;
+      });
+    }
+  }
+
+  Future<void> _edit(String? current) async {
+    final field = TextEditingController(text: current);
+    final result = await showAdaptiveDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('LeetCode username'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Problems you solve on LeetCode are added to your stack, dated the day you solved them.'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: field,
+              autofocus: true,
+              autocorrect: false,
+              decoration: const InputDecoration(labelText: 'Username', hintText: 'e.g. neal_wu'),
+              onSubmitted: (v) => Navigator.pop(context, v.trim()),
+            ),
+          ],
+        ),
+        actions: [
+          if (current != null) TextButton(onPressed: () => Navigator.pop(context, ''), child: const Text('Disconnect')),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(context, field.text.trim()), child: const Text('Save')),
+        ],
+      ),
+    );
+    field.dispose();
+    if (result == null || !mounted) return;
+    if (result.isEmpty) {
+      Prefs.setLeetcodeUser(null);
+      setState(() => _status = null);
+    } else if (!isLeetCodeUsername(result)) {
+      setState(() => _status = 'That does not look like a LeetCode username.');
+    } else {
+      Prefs.setLeetcodeUser(result);
+      await _sync(result);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (kIsWeb) {
+      return const ListTile(
+        leading: Icon(Icons.sync_rounded),
+        title: Text('Import from LeetCode'),
+        subtitle: Text('Works in the phone app'),
+        enabled: false,
+      );
+    }
+    return ValueListenableBuilder(
+      valueListenable: Prefs.leetcodeUser,
+      builder: (context, user, _) => ListTile(
+        leading: const Icon(Icons.sync_rounded),
+        title: Text(user == null ? 'Import from LeetCode' : 'LeetCode: $user'),
+        subtitle: Text(_status ?? (user == null ? 'Add your username to import solved problems' : 'Syncs each time you open the app')),
+        onTap: _busy ? null : () => _edit(user),
+        trailing: user == null
+            ? const Icon(Icons.chevron_right_rounded)
+            : _busy
+            ? const SizedBox.square(dimension: 24, child: CircularProgressIndicator(strokeWidth: 2.5))
+            : IconButton(tooltip: 'Sync now', icon: const Icon(Icons.refresh_rounded), onPressed: () => _sync(user)),
       ),
     );
   }

@@ -37,6 +37,14 @@ class Store {
     );
   });
 
+  /// Your problems as the server has them (not the offline copy, which may be behind on a new device).
+  Future<List<Problem>> serverProblems() async {
+    final m = (await _user.get(const GetOptions(source: Source.server))).data() ?? const {};
+    return [
+      for (final e in (m['problems'] as Map? ?? {}).entries) Problem.fromMap(e.key as String, Map<String, dynamic>.from(e.value as Map)),
+    ];
+  }
+
   /// A fresh id for Problem.solved(id: ...).
   String newProblemId() => _notes.doc().id;
 

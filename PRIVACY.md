@@ -29,6 +29,10 @@ When you tap **Run**, the code and input you typed are sent to a code-execution 
 
 Only if you choose **Join the leaderboard**, your first name, streak and number of solved problems are shown to other signed-in users. Never your email, notes or code. Leaving the leaderboard deletes your entry.
 
+## LeetCode import (optional)
+
+If you add your LeetCode username in **Profile → LeetCode**, the app asks LeetCode for your public list of recently accepted problems and adds new ones to your stack. Your username is kept only on your device; it is not stored in our database. Disconnect it any time in the same place.
+
 ## Notifications
 
 The app schedules one local reminder a day on your phone. No data is sent for this. You can turn it off in your phone's notification settings.

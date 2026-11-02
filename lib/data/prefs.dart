@@ -21,11 +21,15 @@ abstract final class Prefs {
   /// Whether you joined the leaderboard on this device (the entry itself lives in Firestore).
   static final leaderboard = ValueNotifier(false);
 
+  /// LeetCode username whose accepted problems are imported, or null.
+  static final leetcodeUser = ValueNotifier<String?>(null);
+
   /// Ids of walkthrough tips already shown.
   static final seenTips = ValueNotifier<Set<String>>(const {});
 
   static const _theme = 'themeMode', _onboarding = 'seenOnboarding', _reminder = 'reminderMinutes';
-  static const _goal = 'dailyNewGoal', _tips = 'seenTips', _sheet = 'sheetId', _board = 'leaderboard', _reminderOff = -1;
+  static const _goal = 'dailyNewGoal', _tips = 'seenTips', _sheet = 'sheetId', _board = 'leaderboard', _leetcode = 'leetcodeUser';
+  static const _reminderOff = -1;
 
   static Future<SharedPreferences?> _prefs() async {
     try {
@@ -46,6 +50,7 @@ abstract final class Prefs {
     seenTips.value = {...?p.getStringList(_tips)};
     sheetId.value = p.getString(_sheet) ?? 'a2z';
     leaderboard.value = p.getBool(_board) ?? false;
+    leetcodeUser.value = p.getString(_leetcode);
   }
 
   static void setThemeMode(ThemeMode mode) {
@@ -76,6 +81,11 @@ abstract final class Prefs {
   static void setLeaderboard(bool joined) {
     leaderboard.value = joined;
     unawaited(_prefs().then((p) => p?.setBool(_board, joined)));
+  }
+
+  static void setLeetcodeUser(String? name) {
+    leetcodeUser.value = name;
+    unawaited(_prefs().then((p) => name == null ? p?.remove(_leetcode) : p?.setString(_leetcode, name)));
   }
 
   static void markTipSeen(String id) {

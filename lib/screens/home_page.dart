@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../data/home_widget.dart';
 import '../data/leaderboard.dart';
+import '../data/leetcode.dart';
 import '../data/prefs.dart';
 import '../data/reminder.dart';
 import '../data/sheet.dart';
@@ -55,6 +57,7 @@ class _HomePageState extends State<HomePage> {
       final streak = streakWithFreezes(d.stats.days.keys, now);
       unawaited(updateHomeWidget(due: d.problems.where((p) => p.isDue(now)).length, streak: streak));
       _publishLeaderboard(streak, d.problems.length);
+      _syncLeetCode();
     }, onError: (Object _) {});
   }
 
@@ -65,6 +68,23 @@ class _HomePageState extends State<HomePage> {
     _published = (streak, solved);
     unawaited(
       Leaderboard().publish(uid: widget.user.uid, name: firstName(widget.user), streak: streak, solved: solved).catchError((Object _) {}),
+    );
+  }
+
+  bool _leetCodeSynced = false; // once per app start, on the first data
+
+  void _syncLeetCode() {
+    final username = Prefs.leetcodeUser.value;
+    if (_leetCodeSynced || username == null || kIsWeb) return; // LeetCode blocks requests from web pages
+    _leetCodeSynced = true;
+    unawaited(
+      syncLeetCode(username: username, store: store, sheetId: Prefs.sheetId.value).then((added) {
+        if (added > 0 && mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Imported $added new LeetCode ${added == 1 ? 'problem' : 'problems'} into your stack.')));
+        }
+      }, onError: (Object _) {}), // offline or LeetCode down: try again next start
     );
   }
 
