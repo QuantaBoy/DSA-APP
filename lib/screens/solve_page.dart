@@ -1,8 +1,10 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_code_editor/flutter_code_editor.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 import '../data/runner.dart';
 import '../data/sheet.dart';
@@ -32,6 +34,7 @@ class SolvePage extends StatefulWidget {
 class _SolvePageState extends State<SolvePage> {
   final _code = CodeController();
   final _padKey = GlobalKey(), _doneKey = GlobalKey();
+  bool? _verdict; // last run: all expected outputs matched, one failed, or none checked
 
   @override
   void initState() {
@@ -62,8 +65,53 @@ class _SolvePageState extends State<SolvePage> {
     return isStarterCode(text) ? null : text;
   }
 
+  /// Shows the problem page over the editor, so you can read and code without leaving.
+  /// The statement stays on its own site (it is not ours to copy); the web app opens a tab instead.
+  Future<void> _showQuestion() async {
+    final url = widget.problem.url;
+    if (kIsWeb || !isWebLink(url)) return openLink(context, url);
+    final page = WebViewController();
+    await page.setJavaScriptMode(JavaScriptMode.unrestricted);
+    await page.setBackgroundColor(Colors.white);
+    unawaited(page.loadRequest(Uri.parse(url.trim())));
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      enableDrag: false, // the page scrolls; close with the button
+      useSafeArea: true,
+      builder: (context) => SizedBox(
+        height: MediaQuery.sizeOf(context).height * 0.9,
+        child: Column(
+          children: [
+            ListTile(
+              title: Text(widget.problem.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+              subtitle: Text(widget.problem.platform),
+              trailing: IconButton(tooltip: 'Back to code', icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+            ),
+            Expanded(child: WebViewWidget(controller: page)),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _finish() async {
     final p = widget.problem;
+    if (_verdict == false && !widget.solved) {
+      final markAnyway = await showAdaptiveDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog.adaptive(
+          title: const Text('A test case is failing'),
+          content: const Text('Your output does not match the expected output yet. Fix it and Run again, or mark it solved anyway.'),
+          actions: [
+            adaptiveAction(context, 'Keep coding', () => Navigator.pop(context, false), primary: true),
+            adaptiveAction(context, 'Mark solved', () => Navigator.pop(context, true)),
+          ],
+        ),
+      );
+      if (markAnyway != true || !mounted) return;
+    }
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     final code = _yourCode ?? '';
@@ -126,9 +174,9 @@ class _SolvePageState extends State<SolvePage> {
                     runSpacing: 8,
                     children: [
                       OutlinedButton.icon(
-                        onPressed: () => openLink(context, p.url),
+                        onPressed: _showQuestion,
                         icon: const Icon(Icons.description_outlined),
-                        label: Text('Read on ${p.platform}'),
+                        label: const Text('Question'),
                       ),
                       if (p.video != null)
                         OutlinedButton.icon(
@@ -164,8 +212,8 @@ class _SolvePageState extends State<SolvePage> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                'Read the problem, write a full program that reads the input, then Run it with the examples '
-                                'and your own edge cases. When it is right, tap I solved it.',
+                                'Open the Question, copy an example into Input and its answer into Expected, then Run. '
+                                'Add your own edge cases too. When every case passes, tap I solved it.',
                                 style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
                               ),
                             ],
@@ -175,7 +223,7 @@ class _SolvePageState extends State<SolvePage> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  CodePad(key: _padKey, controller: _code, title: 'Your solution'),
+                  CodePad(key: _padKey, controller: _code, title: 'Your solution', onVerdict: (v) => _verdict = v),
                 ],
               ),
             ),

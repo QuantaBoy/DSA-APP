@@ -47,11 +47,14 @@ class _Case {
 /// add test cases (input + expected output), run them all and see which pass.
 /// The parent owns [controller] so it can read the code (to save it on the solution card).
 class CodePad extends StatefulWidget {
-  const CodePad({super.key, required this.controller, this.title = 'Code', this.runner = runCode});
+  const CodePad({super.key, required this.controller, this.title = 'Code', this.runner = runCode, this.onVerdict});
 
   final CodeController controller;
   final String title;
   final Future<RunResult> Function(String language, String code, String stdin) runner; // tests pass a fake
+
+  /// After each run: true if every case with an expected output passed, false if one failed, null if none was checked.
+  final ValueChanged<bool?>? onVerdict;
 
   @override
   State<CodePad> createState() => _CodePadState();
@@ -125,7 +128,9 @@ class _CodePadState extends State<CodePad> {
     if (!mounted) return;
     setState(() => _running = false);
     final verdicts = [for (final c in _cases) c.passed].whereType<bool>();
-    unawaited(verdicts.isNotEmpty && verdicts.every((v) => v) ? HapticFeedback.mediumImpact() : HapticFeedback.lightImpact());
+    final allPassed = verdicts.isEmpty ? null : verdicts.every((v) => v);
+    widget.onVerdict?.call(allPassed);
+    unawaited(allPassed ?? false ? HapticFeedback.mediumImpact() : HapticFeedback.lightImpact());
   }
 
   @override
@@ -239,7 +244,6 @@ class _CaseView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
     final r = testCase.result;
     final passed = testCase.passed;
     return Card(
@@ -298,7 +302,11 @@ class _CaseView extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Icon(r.ok ? Icons.check_circle : Icons.error, size: 16, color: r.ok ? const Color(0xFF4ADE80) : colors.error),
+                          Icon(
+                            r.ok && passed != false ? Icons.check_circle : Icons.error,
+                            size: 16,
+                            color: r.ok && passed != false ? const Color(0xFF4ADE80) : const Color(0xFFFCA5A5),
+                          ),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
