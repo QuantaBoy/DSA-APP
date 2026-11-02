@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 
@@ -189,7 +190,7 @@ class _TodayPageState extends State<TodayPage> {
                         StatTile(
                           key: _goalKey,
                           icon: Icons.task_alt_rounded,
-                          value: '${reviewedToday + solvedToday}/${due.length + reviewedToday + goal}',
+                          value: '${reviewedToday + min(solvedToday, goal)}/${due.length + reviewedToday + goal}', // extra solves don't overflow the goal
                           label: "Today's goal",
                           color: Accent.green,
                         ),
