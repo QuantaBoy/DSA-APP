@@ -445,19 +445,21 @@ class _ShineIconState extends State<_ShineIcon> with SingleTickerProviderStateMi
   );
 }
 
-/// Card colours per rank: soft at the bottom, fierce at the top.
-const _rankFill = <Rank, List<Color>>{
-  Rank.awakened: [Color(0xFF9B8CFF), Color(0xFF6C4EF5)], // calm violet
-  Rank.shadowInitiate: [Color(0xFF64748B), Color(0xFF1E293B)], // smoke
-  Rank.bladeOfLogic: [Color(0xFF38BDF8), Color(0xFF334155)], // steel edge
-  Rank.voidArchitect: [Color(0xFF06B6D4), Color(0xFF1E3A8A)], // deep crystal blue
-  Rank.abyssSovereign: [Color(0xFFD946EF), Color(0xFF4C1D95)], // abyss purple
-  Rank.eclipseEmperor: [Color(0xFFF59E0B), Color(0xFF7C2D12)], // burning eclipse
-  Rank.monarch: [Color(0xFFFFD700), Color(0xFFDC2626), Color(0xFF450A0A)], // gold fire
+/// Fire colours per rank: (deep glow, flame, white-hot core). Violet fire at the start, gold and crimson at the top.
+const _fire = <Rank, (Color, Color, Color)>{
+  Rank.awakened: (Color(0xFF4C1D95), Color(0xFF8B5CF6), Color(0xFFE9D5FF)),
+  Rank.shadowInitiate: (Color(0xFF1F2937), Color(0xFF94A3B8), Color(0xFFF1F5F9)),
+  Rank.bladeOfLogic: (Color(0xFF0C4A6E), Color(0xFF38BDF8), Color(0xFFE0F2FE)),
+  Rank.voidArchitect: (Color(0xFF1E1B4B), Color(0xFF22D3EE), Color(0xFFECFEFF)),
+  Rank.abyssSovereign: (Color(0xFF581C87), Color(0xFFE879F9), Color(0xFFFDF4FF)),
+  Rank.eclipseEmperor: (Color(0xFF7C2D12), Color(0xFFF97316), Color(0xFFFDE047)),
+  Rank.monarch: (Color(0xFF7F1D1D), Color(0xFFEF4444), Color(0xFFFFD700)),
 };
 
-/// Home strip in your rank's colours, with an energy line racing around the edge.
-/// Higher ranks: a thicker, brighter, faster edge.
+const _battleCries = ['NO MERCY. KEEP SOLVING.', 'EVERY PROBLEM MAKES YOU STRONGER.', 'THEY REST. YOU RISE.', 'BREAK YOUR LIMITS TODAY.'];
+
+/// Home strip: a black card burning with your rank's fire. Flames rise from the bottom edge,
+/// a lightning streak races around the border, and both get bigger and faster with each rank.
 class PowerStrip extends StatefulWidget {
   const PowerStrip({super.key});
 
@@ -466,7 +468,8 @@ class PowerStrip extends StatefulWidget {
 }
 
 class _PowerStripState extends State<PowerStrip> with SingleTickerProviderStateMixin {
-  late final _spin = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat();
+  late final _spin = AnimationController(vsync: this, duration: const Duration(seconds: 3))..repeat();
+  final _cry = _battleCries[DateTime.now().day % _battleCries.length]; // one battle cry per day
 
   @override
   void dispose() {
@@ -479,52 +482,80 @@ class _PowerStripState extends State<PowerStrip> with SingleTickerProviderStateM
     valueListenable: power,
     builder: (context, p, _) {
       if (p == null) return const SizedBox.shrink();
-      final fill = _rankFill[p.rank]!;
-      final power = p.rank.index; // 0..6
+      final (deep, flame, hot) = _fire[p.rank]!;
+      final strength = p.rank.index; // 0..6
+      final left = p.level.needed - p.level.into;
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: AnimatedBuilder(
-          animation: _spin,
-          builder: (context, child) => CustomPaint(
-            foregroundPainter: _EdgePainter(t: (_spin.value * (1 + power * 0.35)) % 1, color: p.rank.colors.first, power: power),
-            child: child,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [BoxShadow(color: flame.withValues(alpha: 0.45), offset: const Offset(0, 6), blurRadius: 18)],
           ),
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(6, 6, 14, 8),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              gradient: LinearGradient(colors: fill, begin: Alignment.topLeft, end: Alignment.bottomRight),
-            ),
-            child: Row(
-              children: [
-                RankBadge(rank: p.rank, level: p.level.level, size: 58, glow: false),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'LV ${p.level.level}  ·  ${p.rank.title.toUpperCase()}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.85),
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.2,
-                          fontSize: 11,
-                        ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: AnimatedBuilder(
+              animation: _spin,
+              builder: (context, child) => CustomPaint(
+                painter: _FirePainter(t: _spin.value, deep: deep, flame: flame, hot: hot, strength: strength),
+                foregroundPainter: _EdgePainter(t: (_spin.value * (1 + strength * 0.3)) % 1, color: hot, power: strength),
+                child: child,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(8, 10, 16, 12),
+                child: Row(
+                  children: [
+                    RankBadge(rank: p.rank, level: p.level.level, size: 62, glow: false),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'LV ${p.level.level}  ·  ${p.rank.title.toUpperCase()}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: hot, fontWeight: FontWeight.w900, letterSpacing: 2, fontSize: 11),
+                          ),
+                          const SizedBox(height: 2),
+                          Text.rich(
+                            TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: '$left XP ',
+                                  style: TextStyle(color: hot, fontSize: 24),
+                                ),
+                                TextSpan(text: 'TO LEVEL ${p.level.level + 1}'),
+                              ],
+                            ),
+                            maxLines: 1,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              fontStyle: FontStyle.italic,
+                              letterSpacing: 0.5,
+                              shadows: [Shadow(color: Colors.black, offset: Offset(2, 2))],
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          _Bar(value: p.level.into / p.level.needed, from: flame, to: hot, t: _spin),
+                          const SizedBox(height: 6),
+                          Text(
+                            _cry,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.8),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.6,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${p.level.needed - p.level.into} XP more to Level ${p.level.level + 1}',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16),
-                      ),
-                      const SizedBox(height: 6),
-                      _Bar(value: p.level.into / p.level.needed, color: Colors.white),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -533,7 +564,58 @@ class _PowerStripState extends State<PowerStrip> with SingleTickerProviderStateM
   );
 }
 
-/// A bright streak running around the rounded border, sharp (no blur). Its length and width grow with rank.
+/// Black base, a slash of the rank's colour, speed lines, and flame tongues licking up from the bottom.
+class _FirePainter extends CustomPainter {
+  _FirePainter({required this.t, required this.deep, required this.flame, required this.hot, required this.strength});
+
+  final double t;
+  final Color deep, flame, hot;
+  final int strength;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = LinearGradient(
+          colors: [const Color(0xFF05030A), deep, const Color(0xFF05030A)],
+          stops: const [0.15, 0.6, 1],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ).createShader(rect),
+    );
+    // Speed lines slashing across, like a power-up.
+    final lines = Paint()
+      ..color = flame.withValues(alpha: 0.14)
+      ..strokeWidth = 2;
+    for (var i = 0; i < 7; i++) {
+      final x = ((i / 7 + t) % 1) * size.width * 1.4 - size.width * 0.2;
+      canvas.drawLine(Offset(x, size.height), Offset(x + size.height * 0.8, 0), lines);
+    }
+    // Flame tongues: an outer flame and a white-hot inner layer, each tongue flickering on its own.
+    final count = 14 + strength * 3;
+    final tall = size.height * (0.35 + strength * 0.07);
+    for (final (layer, color, scale) in [(0, flame.withValues(alpha: 0.55), 1.0), (1, hot.withValues(alpha: 0.5), 0.55)]) {
+      final path = Path()..moveTo(0, size.height);
+      for (var i = 1; i <= count; i++) {
+        final x = size.width * i / count;
+        final flicker = 0.55 + 0.45 * sin(t * 2 * pi * (2 + layer) + i * 1.7);
+        final h = tall * scale * flicker;
+        path.quadraticBezierTo(x - size.width / count / 2, size.height - h * 1.4, x, size.height - h * 0.2);
+      }
+      path
+        ..lineTo(size.width, size.height)
+        ..close();
+      canvas.drawPath(path, Paint()..color = color);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_FirePainter old) => old.t != t || old.flame != flame || old.strength != strength;
+}
+
+/// A bright streak racing around the rounded border, sharp (no blur). Length, width and count grow with rank.
 class _EdgePainter extends CustomPainter {
   _EdgePainter({required this.t, required this.color, required this.power});
 
@@ -549,32 +631,20 @@ class _EdgePainter extends CustomPainter {
       rrect,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2
-        ..color = Colors.white.withValues(alpha: 0.35),
+        ..strokeWidth = 1.5
+        ..color = color.withValues(alpha: 0.5),
     );
-    final head = 0.12 + power * 0.04; // share of the sweep the streak covers
-    canvas.drawRRect(
-      rrect,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2 + power * 0.4
-        ..shader = SweepGradient(
-          colors: [Colors.transparent, color, Colors.white, Colors.transparent],
-          stops: [0, head * 0.8, head, head + 0.01],
-          transform: GradientRotation(t * 2 * pi),
-        ).createShader(rect),
-    );
-    if (power >= 4) {
-      // Top ranks: a second streak chasing from the other side.
+    final head = 0.14 + power * 0.04;
+    for (final offset in [0.0, if (power >= 3) pi]) {
       canvas.drawRRect(
         rrect,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 2 + power * 0.4
+          ..strokeWidth = 2.5 + power * 0.4
           ..shader = SweepGradient(
             colors: [Colors.transparent, color, Colors.white, Colors.transparent],
             stops: [0, head * 0.8, head, head + 0.01],
-            transform: GradientRotation(t * 2 * pi + pi),
+            transform: GradientRotation(t * 2 * pi + offset),
           ).createShader(rect),
       );
     }
@@ -584,20 +654,53 @@ class _EdgePainter extends CustomPainter {
   bool shouldRepaint(_EdgePainter old) => old.t != t || old.color != color || old.power != power;
 }
 
+/// XP bar: fire gradient fill with a shine sweeping along it.
 class _Bar extends StatelessWidget {
-  const _Bar({required this.value, required this.color});
+  const _Bar({required this.value, required this.from, required this.to, required this.t});
 
   final double value;
-  final Color color;
+  final Color from, to;
+  final Animation<double> t;
 
   @override
   Widget build(BuildContext context) => ClipRRect(
     borderRadius: BorderRadius.circular(6),
-    child: TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: value.clamp(0.0, 1.0)),
-      duration: const Duration(milliseconds: 900),
-      curve: Curves.easeOutCubic,
-      builder: (context, v, _) => LinearProgressIndicator(value: v, minHeight: 6, color: color, backgroundColor: Colors.white24),
+    child: SizedBox(
+      height: 8,
+      width: double.infinity,
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0, end: value.clamp(0.0, 1.0)),
+        duration: const Duration(milliseconds: 900),
+        curve: Curves.easeOutCubic,
+        builder: (context, v, _) => AnimatedBuilder(
+          animation: t,
+          builder: (context, _) => CustomPaint(
+            painter: _BarPainter(v: v, from: from, to: to, shine: t.value),
+          ),
+        ),
+      ),
     ),
   );
+}
+
+class _BarPainter extends CustomPainter {
+  _BarPainter({required this.v, required this.from, required this.to, required this.shine});
+
+  final double v, shine;
+  final Color from, to;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRect(Offset.zero & size, Paint()..color = Colors.white.withValues(alpha: 0.15));
+    final fill = Rect.fromLTWH(0, 0, size.width * v, size.height);
+    if (fill.width <= 0) return;
+    canvas.drawRect(fill, Paint()..shader = LinearGradient(colors: [from, to]).createShader(fill));
+    canvas.drawRect(
+      Rect.fromLTWH(fill.width * shine - 14, 0, 28, size.height).intersect(fill),
+      Paint()..color = Colors.white.withValues(alpha: 0.6),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_BarPainter old) => old.v != v || old.shine != shine || old.from != from;
 }
