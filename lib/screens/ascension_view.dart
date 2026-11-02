@@ -188,107 +188,112 @@ class PowerCard extends StatelessWidget {
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
-          gradient: const LinearGradient(
-            colors: [Color(0xFF0B0D1A), Color(0xFF1B1F3B)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+          // Near-black void lit by your rank's colour from behind the badge.
+          gradient: RadialGradient(
+            center: const Alignment(-0.75, -0.55),
+            radius: 1.3,
+            colors: [p.rank.colors.first.withValues(alpha: 0.38), const Color(0xFF0A0B16), const Color(0xFF040509)],
+            stops: const [0, 0.45, 1],
           ),
           border: Border.all(color: p.rank.colors.first.withValues(alpha: 0.6)),
           boxShadow: [BoxShadow(color: p.rank.colors.first.withValues(alpha: 0.35), blurRadius: 24)],
         ),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                RankBadge(rank: p.rank, level: p.level.level, size: 110),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'LEVEL ${p.level.level}',
-                        style: const TextStyle(color: _system, fontWeight: FontWeight.w900, letterSpacing: 2),
-                      ),
-                      Text(
-                        p.rank.title,
-                        style: TextStyle(color: p.rank.colors.first, fontSize: 22, fontWeight: FontWeight.w900, height: 1.1),
-                      ),
-                      ValueListenableBuilder(
-                        valueListenable: Prefs.equippedTitle,
-                        builder: (context, id, _) => Text(
-                          titleById(id)?.name ?? 'No title worn',
-                          style: TextStyle(
-                            color: id == null ? Colors.white54 : _gold,
-                            fontWeight: FontWeight.w800,
-                            shadows: id == null ? null : const [Shadow(color: _gold, blurRadius: 10)],
+        child: CustomPaint(
+          painter: _GridPainter(p.rank.colors.first),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  RankBadge(rank: p.rank, level: p.level.level, size: 110),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'LEVEL ${p.level.level}',
+                          style: const TextStyle(color: _system, fontWeight: FontWeight.w900, letterSpacing: 2),
+                        ),
+                        Text(
+                          p.rank.title,
+                          style: TextStyle(color: p.rank.colors.first, fontSize: 22, fontWeight: FontWeight.w900, height: 1.1),
+                        ),
+                        ValueListenableBuilder(
+                          valueListenable: Prefs.equippedTitle,
+                          builder: (context, id, _) => Text(
+                            titleById(id)?.name ?? 'No title worn',
+                            style: TextStyle(
+                              color: id == null ? Colors.white54 : _gold,
+                              fontWeight: FontWeight.w800,
+                              shadows: id == null ? null : const [Shadow(color: _gold, blurRadius: 10)],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                const Icon(Icons.bolt_rounded, color: _system, size: 20),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    '${p.level.needed - p.level.into} XP to Level ${p.level.level + 1}',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16),
-                  ),
-                ),
-                Text('${p.level.into} / ${p.level.needed}', style: const TextStyle(color: Colors.white54, fontSize: 12)),
-              ],
-            ),
-            const SizedBox(height: 6),
-            _Bar(value: p.level.into / p.level.needed, color: _system),
-            if (Rank.values.where((r) => r.fromLevel > p.level.level).firstOrNull case final rank?) ...[
-              const SizedBox(height: 12),
-              _Goal(
-                icon: Icons.keyboard_double_arrow_up_rounded,
-                color: rank.colors.first,
-                label: 'NEXT RANK',
-                text: '${rank.title} at Lv ${rank.fromLevel}',
+                ],
               ),
-            ],
-            if (p.next case final next?) ...[
-              const SizedBox(height: 10),
-              _Goal(
-                icon: Icons.military_tech_rounded,
-                color: _gold,
-                label: 'NEXT TITLE',
-                text: '${next.title.name}  ·  ${next.progress.done} / ${next.progress.total}',
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  const Icon(Icons.bolt_rounded, color: _system, size: 20),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      '${p.level.needed - p.level.into} XP to Level ${p.level.level + 1}',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16),
+                    ),
+                  ),
+                  Text('${p.level.into} / ${p.level.needed}', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                ],
               ),
               const SizedBox(height: 6),
-              _Bar(value: next.progress.done / next.progress.total, color: _gold),
-              const SizedBox(height: 4),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(next.title.how, style: const TextStyle(color: Colors.white54, fontSize: 12)),
-              ),
-            ],
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    'Every solve feeds your power. Hunt.',
-                    style: TextStyle(color: Colors.white38, fontSize: 12, fontStyle: FontStyle.italic),
-                  ),
-                ),
-                TextButton.icon(
-                  style: TextButton.styleFrom(foregroundColor: _gold),
-                  onPressed: () => unawaited(Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const TitlesPage()))),
-                  icon: const Icon(Icons.military_tech_rounded),
-                  label: Text('Titles ${p.titles.length}/${titles.length}'),
+              _Bar(value: p.level.into / p.level.needed, color: _system),
+              if (Rank.values.where((r) => r.fromLevel > p.level.level).firstOrNull case final rank?) ...[
+                const SizedBox(height: 12),
+                _Goal(
+                  icon: Icons.keyboard_double_arrow_up_rounded,
+                  color: rank.colors.first,
+                  label: 'NEXT RANK',
+                  text: '${rank.title} at Lv ${rank.fromLevel}',
                 ),
               ],
-            ),
-          ],
+              if (p.next case final next?) ...[
+                const SizedBox(height: 10),
+                _Goal(
+                  icon: Icons.military_tech_rounded,
+                  color: _gold,
+                  label: 'NEXT TITLE',
+                  text: '${next.title.name}  ·  ${next.progress.done} / ${next.progress.total}',
+                ),
+                const SizedBox(height: 6),
+                _Bar(value: next.progress.done / next.progress.total, color: _gold),
+                const SizedBox(height: 4),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(next.title.how, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                ),
+              ],
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Every solve feeds your power. Hunt.',
+                      style: TextStyle(color: Colors.white38, fontSize: 12, fontStyle: FontStyle.italic),
+                    ),
+                  ),
+                  TextButton.icon(
+                    style: TextButton.styleFrom(foregroundColor: _gold),
+                    onPressed: () => unawaited(Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const TitlesPage()))),
+                    icon: const Icon(Icons.military_tech_rounded),
+                    label: Text('Titles ${p.titles.length}/${titles.length}'),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       );
     },
@@ -619,4 +624,34 @@ class _Goal extends StatelessWidget {
       ),
     ],
   );
+}
+
+/// Faint System grid lines and a few diagonal energy streaks.
+class _GridPainter extends CustomPainter {
+  _GridPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final line = Paint()
+      ..color = color.withValues(alpha: 0.06)
+      ..strokeWidth = 1;
+    for (var x = 0.0; x < size.width; x += 28) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), line);
+    }
+    for (var y = 0.0; y < size.height; y += 28) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), line);
+    }
+    final streak = Paint()
+      ..strokeWidth = 2
+      ..shader = LinearGradient(colors: [color.withValues(alpha: 0), color.withValues(alpha: 0.25), color.withValues(alpha: 0)])
+          .createShader(Offset.zero & size);
+    for (final f in [0.55, 0.7, 0.85]) {
+      canvas.drawLine(Offset(size.width * f, 0), Offset(size.width * (f - 0.25), size.height), streak);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_GridPainter old) => old.color != color;
 }

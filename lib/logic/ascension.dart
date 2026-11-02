@@ -24,14 +24,6 @@ int totalXp(Deeds d) {
   for (final p in d.problems) {
     xp += solveXp(p.difficulty) + p.remembered * 10 + (p.reviews - p.remembered) * 3;
   }
-  // Streak fire: each day in a run is worth more the longer the run (5 XP per day of run, at most 100).
-  var run = 0;
-  DateTime? last;
-  for (final day in d.stats.days.keys.map(dateOnly).toList()..sort()) {
-    run = last != null && day.difference(last).inDays == 1 ? run + 1 : 1;
-    last = day;
-    xp += min(5 * run, 100);
-  }
   return xp + d.aptCorrect * 8 + d.aptWrong * 2;
 }
 
@@ -129,10 +121,12 @@ final titles = <HunterTitle>[
   HunterTitle('ashes', 'Risen from Ashes', 'Come back after a broken streak', (d, _) => (done: _risen(d) ? 1 : 0, total: 1), secret: true),
 ];
 
-/// The locked title you are closest to (by share done), to chase next. Null once all are earned.
+const _streakTitles = {'ember', 'unyielding', 'eternal', 'undying'};
+
+/// The locked solving title you are closest to (by share done), to chase next. Null once all are earned.
 ({HunterTitle title, Progress progress})? nextTitle(Deeds d, Sheet? a2z) {
   ({HunterTitle title, Progress progress})? best;
-  for (final t in titles.where((t) => !t.secret)) {
+  for (final t in titles.where((t) => !t.secret && !_streakTitles.contains(t.id))) {
     final p = t.progress(d, a2z);
     if (p.total == 0 || p.done >= p.total) continue;
     if (best == null || p.done / p.total > best.progress.done / best.progress.total) best = (title: t, progress: p);

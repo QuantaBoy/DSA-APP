@@ -14,12 +14,12 @@ void main() {
     expect(xpToNext(10), greaterThan(xpToNext(2)));
   });
 
-  test('XP counts solves by difficulty, streak runs and aptitude', () {
+  test('XP counts solves by difficulty and aptitude, not streaks', () {
     const none = Stats();
     expect(totalXp((problems: [_p('a', 'Easy'), _p('b', 'Hard')], stats: none, aptCorrect: 0, aptWrong: 0)), 130);
     expect(totalXp((problems: const [], stats: none, aptCorrect: 2, aptWrong: 1)), 18);
     final run = Stats(days: {DateTime.utc(2026, 1, 1): 1, DateTime.utc(2026, 1, 2): 1, DateTime.utc(2026, 1, 3): 1});
-    expect(totalXp((problems: const [], stats: run, aptCorrect: 0, aptWrong: 0)), 5 + 10 + 15);
+    expect(totalXp((problems: const [], stats: run, aptCorrect: 0, aptWrong: 0)), 0);
   });
 
   test('ranks follow levels', () {
