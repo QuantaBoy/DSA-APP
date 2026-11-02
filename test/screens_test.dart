@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:memory_stack/data/store.dart';
 import 'package:memory_stack/logic/models.dart';
 import 'package:memory_stack/logic/srs.dart';
+import 'package:memory_stack/screens/goal_celebration.dart';
 import 'package:memory_stack/screens/library_page.dart';
 import 'package:memory_stack/screens/profile_page.dart';
 import 'package:memory_stack/screens/review_page.dart';
@@ -182,5 +183,29 @@ void main() {
       ),
     );
     expect(find.text('2 active days in the last 18 weeks'), findsOneWidget);
+  });
+
+  testWidgets('goal celebration dances, shows the streak and closes', (tester) async {
+    tall(tester);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () =>
+                Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const GoalCelebration(streak: 4, solvedToday: 2))),
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 3));
+    expect(find.text('GOAL CLEARED!'), findsOneWidget);
+    expect(find.text('4 day streak'), findsOneWidget);
+    await tester.tap(find.text("Let's go!"));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('GOAL CLEARED!'), findsNothing);
   });
 }

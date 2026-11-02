@@ -10,6 +10,7 @@ import '../logic/srs.dart';
 import 'aptitude_page.dart';
 import 'ascension_view.dart';
 import 'coach.dart';
+import 'goal_celebration.dart';
 import 'interview_page.dart';
 import 'motion.dart';
 import 'review_page.dart';
@@ -81,6 +82,25 @@ class _TodayPageState extends State<TodayPage> {
     ),
   );
 
+  /// Plays the goal party the first time today's goal is seen complete (once a day).
+  void _maybeCelebrate({required bool done, required int streak, required int solvedToday}) {
+    final day = dayKey(today());
+    if (!done || Prefs.goalCelebrated == day) return;
+    Prefs.markGoalCelebrated(day);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(
+        Navigator.push(
+          context,
+          PageRouteBuilder<void>(
+            pageBuilder: (_, _, _) => GoalCelebration(streak: streak, solvedToday: solvedToday),
+            transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child),
+          ),
+        ),
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -92,6 +112,11 @@ class _TodayPageState extends State<TodayPage> {
     final reviewedToday = stats.reviewsOn(now);
     final solvedToday = problems.where((p) => p.solvedOn == now).length;
     final days = streakWithFreezes(activeDays(problems, stats), now);
+    _maybeCelebrate(
+      done: due.isEmpty && (solvedToday > 0 || reviewedToday > 0) && solvedToday >= Prefs.dailyNewGoal.value,
+      streak: days,
+      solvedToday: solvedToday,
+    );
 
     return ValueListenableBuilder(
       valueListenable: Prefs.dailyNewGoal,

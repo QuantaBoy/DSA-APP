@@ -29,6 +29,9 @@ abstract final class Prefs {
 
   /// Level and titles already celebrated, so each level-up shows once. -1 before the first look.
   static int seenLevel = -1;
+
+  /// Day (yyyy-mm-dd) the goal celebration last played, so it plays once a day.
+  static String? goalCelebrated;
   static Set<String> seenTitles = const {};
 
   /// Ids of walkthrough tips already shown.
@@ -36,6 +39,7 @@ abstract final class Prefs {
 
   static const _theme = 'themeMode', _onboarding = 'seenOnboarding', _reminder = 'reminderMinutes';
   static const _goal = 'dailyNewGoal', _tips = 'seenTips', _sheet = 'sheetId', _board = 'leaderboard', _leetcode = 'leetcodeUser';
+  static const _goalDay = 'goalCelebrated';
   static const _title = 'equippedTitle', _seenLevel = 'seenLevel', _seenTitles = 'seenTitles';
   static const _reminderOff = -1;
 
@@ -61,7 +65,13 @@ abstract final class Prefs {
     leetcodeUser.value = p.getString(_leetcode);
     equippedTitle.value = p.getString(_title);
     seenLevel = p.getInt(_seenLevel) ?? -1;
+    goalCelebrated = p.getString(_goalDay);
     seenTitles = {...?p.getStringList(_seenTitles)};
+  }
+
+  static void markGoalCelebrated(String day) {
+    goalCelebrated = day;
+    unawaited(_prefs().then((p) => p?.setString(_goalDay, day)));
   }
 
   static void equipTitle(String? id) {
