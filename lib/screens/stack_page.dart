@@ -63,6 +63,47 @@ class _StackPageState extends State<StackPage> {
     if (ok == true) unawaited(store.deleteProblem(p));
   }
 
+  /// Fixes a mis-tapped grade: pick the right one, the schedule and recall are redone as if you had chosen it.
+  Future<void> _regrade(BuildContext context, Problem p) async {
+    final grade = await showModalBottomSheet<Grade>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Change last grade', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+              const SizedBox(height: 4),
+              Text('You graded ${p.name} "${p.last!.grade.label}". Pick what you meant; it replaces that review.'),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  for (final (i, g) in Grade.values.indexed) ...[
+                    if (i > 0) const SizedBox(width: 8),
+                    Expanded(
+                      child: (g == p.last!.grade ? OutlinedButton.new : FilledButton.tonal)(
+                        onPressed: g == p.last!.grade ? null : () => Navigator.pop(context, g),
+                        child: Text(g.label),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (grade == null || !context.mounted) return;
+    unawaited(store.regrade(p, grade));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Changed to ${grade.label}. Next review ${prettyDay(p.regrade(grade, on: today()).nextDue)}.')));
+  }
+
   Future<void> _editNotes(BuildContext context, Problem p) async {
     final current = await store.solution(p.id);
     if (!context.mounted) return;
@@ -87,10 +128,16 @@ class _StackPageState extends State<StackPage> {
     final colors = Theme.of(context).colorScheme;
     final now = today();
     final q = _query.trim().toLowerCase();
-    final shown = [
-      for (final p in problems)
-        if (_matches(p, _filter) && (q.isEmpty || p.name.toLowerCase().contains(q) || p.topic.toLowerCase().contains(q))) p,
-    ]..sort((a, b) => a.nextDue.compareTo(b.nextDue));
+    final shown =
+        [
+          for (final p in problems)
+            if (_matches(p, _filter) && (q.isEmpty || p.name.toLowerCase().contains(q) || p.topic.toLowerCase().contains(q))) p,
+        ]..sort(
+          (a, b) => switch (a.topic.compareTo(b.topic)) {
+            0 => a.nextDue.compareTo(b.nextDue),
+            final c => c,
+          },
+        ); // grouped by topic, soonest review first inside each
     String chip(_Filter f, String name) => '$name (${problems.where((p) => _matches(p, f)).length})';
 
     return Column(
@@ -158,8 +205,10 @@ class _StackPageState extends State<StackPage> {
                     final overdue = p.daysOverdue(now);
                     final due = p.isDue(now);
                     final stageColor = _stageColor(p);
+                    final firstOfTopic = i == 0 || shown[i - 1].topic != p.topic;
+                    final count = shown.where((x) => x.topic == p.topic).length;
                     final next = due ? dueLabel(overdue) : 'Next: ${prettyDay(p.nextDue).replaceFirst(RegExp(r' \d{4}$'), '')}';
-                    return Rise(
+                    final row = Rise(
                       index: i,
                       child: Card(
                         margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -228,13 +277,16 @@ class _StackPageState extends State<StackPage> {
                                         ),
                                       ),
                                     ),
+                                    'regrade' => _regrade(context, p),
                                     'notes' => _editNotes(context, p),
                                     _ => _confirmDelete(context, p),
                                   },
-                                  itemBuilder: (_) => const [
-                                    PopupMenuItem(value: 'again', child: Text('Review again (change grade)')),
-                                    PopupMenuItem(value: 'notes', child: Text('Solution card')),
-                                    PopupMenuItem(value: 'delete', child: Text('Delete')),
+                                  itemBuilder: (_) => [
+                                    if (p.last case final l?)
+                                      PopupMenuItem(value: 'regrade', child: Text('Change last grade (${l.grade.label})')),
+                                    const PopupMenuItem(value: 'again', child: Text('Review again')),
+                                    const PopupMenuItem(value: 'notes', child: Text('Solution card')),
+                                    const PopupMenuItem(value: 'delete', child: Text('Delete')),
                                   ],
                                 ),
                               ],
@@ -242,6 +294,20 @@ class _StackPageState extends State<StackPage> {
                           ),
                         ),
                       ),
+                    );
+                    if (!firstOfTopic) return row;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(20, i == 0 ? 4 : 14, 20, 8),
+                          child: Text(
+                            '${p.topic.toUpperCase()} · $count',
+                            style: TextStyle(fontSize: 12, letterSpacing: 1.2, fontWeight: FontWeight.w800, color: colors.primary),
+                          ),
+                        ),
+                        row,
+                      ],
                     );
                   },
                 ),

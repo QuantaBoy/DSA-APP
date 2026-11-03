@@ -3,7 +3,7 @@ rules_version = '2';
 // Each user owns exactly one document plus their notes, and optionally a leaderboard entry. Everything else is denied.
 //
 //   users/{uid}               v, problems (map by id), days (reviews per day), topics (results per topic)
-//   users/{uid}/notes/{id}    solution card: text (code), idea, time, space, mistake
+//   users/{uid}/notes/{id}    solution card: text (code), question, idea, time, space, mistake
 //   users/{uid}/apt/{id}      aptitude question with its options, answer, explanation and schedule
 //   users/{uid}/problems/{id} and /reviews/{id} — old (v1) layout: read and delete only, so the app can move it
 service cloud.firestore {
@@ -29,8 +29,9 @@ service cloud.firestore {
     // Solution card. Limits match Limits in lib/logic/models.dart.
     function isValidNote(data) {
       return data.size() > 0
-        && data.keys().hasOnly(['text', 'idea', 'time', 'space', 'mistake'])
+        && data.keys().hasOnly(['text', 'question', 'idea', 'time', 'space', 'mistake'])
         && optionalString(data, 'text', 20000)
+        && optionalString(data, 'question', 5000)
         && optionalString(data, 'idea', 500)
         && optionalString(data, 'mistake', 500)
         && optionalString(data, 'time', 40)

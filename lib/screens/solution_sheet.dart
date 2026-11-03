@@ -46,6 +46,7 @@ class _SolutionEditor extends StatefulWidget {
 }
 
 class _SolutionEditorState extends State<_SolutionEditor> {
+  late final _question = TextEditingController(text: widget.initial.question);
   late final _idea = TextEditingController(text: widget.initial.idea);
   late final _mistake = TextEditingController(text: widget.initial.mistake);
   late final _code = CodeController(text: widget.initial.code, language: codeLanguage(widget.initial.code).mode);
@@ -56,6 +57,7 @@ class _SolutionEditorState extends State<_SolutionEditor> {
 
   @override
   void dispose() {
+    _question.dispose();
     _idea.dispose();
     _mistake.dispose();
     _code.dispose();
@@ -64,6 +66,7 @@ class _SolutionEditorState extends State<_SolutionEditor> {
 
   void _save() {
     final solution = Solution(
+      question: _question.text.trim(),
       idea: _idea.text.trim(),
       time: _time,
       space: _space,
@@ -124,6 +127,15 @@ class _SolutionEditorState extends State<_SolutionEditor> {
             Text(
               'Write what you want to remember. Reviews show this card.',
               style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+            ),
+            label('Question', hint: 'optional, shown when you review'),
+            TextField(
+              controller: _question,
+              maxLength: Limits.questionLength,
+              minLines: 2,
+              maxLines: 8,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(hintText: 'Paste or write the problem, e.g. Print a 4×4 square of stars'),
             ),
             label('Pattern', hint: 'pick up to ${Limits.maxPatterns}'),
             Wrap(

@@ -68,6 +68,8 @@ describe('notes', () => {
 
   it('rejects oversized card fields', async () => {
     await assertFails(setDoc(doc(alice(), 'users/alice/notes/p1'), { idea: 'x'.repeat(501) }));
+    await assertSucceeds(setDoc(doc(alice(), 'users/alice/notes/p1'), { question: 'Print a square' }));
+    await assertFails(setDoc(doc(alice(), 'users/alice/notes/p1'), { question: 'x'.repeat(5001) }));
     await assertFails(setDoc(doc(alice(), 'users/alice/notes/p1'), { time: 'x'.repeat(41) }));
     await assertFails(setDoc(doc(alice(), 'users/alice/notes/p1'), {}));
   });

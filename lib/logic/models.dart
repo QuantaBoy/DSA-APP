@@ -9,6 +9,7 @@ abstract final class Limits {
   static const urlLength = 500;
   static const maxNoteLength = 20000; // code
   static const shortTextLength = 500; // idea, mistake
+  static const questionLength = 5000; // the question, pasted in your own words
   static const complexityLength = 40;
   static const maxPatterns = 8;
   static const aptQuestionLength = 2000;
@@ -60,7 +61,9 @@ const complexities = ['O(1)', 'O(log n)', 'O(n)', 'O(n log n)', 'O(n²)', 'O(n³
 /// What you want to remember about a solution: the approach first, code last.
 /// Stored in users/{uid}/notes/{problemId}; the patterns live on the [Problem] so lists need no extra reads.
 class Solution {
-  const Solution({this.idea = '', this.time = '', this.space = '', this.mistake = '', this.code = ''});
+  const Solution({this.question = '', this.idea = '', this.time = '', this.space = '', this.mistake = '', this.code = ''});
+
+  final String question; // the problem statement, for reviews of problems whose text the app cannot fetch
 
   final String idea; // the key insight in one line
   final String time;
@@ -68,9 +71,10 @@ class Solution {
   final String mistake; // what went wrong last time
   final String code;
 
-  bool get isEmpty => idea.isEmpty && time.isEmpty && space.isEmpty && mistake.isEmpty && code.isEmpty;
+  bool get isEmpty => question.isEmpty && idea.isEmpty && time.isEmpty && space.isEmpty && mistake.isEmpty && code.isEmpty;
 
-  Solution copyWith({String? idea, String? time, String? space, String? mistake, String? code}) => Solution(
+  Solution copyWith({String? question, String? idea, String? time, String? space, String? mistake, String? code}) => Solution(
+    question: question ?? this.question,
     idea: idea ?? this.idea,
     time: time ?? this.time,
     space: space ?? this.space,
@@ -81,6 +85,7 @@ class Solution {
   /// Only non-empty fields are stored. `text` is the code (the field name predates the card).
   Map<String, String> toMap() => {
     if (code.isNotEmpty) 'text': code,
+    if (question.isNotEmpty) 'question': question,
     if (idea.isNotEmpty) 'idea': idea,
     if (time.isNotEmpty) 'time': time,
     if (space.isNotEmpty) 'space': space,
@@ -89,6 +94,7 @@ class Solution {
 
   factory Solution.fromMap(Map<String, dynamic> m) => Solution(
     code: m['text'] as String? ?? '',
+    question: m['question'] as String? ?? '',
     idea: m['idea'] as String? ?? '',
     time: m['time'] as String? ?? '',
     space: m['space'] as String? ?? '',
@@ -112,6 +118,7 @@ class Problem {
     this.reviews = 0,
     this.remembered = 0,
     this.patterns = const [],
+    this.last,
   });
 
   /// A newly added problem: stage 0, first review the day after it was solved.
@@ -151,6 +158,9 @@ class Problem {
   final int remembered; // kept so deleting the problem can take it out of the topic totals
   final List<String> patterns; // e.g. ['Two Pointers'], from the solution card
 
+  /// The latest review: its grade and the schedule before it, so a mis-tap can be corrected later.
+  final ({Grade grade, int stage, DateTime due})? last;
+
   bool get mastered => stage == reviewIntervals.length - 1;
   bool isDue(DateTime today) => !nextDue.isAfter(dateOnly(today));
   int daysOverdue(DateTime today) => dateOnly(today).difference(nextDue).inDays;
@@ -167,6 +177,7 @@ class Problem {
     'reviews': reviews,
     'remembered': remembered,
     if (patterns.isNotEmpty) 'patterns': patterns,
+    if (last case final l?) 'last': {'grade': l.grade.name, 'stage': l.stage, 'due': dayKey(l.due)},
   };
 
   factory Problem.fromMap(String id, Map<String, dynamic> m) => Problem(
@@ -182,9 +193,24 @@ class Problem {
     reviews: m['reviews'] as int? ?? 0,
     remembered: m['remembered'] as int? ?? 0,
     patterns: [...?(m['patterns'] as List?)?.whereType<String>()],
+    last: switch (m['last']) {
+      {'grade': final String g, 'stage': final int s, 'due': final String d} when Grade.values.any((x) => x.name == g) => (
+        grade: Grade.values.byName(g),
+        stage: s,
+        due: parseDay(d),
+      ),
+      _ => null,
+    },
   );
 
-  Problem copyWith({int? stage, DateTime? nextDue, int? reviews, int? remembered, List<String>? patterns}) => Problem(
+  Problem copyWith({
+    int? stage,
+    DateTime? nextDue,
+    int? reviews,
+    int? remembered,
+    List<String>? patterns,
+    ({Grade grade, int stage, DateTime due})? last,
+  }) => Problem(
     id: id,
     name: name,
     platform: platform,
@@ -197,12 +223,32 @@ class Problem {
     reviews: reviews ?? this.reviews,
     remembered: remembered ?? this.remembered,
     patterns: patterns ?? this.patterns,
+    last: last ?? this.last,
   );
 
   /// The problem after one review: rescheduled, with its counts updated.
   Problem review({required Grade grade, required DateTime on}) {
     final (newStage, due) = afterReview(stage, grade, dateOnly(on));
-    return copyWith(stage: newStage, nextDue: due, reviews: reviews + 1, remembered: remembered + (grade.remembered ? 1 : 0));
+    return copyWith(
+      stage: newStage,
+      nextDue: due,
+      reviews: reviews + 1,
+      remembered: remembered + (grade.remembered ? 1 : 0),
+      last: (grade: grade, stage: stage, due: nextDue),
+    );
+  }
+
+  /// The latest review graded [grade] instead: schedule redone from before it, counts adjusted, no new review.
+  Problem regrade(Grade grade, {required DateTime on}) {
+    final l = last;
+    if (l == null) return this;
+    final (newStage, due) = afterReview(l.stage, grade, dateOnly(on));
+    return copyWith(
+      stage: newStage,
+      nextDue: due,
+      remembered: remembered - (l.grade.remembered ? 1 : 0) + (grade.remembered ? 1 : 0),
+      last: (grade: grade, stage: l.stage, due: l.due),
+    );
   }
 }
 

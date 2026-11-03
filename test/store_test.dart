@@ -68,4 +68,25 @@ void main() {
     expect((await db.collection('users').doc('u').get()).exists, isFalse);
     expect((await db.collection('users').doc('u').collection('notes').get()).docs, isEmpty);
   });
+
+  test('changing a mis-tapped grade redoes the schedule and recall, without another review', () async {
+    final store = Store('u', db: FakeFirebaseFirestore());
+    final p = Problem.solved(id: 'p', name: 'P', platform: 'LeetCode', difficulty: 'Easy', topic: 'T', solvedOn: addDays(today(), -1));
+    await store.addProblem(p);
+    await store.review(p, Grade.again);
+    var data = await store.data().first;
+    final reviewed = data.problems.single;
+    expect(reviewed.last?.grade, Grade.again);
+    expect(data.stats.recall, 0);
+
+    await store.regrade(reviewed, Grade.good);
+    data = await store.data().first;
+    final fixed = data.problems.single;
+    expect(fixed.reviews, 1);
+    expect(fixed.remembered, 1);
+    expect(fixed.stage, afterReview(0, Grade.good, today()).$1);
+    expect(fixed.last?.grade, Grade.good);
+    expect(data.stats.recall, 1);
+    expect(data.stats.reviews, 1);
+  });
 }

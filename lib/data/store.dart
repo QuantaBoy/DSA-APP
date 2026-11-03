@@ -65,6 +65,16 @@ class Store {
     if (grade.remembered) FieldPath(['topics', p.topic, 'remembered']): FieldValue.increment(1),
   });
 
+  /// Replaces the latest grade of [p] (a mis-tap): reschedules from before that review and fixes recall,
+  /// without counting another review.
+  Future<void> regrade(Problem p, Grade grade) {
+    final old = p.last!.grade;
+    return _user.update({
+      FieldPath(['problems', p.id]): p.regrade(grade, on: today()).toMap(),
+      if (old.remembered != grade.remembered) FieldPath(['topics', p.topic, 'remembered']): FieldValue.increment(grade.remembered ? 1 : -1),
+    });
+  }
+
   /// Reverses [review]: puts [before] (the problem as it was) back and takes the review out of the totals.
   Future<void> undoReview(Problem before, Grade grade) => _user.update({
     FieldPath(['problems', before.id]): before.toMap(),
@@ -104,6 +114,7 @@ class Store {
 
   static bool fitsLimits(Solution s) =>
       s.code.length <= Limits.maxNoteLength &&
+      s.question.length <= Limits.questionLength &&
       s.idea.length <= Limits.shortTextLength &&
       s.mistake.length <= Limits.shortTextLength &&
       s.time.length <= Limits.complexityLength &&

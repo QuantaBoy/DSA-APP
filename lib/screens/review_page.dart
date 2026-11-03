@@ -119,6 +119,18 @@ class _ReviewPageState extends State<ReviewPage> {
   Problem get _current => widget.queue[_index];
   bool get _done => _index >= widget.queue.length;
 
+  final _loading = <String>{};
+
+  /// Loads the solution card (one read) as soon as a card shows, so its question can sit on the front.
+  void _load(Problem p) {
+    if (_solutions.containsKey(p.id) || !_loading.add(p.id)) return;
+    unawaited(
+      widget.store.solution(p.id).then((s) {
+        if (mounted) setState(() => _solutions[p.id] = s);
+      }, onError: (Object _) {}),
+    );
+  }
+
   Future<void> _flip() async {
     unawaited(HapticFeedback.selectionClick());
     setState(() => _flipped = true);
@@ -232,6 +244,7 @@ class _ReviewPageState extends State<ReviewPage> {
 
   Widget _card(BuildContext context) {
     final p = _current;
+    _load(p);
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     return Center(
@@ -273,10 +286,30 @@ class _ReviewPageState extends State<ReviewPage> {
                               'Solved ${prettyDay(p.solvedOn)} · ${dueLabel(p.daysOverdue(today()))}',
                               style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
                             ),
-                            if (_statement(p) case final statement?) ...[
-                              const SizedBox(height: 16),
-                              QuestionCard(statement: statement, platform: p.platform, onOpen: () => openLink(context, p.url!)),
-                            ],
+                            const SizedBox(height: 16),
+                            if (_statement(p) case final statement?)
+                              QuestionCard(statement: statement, platform: p.platform, onOpen: () => openLink(context, p.url!))
+                            else if (_solutions[p.id]?.question case final q? when q.isNotEmpty)
+                              Card(
+                                margin: EdgeInsets.zero,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Question', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                                      const SizedBox(height: 8),
+                                      Text(q, style: theme.textTheme.bodyMedium?.copyWith(height: 1.5)),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            else
+                              OutlinedButton.icon(
+                                onPressed: () => _editCard(p),
+                                icon: const Icon(Icons.add_rounded),
+                                label: const Text('Add the question to this card'),
+                              ),
                             const SizedBox(height: 28),
                             Icon(Icons.psychology_rounded, size: 42, color: colors.primary),
                             const SizedBox(height: 8),
