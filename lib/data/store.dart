@@ -75,6 +75,11 @@ class Store {
     });
   }
 
+  /// Marks a GATE subtopic as covered today, or uncovers it.
+  Future<void> setGateCovered(String topicId, {required bool covered}) => _user.set({
+    'gate': {topicId: covered ? dayKey(today()) : FieldValue.delete()},
+  }, SetOptions(merge: true));
+
   /// Adds right quiz answers to your total (5 XP each) and counts the quiz as activity for the day.
   Future<void> addQuizScore(int right) => _user.set({
     'quiz': FieldValue.increment(right),

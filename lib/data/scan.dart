@@ -11,7 +11,15 @@ const aiModel = String.fromEnvironment('AI_MODEL', defaultValue: 'gemini-3.5-fla
 
 /// One question read from a photo. [answer] is the model's own solution; [photoAnswer] is the answer
 /// marked in the photo, if any. When both exist and differ, the user should check before saving.
-typedef ScannedQuestion = ({String question, List<String> options, int answer, int? photoAnswer, String explanation, String topic});
+typedef ScannedQuestion = ({
+  String question,
+  List<String> options,
+  int answer,
+  int? photoAnswer,
+  String explanation,
+  String topic,
+  String? subtopic,
+});
 
 class ScanException implements Exception {
   const ScanException(this.message);
@@ -20,8 +28,15 @@ class ScanException implements Exception {
   String toString() => message;
 }
 
+/// What a GATE paper scan adds to the prompt: file each question under one syllabus subtopic id.
+String gatePrompt(List<({String id, String name})> topics) => '''
+These are GATE Data Science & AI exam questions. For numerical-answer questions, write 4 plausible options
+including the correct value. For each question also give "subtopic": the id of the best matching syllabus
+subtopic from this list (id: name):
+${topics.map((t) => '${t.id}: ${t.name}').join('\n')}''';
+
 const _prompt = '''
-You read photos of aptitude test questions (quantitative, logical reasoning, verbal).
+You read photos or PDF pages of multiple-choice exam questions (aptitude, or the subject named below).
 For every multiple-choice question in the image:
 - copy the question text exactly, without the option labels;
 - copy each option's text, without its letter or number label;
@@ -49,6 +64,7 @@ const _schema = {
           'photoAnswer': {'type': 'integer'},
           'explanation': {'type': 'string'},
           'topic': {'type': 'string'},
+          'subtopic': {'type': 'string'},
         },
         'required': ['question', 'options', 'answer', 'explanation', 'topic'],
       },
@@ -88,6 +104,7 @@ List<ScannedQuestion> parseScan(String json) {
       photoAnswer: photo is int && photo >= 0 && photo < options.length ? photo : null,
       explanation: _clip(q['explanation'] is String ? q['explanation'] as String : '', Limits.aptExplanationLength),
       topic: _clip(topic, Limits.topicLength),
+      subtopic: q['subtopic'] is String ? q['subtopic'] as String : null,
     ));
   }
   return result;
@@ -104,7 +121,8 @@ String scanErrorMessage(String raw) => switch (raw.toLowerCase()) {
 };
 
 /// Reads the aptitude questions in a photo and solves them.
-Future<List<ScannedQuestion>> scanQuestions(Uint8List image, {String mimeType = 'image/jpeg'}) async {
+/// [extra] adds instructions (e.g. [gatePrompt]); a PDF ([mimeType] application/pdf) may hold a whole paper.
+Future<List<ScannedQuestion>> scanQuestions(Uint8List image, {String mimeType = 'image/jpeg', String extra = ''}) async {
   final model = FirebaseAI.googleAI().generativeModel(
     model: aiModel,
     generationConfig: GenerationConfig(responseMimeType: 'application/json', responseJsonSchema: _schema),
@@ -112,9 +130,9 @@ Future<List<ScannedQuestion>> scanQuestions(Uint8List image, {String mimeType = 
   try {
     final response = await model
         .generateContent([
-          Content.multi([TextPart(_prompt), InlineDataPart(mimeType, image)]),
+          Content.multi([TextPart('$_prompt\n$extra'), InlineDataPart(mimeType, image)]),
         ])
-        .timeout(const Duration(seconds: 60));
+        .timeout(Duration(seconds: mimeType == 'application/pdf' ? 240 : 60));
     return parseScan(response.text ?? '');
   } on QuotaExceeded {
     throw const ScanException('Daily AI limit reached. Try again tomorrow, or type the question.');

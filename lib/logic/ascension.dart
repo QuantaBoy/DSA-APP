@@ -36,7 +36,7 @@ int totalXp(Deeds d) {
   for (final n in perDay.values) {
     xp += max(0, n - overdriveFrom) * overdriveXp;
   }
-  return xp + d.aptCorrect * 8 + d.aptWrong * 2 + d.stats.quizRight * 5;
+  return xp + d.aptCorrect * 8 + d.aptWrong * 2 + d.stats.quizRight * 5 + d.stats.gateCovered.length * 25;
 }
 
 /// XP needed to go from [level] to the next one: quick early, slow later.

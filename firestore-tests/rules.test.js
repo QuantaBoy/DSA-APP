@@ -50,6 +50,9 @@ describe('user document', () => {
     await assertFails(setDoc(ref, { v: 2, isAdmin: true }));
     await assertFails(setDoc(ref, { v: 'two' }));
     await assertFails(setDoc(ref, { problems: 'not a map' }));
+    await assertSucceeds(setDoc(ref, { quiz: 5, gate: { 'la-eigen': '2026-11-03' } }));
+    await assertFails(setDoc(ref, { gate: 'not a map' }));
+    await assertFails(setDoc(ref, { quiz: -1 }));
   });
 });
 

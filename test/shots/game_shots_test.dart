@@ -16,6 +16,8 @@ import 'package:memory_stack/main.dart';
 import 'package:memory_stack/screens/ascension_view.dart';
 import 'package:memory_stack/screens/goal_celebration.dart';
 import 'package:memory_stack/screens/leaderboard_page.dart';
+import 'package:memory_stack/screens/gate_page.dart';
+import 'package:memory_stack/logic/gate.dart';
 import 'package:memory_stack/screens/quiz_page.dart';
 import 'package:memory_stack/screens/roadmap_page.dart';
 import 'package:memory_stack/screens/widgets.dart';
@@ -186,6 +188,36 @@ void main() {
       ),
       'overdrive',
       size: const Size(1170, 600),
+    );
+  });
+
+  testWidgets('gate journey', (t) async {
+    final store = Store('u', db: FakeFirebaseFirestore());
+    final covered = {...gateDa[0].topics.map((x) => x.id), ...gateDa[1].topics.take(3).map((x) => x.id)};
+    await t.runAsync(() async {
+      for (final id in covered) {
+        await store.setGateCovered(id, covered: true);
+      }
+    });
+    await phone(
+      t,
+      Scaffold(
+        body: GateView(store: store, covered: covered),
+      ),
+      'gate',
+      size: const Size(1170, 3000),
+    );
+    await phone(
+      t,
+      GateSectionPage(store: store, section: gateDa[1]),
+      'gate_section',
+      size: const Size(1170, 2532),
+    );
+    await phone(
+      t,
+      GateTopicPage(store: store, section: gateDa[1], topic: gateDa[1].topics[3]),
+      'gate_topic',
+      size: const Size(1170, 2532),
     );
   });
 

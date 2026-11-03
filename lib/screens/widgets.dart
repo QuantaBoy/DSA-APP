@@ -263,7 +263,7 @@ Widget adaptiveAction(BuildContext context, String label, VoidCallback onPressed
   return primary ? FilledButton(onPressed: onPressed, child: Text(label)) : TextButton(onPressed: onPressed, child: Text(label));
 }
 
-/// Flames flickering up from the top edge of a tile (Overdrive).
+/// A gently pulsing glow under a tile (Overdrive).
 class _Burning extends StatefulWidget {
   const _Burning({required this.child});
 
@@ -274,7 +274,7 @@ class _Burning extends StatefulWidget {
 }
 
 class _BurningState extends State<_Burning> with SingleTickerProviderStateMixin {
-  late final _t = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat();
+  late final _t = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600))..repeat();
 
   @override
   void dispose() {
@@ -285,61 +285,20 @@ class _BurningState extends State<_Burning> with SingleTickerProviderStateMixin 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: _t,
-    builder: (context, child) => CustomPaint(painter: _TileFlames(_t.value), child: child),
+    // A soft glow that breathes under the tile; nothing is drawn outside it.
+    builder: (context, child) => DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFF97316).withValues(alpha: 0.25 + 0.3 * sin(_t.value * pi)),
+            blurRadius: 14 + 10 * sin(_t.value * pi),
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: child,
+    ),
     child: widget.child,
   );
-}
-
-class _TileFlames extends CustomPainter {
-  _TileFlames(this.t);
-
-  final double t;
-
-  /// One aura around the whole tile, burning upward: tall tongues swept up and to the right on top,
-  /// flames rising along both sides, a soft glowing rim along the bottom.
-  Path _aura(Size size, double pad, double reach, double phase) {
-    final w = size.width, h = size.height;
-    double flick(int i) => 0.65 + 0.35 * sin(t * 2 * pi * 2 + i * 1.9 + phase);
-    final path = Path()..moveTo(-pad, h * 0.75);
-    // Left side, rising: bumps leaning up.
-    for (var i = 0; i < 3; i++) {
-      final y0 = h * (0.75 - i * 0.28), y1 = h * (0.75 - (i + 1) * 0.28);
-      final out = reach * 0.35 * flick(i);
-      path.quadraticBezierTo(-pad - out, (y0 + y1) / 2 + 6, -pad + 2, y1);
-    }
-    // Top: tall tongues swept up and right, like fire in the wind.
-    const tongues = 6;
-    for (var i = 0; i < tongues; i++) {
-      final x0 = -pad + 2 + (w + pad * 2 - 4) * i / tongues;
-      final x1 = -pad + 2 + (w + pad * 2 - 4) * (i + 1) / tongues;
-      final tall = reach * (0.7 + 0.5 * ((i * 3) % 4) / 3) * flick(i + 3);
-      final tip = Offset(x1 + reach * 0.15, -pad - tall);
-      path
-        ..quadraticBezierTo(x0 + (x1 - x0) * 0.2, -pad - tall * 0.35, tip.dx, tip.dy)
-        ..quadraticBezierTo(x1 - (x1 - x0) * 0.1, -pad - tall * 0.2, x1, -pad);
-    }
-    // Right side, rising.
-    for (var i = 2; i >= 0; i--) {
-      final y0 = h * (0.75 - (i + 1) * 0.28), y1 = h * (0.75 - i * 0.28);
-      final out = reach * 0.45 * flick(i + 9);
-      path.quadraticBezierTo(w + pad + out, (y0 + y1) / 2 - 6, w + pad - 2, y1);
-    }
-    // Bottom: just a rounded glowing rim, no flames.
-    path
-      ..quadraticBezierTo(w + pad, h + pad, w - 10, h + pad)
-      ..lineTo(10, h + pad)
-      ..quadraticBezierTo(-pad, h + pad, -pad, h * 0.75)
-      ..close();
-    return path;
-  }
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas
-      ..drawPath(_aura(size, 10, 26, 0), Paint()..color = const Color(0xFFFDE047).withValues(alpha: 0.85))
-      ..drawPath(_aura(size, 5, 14, 1.3), Paint()..color = const Color(0xFFFEF3C7));
-  }
-
-  @override
-  bool shouldRepaint(_TileFlames old) => old.t != t;
 }

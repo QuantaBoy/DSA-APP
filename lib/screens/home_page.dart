@@ -217,7 +217,7 @@ class _HomePageState extends State<HomePage> {
             onSeeAll: () => _go(_library),
           ),
           _sheet => SheetPage(store: store, problems: data.problems),
-          _library => LibraryPage(store: store, problems: data.problems),
+          _library => LibraryPage(store: store, problems: data.problems, gateCovered: data.stats.gateCovered),
           _ => ProfilePage(user: widget.user, store: store, problems: data.problems, stats: data.stats),
         };
       }

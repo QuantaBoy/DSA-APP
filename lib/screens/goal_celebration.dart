@@ -65,7 +65,7 @@ class _GoalCelebrationState extends State<GoalCelebration> with TickerProviderSt
             Positioned.fill(
               child: AnimatedBuilder(
                 animation: _confetti,
-                builder: (context, _) => CustomPaint(painter: _ConfettiPainter(_confetti.value)),
+                builder: (context, _) => CustomPaint(painter: ConfettiPainter(_confetti.value)),
               ),
             ),
             SafeArea(
@@ -190,8 +190,8 @@ class _StreakBadge extends StatelessWidget {
 }
 
 /// Confetti burst from the top, falling with gravity and spinning.
-class _ConfettiPainter extends CustomPainter {
-  _ConfettiPainter(this.t);
+class ConfettiPainter extends CustomPainter {
+  ConfettiPainter(this.t);
 
   final double t; // 0..1 over the burst
 
@@ -222,5 +222,21 @@ class _ConfettiPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_ConfettiPainter old) => old.t != t;
+  bool shouldRepaint(ConfettiPainter old) => old.t != t;
+}
+
+/// A two-second confetti shower over the whole screen, for small wins (a GATE subtopic ticked).
+void confettiBurst(BuildContext context) {
+  late final OverlayEntry entry;
+  entry = OverlayEntry(
+    builder: (_) => IgnorePointer(
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0, end: 1),
+        duration: const Duration(milliseconds: 2200),
+        onEnd: () => entry.remove(),
+        builder: (context, t, _) => CustomPaint(size: MediaQuery.sizeOf(context), painter: ConfettiPainter(t)),
+      ),
+    ),
+  );
+  Overlay.of(context).insert(entry);
 }

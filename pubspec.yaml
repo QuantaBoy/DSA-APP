@@ -1,13 +1,14 @@
 name: memory_stack
 description: "Spaced repetition for DSA problems."
 publish_to: 'none'
-version: 1.32.2+36
+version: 1.33.0+37
 
 environment:
   sdk: ^3.13.5
 
 dependencies:
   cloud_firestore: ^7.1.0
+  file_picker: ^13.3.2
   firebase_ai: ^5.1.0
   firebase_app_check: ^0.5.1
   firebase_auth: ^7.0.1

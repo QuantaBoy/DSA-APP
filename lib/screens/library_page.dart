@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/store.dart';
 import '../logic/models.dart';
 import 'aptitude_page.dart';
+import 'gate_page.dart';
 import 'motion.dart';
 import 'open_link.dart';
 import 'stack_page.dart';
@@ -10,14 +11,15 @@ import 'widgets.dart';
 
 /// Everything you have solved: as a list (with search and filters) or grouped by DSA pattern.
 class LibraryPage extends StatelessWidget {
-  const LibraryPage({super.key, required this.store, required this.problems});
+  const LibraryPage({super.key, required this.store, required this.problems, this.gateCovered = const {}});
 
   final Store store;
   final List<Problem> problems;
+  final Set<String> gateCovered;
 
   @override
   Widget build(BuildContext context) => DefaultTabController(
-    length: 3,
+    length: 4,
     child: Column(
       children: [
         const Padding(
@@ -28,6 +30,7 @@ class LibraryPage extends StatelessWidget {
               Tab(text: 'Problems'),
               Tab(text: 'Patterns'),
               Tab(text: 'Aptitude'),
+              Tab(text: 'GATE'),
             ],
           ),
         ),
@@ -37,6 +40,7 @@ class LibraryPage extends StatelessWidget {
               StackPage(store: store, problems: problems),
               PatternsView(problems: problems),
               AptitudeView(store: store),
+              GateView(store: store, covered: gateCovered),
             ],
           ),
         ),

@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../data/scan.dart';
 import '../data/store.dart';
+import '../logic/gate.dart';
 import '../logic/models.dart';
 import '../logic/srs.dart';
 import 'widgets.dart';
@@ -25,7 +26,8 @@ class AptitudeView extends StatelessWidget {
       if (snap.hasError) return const Center(child: Text('Could not load your aptitude questions.'));
       if (!snap.hasData) return const Center(child: CircularProgressIndicator());
       final now = today();
-      final cards = [...snap.data!]..sort((a, b) => a.nextDue.compareTo(b.nextDue));
+      // GATE questions live in the GATE tab.
+      final cards = [...snap.data!.where((c) => !isGateCard(c.topic))]..sort((a, b) => a.nextDue.compareTo(b.nextDue));
       final due = cards.where((c) => c.isDue(now)).toList();
       final theme = Theme.of(context);
       return ListView(
@@ -112,7 +114,8 @@ class AptitudeView extends StatelessWidget {
 }
 
 /// Opens the camera or photos, has the AI read the questions, then shows each one to check and save.
-Future<void> scanAptitude(BuildContext context, Store store, ImageSource source) async {
+/// [topic] files every question under one tag (a GATE subtopic); [extra] adds instructions for the AI.
+Future<void> scanAptitude(BuildContext context, Store store, ImageSource source, {String? topic, String extra = ''}) async {
   final messenger = ScaffoldMessenger.of(context);
   final navigator = Navigator.of(context);
   final XFile? photo;
@@ -140,7 +143,7 @@ Future<void> scanAptitude(BuildContext context, Store store, ImageSource source)
   );
   List<ScannedQuestion> found;
   try {
-    found = await scanQuestions(await photo.readAsBytes(), mimeType: photo.mimeType ?? 'image/jpeg');
+    found = await scanQuestions(await photo.readAsBytes(), mimeType: photo.mimeType ?? 'image/jpeg', extra: extra);
   } on ScanException catch (e) {
     navigator.pop();
     messenger.showSnackBar(SnackBar(content: Text(e.message)));
@@ -155,7 +158,8 @@ Future<void> scanAptitude(BuildContext context, Store store, ImageSource source)
   for (final (i, q) in found.indexed) {
     final ok = await navigator.push<bool>(
       MaterialPageRoute(
-        builder: (_) => AptEditPage(store: store, scanned: q, position: found.length > 1 ? '${i + 1} of ${found.length}' : null),
+        builder: (_) =>
+            AptEditPage(store: store, scanned: q, position: found.length > 1 ? '${i + 1} of ${found.length}' : null, fixedTopic: topic),
       ),
     );
     if (ok ?? false) saved++;
@@ -228,12 +232,13 @@ class _HeroButton extends StatelessWidget {
 
 /// Check and edit a question before it is saved: new (typed or scanned) or existing.
 class AptEditPage extends StatefulWidget {
-  const AptEditPage({super.key, required this.store, this.card, this.scanned, this.position});
+  const AptEditPage({super.key, required this.store, this.card, this.scanned, this.position, this.fixedTopic});
 
   final Store store;
   final AptCard? card; // editing an existing card
   final ScannedQuestion? scanned; // filled by the AI
   final String? position; // "2 of 3" when a photo had several questions
+  final String? fixedTopic; // set for GATE questions: the subtopic tag, and the topic field is hidden
 
   @override
   State<AptEditPage> createState() => _AptEditPageState();
@@ -277,7 +282,7 @@ class _AptEditPageState extends State<AptEditPage> {
 
   Future<void> _save() async {
     if (!_form.currentState!.validate()) return;
-    final topic = _topic.text.trim().isEmpty ? 'General' : _topic.text.trim();
+    final topic = widget.fixedTopic ?? (_topic.text.trim().isEmpty ? 'General' : _topic.text.trim());
     final options = [for (final o in _options) o.text.trim()];
     final card =
         widget.card?.copyWith(
@@ -406,11 +411,12 @@ class _AptEditPageState extends State<AptEditPage> {
                 validator: (v) => (v?.length ?? 0) > Limits.aptExplanationLength ? 'Too long' : null,
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _topic,
-                decoration: const InputDecoration(labelText: 'Topic', hintText: 'e.g. Percentages'),
-                validator: (v) => (v?.length ?? 0) > Limits.topicLength ? 'Too long' : null,
-              ),
+              if (widget.fixedTopic == null)
+                TextFormField(
+                  controller: _topic,
+                  decoration: const InputDecoration(labelText: 'Topic', hintText: 'e.g. Percentages'),
+                  validator: (v) => (v?.length ?? 0) > Limits.topicLength ? 'Too long' : null,
+                ),
             ],
           ),
         ),
