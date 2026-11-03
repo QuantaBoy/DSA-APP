@@ -43,7 +43,7 @@ void main() {
   });
 
   test('levels unlock harder kinds and longer, faster quizzes', () {
-    expect(kindsAt(1), [QuizKind.topic, QuizKind.pattern]);
+    expect(kindsAt(1), [QuizKind.topic, QuizKind.pattern, QuizKind.aptitude]);
     expect(kindsAt(5), QuizKind.values);
     expect(quizShape(1).count, 5);
     expect(quizShape(30).count, 10);
@@ -58,5 +58,12 @@ void main() {
     final quiz = buildQuiz(ps, sols, 10, Random(3));
     expect(quiz.length, quizShape(10).count);
     expect(quiz.map((q) => q.kind).toSet().length, greaterThan(2));
+  });
+
+  test('aptitude part keeps the right answer after shuffling options', () {
+    final card = AptCard.fresh(id: 'a', question: '2+2?', options: ['3', '4', '5', '6'], answer: 1, explanation: '', topic: 'Math');
+    final q = aptitudeQuiz([card], 1, Random(4)).single;
+    expect(q.kind, QuizKind.aptitude);
+    expect(q.options[q.answer], '4');
   });
 }

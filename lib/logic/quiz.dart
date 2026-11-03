@@ -9,7 +9,8 @@ enum QuizKind {
   topic('Which topic?', 1),
   pattern('Spot the pattern', 1),
   complexity('Time complexity', 3),
-  blank('Fill the blank', 5);
+  blank('Fill the blank', 5),
+  aptitude('Aptitude', 1);
 
   const QuizKind(this.label, this.fromLevel);
   final String label;
@@ -144,6 +145,7 @@ List<QuizQuestion> buildQuiz(List<Problem> problems, Map<String, Solution> solut
         QuizKind.pattern => patternQuestion(p, rnd),
         QuizKind.complexity => complexityQuestion(p, s, rnd),
         QuizKind.blank => blankQuestion(p, s, rnd),
+        QuizKind.aptitude => null, // asked in their own part, see aptitudeQuiz
       };
       if (q != null) pool.add(q);
     }
@@ -160,5 +162,21 @@ List<QuizQuestion> buildQuiz(List<Problem> problems, Map<String, Solution> solut
   }
   return kept..shuffle(rnd);
 }
+
+/// Part two of the quiz: your saved aptitude questions, options shuffled, as many as the level allows.
+List<QuizQuestion> aptitudeQuiz(List<AptCard> cards, int level, Random rnd) => [
+  for (final c in ([...cards]..shuffle(rnd)).take(quizShape(level).count))
+    if (c.options.length >= 2)
+      () {
+        final order = [for (var i = 0; i < c.options.length; i++) i]..shuffle(rnd);
+        return QuizQuestion(
+          kind: QuizKind.aptitude,
+          problem: c.topic,
+          prompt: c.question,
+          options: [for (final i in order) c.options[i]],
+          answer: order.indexOf(c.answer),
+        );
+      }(),
+];
 
 const _fallbackTopics = ['Arrays', 'Strings', 'Linked List', 'Binary Search', 'Recursion', 'Graphs', 'Dynamic Programming', 'Trees'];

@@ -28,6 +28,8 @@ class _QuizPageState extends State<QuizPage> with SingleTickerProviderStateMixin
   int _index = 0;
   int? _picked; // the option tapped, or -1 when time ran out
   int _right = 0;
+  int? _aptStart; // where part 2 (aptitude) begins, when there are both parts
+  bool _onBreak = false; // the 'DSA done, now aptitude' screen between the parts
   late final _clock =
       AnimationController(
         vsync: this,
@@ -54,8 +56,18 @@ class _QuizPageState extends State<QuizPage> with SingleTickerProviderStateMixin
         // offline and not cached: that problem just gives fewer question kinds
       }
     }
+    var apt = <QuizQuestion>[];
+    try {
+      apt = aptitudeQuiz(await widget.store.aptCards().first.timeout(const Duration(seconds: 8)), widget.level, rnd);
+    } on Exception {
+      // offline with nothing cached: DSA only
+    }
     if (!mounted) return;
-    setState(() => _quiz = buildQuiz(picks, solutions, widget.level, rnd));
+    final dsa = buildQuiz(picks, solutions, widget.level, rnd);
+    setState(() {
+      _quiz = [...dsa, ...apt];
+      if (dsa.isNotEmpty && apt.isNotEmpty) _aptStart = dsa.length;
+    });
     unawaited(_clock.forward(from: 0));
   }
 
@@ -81,7 +93,9 @@ class _QuizPageState extends State<QuizPage> with SingleTickerProviderStateMixin
       _index++;
       _picked = null;
     });
-    if (_index < _quiz!.length) {
+    if (_index == _aptStart) {
+      setState(() => _onBreak = true); // part 1 done: show the hand-over, timer waits
+    } else if (_index < _quiz!.length) {
       unawaited(_clock.forward(from: 0));
     } else if (_right > 0) {
       unawaited(widget.store.addQuizScore(_right));
@@ -94,8 +108,8 @@ class _QuizPageState extends State<QuizPage> with SingleTickerProviderStateMixin
     final done = quiz != null && _index >= quiz.length;
     return Scaffold(
       appBar: AppBar(
-        title: Text(quiz == null || done ? 'Quick quiz' : 'Question ${_index + 1} of ${quiz.length}'),
-        bottom: quiz == null || done
+        title: Text(quiz == null || done || _onBreak ? 'Quick quiz' : '${_part()} · ${_index + 1} of ${quiz.length}'),
+        bottom: quiz == null || done || _onBreak
             ? null
             : PreferredSize(
                 preferredSize: const Size.fromHeight(4),
@@ -115,10 +129,22 @@ class _QuizPageState extends State<QuizPage> with SingleTickerProviderStateMixin
             ? const _Empty()
             : done
             ? _Summary(right: _right, total: quiz.length)
+            : _onBreak
+            ? _Break(
+                right: _right,
+                total: _aptStart!,
+                aptitude: quiz.length - _aptStart!,
+                onGo: () {
+                  setState(() => _onBreak = false);
+                  unawaited(_clock.forward(from: 0));
+                },
+              )
             : _question(context, quiz[_index]),
       ),
     );
   }
+
+  String _part() => _aptStart == null ? 'Quiz' : (_index < _aptStart! ? 'DSA 1/2' : 'Aptitude 2/2');
 
   Widget _question(BuildContext context, QuizQuestion q) {
     final theme = Theme.of(context);
@@ -308,4 +334,54 @@ class _Empty extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// Between the parts: DSA is done, aptitude starts right here (no new quiz to open).
+class _Break extends StatelessWidget {
+  const _Break({required this.right, required this.total, required this.aptitude, required this.onGo});
+
+  final int right;
+  final int total;
+  final int aptitude;
+  final VoidCallback onGo;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check_circle_rounded, size: 72, color: Color(0xFF22C55E)),
+            const SizedBox(height: 12),
+            Text('DSA quiz complete', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
+            const SizedBox(height: 4),
+            Text('$right / $total correct · part 1 of 2 done', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+            const SizedBox(height: 28),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: theme.colorScheme.primaryContainer, borderRadius: BorderRadius.circular(18)),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.calculate_rounded, color: theme.colorScheme.primary),
+                  const SizedBox(width: 10),
+                  Text('Next: $aptitude aptitude questions', style: const TextStyle(fontWeight: FontWeight.w800)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(minimumSize: const Size(220, 52)),
+              onPressed: onGo,
+              icon: const Icon(Icons.arrow_forward_rounded),
+              label: const Text('Continue to aptitude'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
