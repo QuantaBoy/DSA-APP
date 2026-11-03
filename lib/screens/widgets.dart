@@ -295,42 +295,49 @@ class _TileFlames extends CustomPainter {
 
   final double t;
 
+  /// One aura around the whole tile, burning upward: tall tongues swept up and to the right on top,
+  /// flames rising along both sides, a soft glowing rim along the bottom.
+  Path _aura(Size size, double pad, double reach, double phase) {
+    final w = size.width, h = size.height;
+    double flick(int i) => 0.65 + 0.35 * sin(t * 2 * pi * 2 + i * 1.9 + phase);
+    final path = Path()..moveTo(-pad, h * 0.75);
+    // Left side, rising: bumps leaning up.
+    for (var i = 0; i < 3; i++) {
+      final y0 = h * (0.75 - i * 0.28), y1 = h * (0.75 - (i + 1) * 0.28);
+      final out = reach * 0.35 * flick(i);
+      path.quadraticBezierTo(-pad - out, (y0 + y1) / 2 + 6, -pad + 2, y1);
+    }
+    // Top: tall tongues swept up and right, like fire in the wind.
+    const tongues = 6;
+    for (var i = 0; i < tongues; i++) {
+      final x0 = -pad + 2 + (w + pad * 2 - 4) * i / tongues;
+      final x1 = -pad + 2 + (w + pad * 2 - 4) * (i + 1) / tongues;
+      final tall = reach * (0.7 + 0.5 * ((i * 3) % 4) / 3) * flick(i + 3);
+      final tip = Offset(x1 + reach * 0.15, -pad - tall);
+      path
+        ..quadraticBezierTo(x0 + (x1 - x0) * 0.2, -pad - tall * 0.35, tip.dx, tip.dy)
+        ..quadraticBezierTo(x1 - (x1 - x0) * 0.1, -pad - tall * 0.2, x1, -pad);
+    }
+    // Right side, rising.
+    for (var i = 2; i >= 0; i--) {
+      final y0 = h * (0.75 - (i + 1) * 0.28), y1 = h * (0.75 - i * 0.28);
+      final out = reach * 0.45 * flick(i + 9);
+      path.quadraticBezierTo(w + pad + out, (y0 + y1) / 2 - 6, w + pad - 2, y1);
+    }
+    // Bottom: just a rounded glowing rim, no flames.
+    path
+      ..quadraticBezierTo(w + pad, h + pad, w - 10, h + pad)
+      ..lineTo(10, h + pad)
+      ..quadraticBezierTo(-pad, h + pad, -pad, h * 0.75)
+      ..close();
+    return path;
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
-    // Behind the tile: tongues licking up past its top edge and out of its sides.
-    for (final (layer, color, scale) in [(0, const Color(0xFFF97316), 1.0), (1, const Color(0xFFFDE047), 0.55)]) {
-      final paint = Paint()..color = color.withValues(alpha: 0.9);
-      const count = 7;
-      final w = size.width - 24;
-      final path = Path()..moveTo(12, 14);
-      for (var i = 0; i < count; i++) {
-        final x0 = 12 + w * i / count, x1 = 12 + w * (i + 1) / count;
-        final flicker = 0.5 + 0.5 * sin(t * 2 * pi * (2 + layer) + i * 2.1).abs();
-        final h = (14 + 10 * ((i * 37) % 5) / 4) * scale * flicker;
-        final tip = Offset((x0 + x1) / 2 + sin(t * 2 * pi + i) * 3, 2 - h);
-        path
-          ..quadraticBezierTo(x0, 6 - h * 0.4, tip.dx, tip.dy)
-          ..quadraticBezierTo(x1, 6 - h * 0.4, x1, 14);
-      }
-      path.close();
-      canvas.drawPath(path, paint);
-      // Side licks.
-      for (final side in [0.0, size.width]) {
-        final dir = side == 0 ? -1.0 : 1.0;
-        for (var i = 0; i < 3; i++) {
-          final y = 22.0 + i * (size.height - 40) / 2;
-          final h = (8 + 4 * sin(t * 2 * pi * 3 + i + side)) * scale;
-          canvas.drawPath(
-            Path()
-              ..moveTo(side, y)
-              ..quadraticBezierTo(side + dir * h * 0.6, y + 4, side + dir * h, y + 8)
-              ..quadraticBezierTo(side + dir * h * 0.4, y + 12, side, y + 16)
-              ..close(),
-            paint,
-          );
-        }
-      }
-    }
+    canvas
+      ..drawPath(_aura(size, 10, 26, 0), Paint()..color = const Color(0xFFFDE047).withValues(alpha: 0.85))
+      ..drawPath(_aura(size, 5, 14, 1.3), Paint()..color = const Color(0xFFFEF3C7));
   }
 
   @override
