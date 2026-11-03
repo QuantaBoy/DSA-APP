@@ -102,7 +102,11 @@ class _SolutionEditorState extends State<_SolutionEditor> {
           ChoiceChip(
             label: Text(c),
             selected: value == c,
-            showCheckmark: false,
+            // The picked one is solid with a tick, so it is obvious at a glance.
+            showCheckmark: true,
+            checkmarkColor: Colors.white,
+            selectedColor: Theme.of(context).colorScheme.primary,
+            labelStyle: TextStyle(color: value == c ? Colors.white : null, fontWeight: value == c ? FontWeight.w800 : null),
             visualDensity: VisualDensity.compact,
             onSelected: (on) => setState(() => onPick(on ? c : '')),
           ),

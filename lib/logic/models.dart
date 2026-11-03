@@ -254,10 +254,11 @@ class Problem {
 
 /// Running review totals, stored next to the problems so no screen ever reads a review history.
 class Stats {
-  const Stats({this.days = const {}, this.topics = const {}});
+  const Stats({this.days = const {}, this.topics = const {}, this.quizRight = 0});
 
   final Map<DateTime, int> days; // reviews done per day
   final Map<String, ({int remembered, int total})> topics; // only problems still in the stack count
+  final int quizRight; // quiz answers got right, ever (worth XP)
 
   int get reviews => days.values.fold(0, (a, b) => a + b);
   int reviewsOn(DateTime day) => days[dateOnly(day)] ?? 0;
@@ -274,6 +275,7 @@ class Stats {
       for (final e in (m['topics'] as Map? ?? {}).entries)
         e.key as String: (remembered: (e.value as Map)['remembered'] as int? ?? 0, total: (e.value as Map)['total'] as int? ?? 0),
     },
+    quizRight: m['quiz'] as int? ?? 0,
   );
 }
 

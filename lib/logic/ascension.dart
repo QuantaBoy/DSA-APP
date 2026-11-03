@@ -21,7 +21,7 @@ int totalXp(Deeds d) {
   for (final p in d.problems) {
     xp += solveXp(p.difficulty) + p.remembered * 10 + (p.reviews - p.remembered) * 3;
   }
-  return xp + d.aptCorrect * 8 + d.aptWrong * 2;
+  return xp + d.aptCorrect * 8 + d.aptWrong * 2 + d.stats.quizRight * 5;
 }
 
 /// XP needed to go from [level] to the next one: quick early, slow later.

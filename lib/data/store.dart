@@ -75,6 +75,12 @@ class Store {
     });
   }
 
+  /// Adds right quiz answers to your total (5 XP each) and counts the quiz as activity for the day.
+  Future<void> addQuizScore(int right) => _user.set({
+    'quiz': FieldValue.increment(right),
+    'days': {dayKey(today()): FieldValue.increment(0)},
+  }, SetOptions(merge: true));
+
   /// Reverses [review]: puts [before] (the problem as it was) back and takes the review out of the totals.
   Future<void> undoReview(Problem before, Grade grade) => _user.update({
     FieldPath(['problems', before.id]): before.toMap(),

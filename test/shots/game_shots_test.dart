@@ -16,7 +16,10 @@ import 'package:memory_stack/main.dart';
 import 'package:memory_stack/screens/ascension_view.dart';
 import 'package:memory_stack/screens/goal_celebration.dart';
 import 'package:memory_stack/screens/leaderboard_page.dart';
+import 'package:memory_stack/screens/quiz_page.dart';
 import 'package:memory_stack/screens/roadmap_page.dart';
+import 'package:memory_stack/data/store.dart';
+import 'package:memory_stack/logic/models.dart';
 
 const fonts = r'C:/flutter/bin/cache/artifacts/material_fonts';
 
@@ -127,6 +130,39 @@ void main() {
       await expectLater(find.byType(MaterialApp), matchesGoldenFile('game/system_$name.png'));
     });
   }
+
+  testWidgets('quiz', (t) async {
+    final store = Store('u', db: FakeFirebaseFirestore());
+    final p = Problem.solved(
+      id: 'p',
+      name: 'Two Sum',
+      platform: 'LeetCode',
+      difficulty: 'Easy',
+      topic: 'Arrays',
+      solvedOn: DateTime.utc(2026),
+    );
+    await t.runAsync(
+      () => store.addProblem(
+        p,
+        solution: const Solution(time: 'O(n)', code: 'int n = nums.size();\nfor (int i = 0; i < n; i++) {\n  seen[nums[i]] = i;\n}'),
+      ),
+    );
+    t.view.physicalSize = const Size(1170, 2532);
+    t.view.devicePixelRatio = 3;
+    addTearDown(t.view.reset);
+    await t.pumpWidget(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: appTheme(Brightness.light),
+        home: QuizPage(store: store, problems: [p], level: 9),
+      ),
+    );
+    for (var i = 0; i < 4; i++) {
+      await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+      await t.pump(const Duration(milliseconds: 200));
+    }
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('game/quiz.png'));
+  });
 
   testWidgets('party', (t) => phone(t, const GoalCelebration(streak: 5, solvedToday: 3), 'party'));
 

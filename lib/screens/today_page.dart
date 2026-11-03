@@ -7,6 +7,7 @@ import '../data/prefs.dart';
 import '../data/sheet.dart';
 import '../data/store.dart';
 import '../logic/models.dart';
+import '../logic/quiz.dart';
 import '../logic/srs.dart';
 import 'aptitude_page.dart';
 import 'ascension_view.dart';
@@ -14,6 +15,7 @@ import 'coach.dart';
 import 'goal_celebration.dart';
 import 'interview_page.dart';
 import 'motion.dart';
+import 'quiz_page.dart';
 import 'review_page.dart';
 import 'solve_page.dart';
 import 'streak_page.dart';
@@ -242,6 +244,7 @@ class _TodayPageState extends State<TodayPage> {
                     ),
                   ),
                   _AptitudeDue(store: widget.store),
+                  _QuizCard(store: widget.store, problems: problems),
                   if (twoColumns)
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -501,6 +504,73 @@ class _AptitudeDue extends StatelessWidget {
                   ),
                   const Icon(Icons.chevron_right_rounded),
                 ],
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+/// Quick-fire quiz from your stack. Locked until 3 problems; harder question kinds open as you level up.
+class _QuizCard extends StatelessWidget {
+  const _QuizCard({required this.store, required this.problems});
+
+  final Store store;
+  final List<Problem> problems;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: power,
+    builder: (context, p, _) {
+      final theme = Theme.of(context);
+      final level = p?.level.level ?? 1;
+      final locked = problems.length < 3;
+      final shape = quizShape(level);
+      final nextKind = QuizKind.values.where((k) => k.fromLevel > level).firstOrNull;
+      final subtitle = locked
+          ? 'Solve ${3 - problems.length} more to unlock'
+          : '${shape.count} questions · ${shape.seconds}s each${nextKind == null ? '' : ' · ${nextKind.label} at Lv ${nextKind.fromLevel}'}';
+      return Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: Pressable(
+          onTap: locked
+              ? null
+              : () => unawaited(
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => QuizPage(store: store, problems: problems, level: level),
+                    ),
+                  ),
+                ),
+          child: Opacity(
+            opacity: locked ? 0.55 : 1,
+            child: Card(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(color: Accent.green.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(14)),
+                      child: Icon(locked ? Icons.lock_rounded : Icons.quiz_rounded, color: Accent.green),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Quick quiz', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+                          Text(subtitle, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right_rounded),
+                  ],
+                ),
               ),
             ),
           ),

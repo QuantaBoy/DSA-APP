@@ -15,11 +15,12 @@ service cloud.firestore {
 
     // Shape and size limits. Firestore also caps a document at 1 MiB.
     function isValidUser(data) {
-      return data.keys().hasOnly(['v', 'problems', 'days', 'topics'])
+      return data.keys().hasOnly(['v', 'problems', 'days', 'topics', 'quiz'])
         && (!('v' in data) || data.v is int)
         && (!('problems' in data) || (data.problems is map && data.problems.size() <= 3000))
         && (!('days' in data) || (data.days is map && data.days.size() <= 4000))
-        && (!('topics' in data) || (data.topics is map && data.topics.size() <= 500));
+        && (!('topics' in data) || (data.topics is map && data.topics.size() <= 500))
+        && (!('quiz' in data) || (data.quiz is int && data.quiz >= 0 && data.quiz <= 1000000));
     }
 
     function optionalString(data, key, max) {
