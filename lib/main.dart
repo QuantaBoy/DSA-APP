@@ -27,6 +27,7 @@ Future<void> main() async {
   // Keep a device copy of the data so the app works offline (already the default on Android, not on web).
   FirebaseFirestore.instance.settings = const Settings(persistenceEnabled: true);
   await Prefs.load();
+  await signOutIfAway();
   tipsEnabled = true; // walkthrough tips on in the real app (off in tests)
   runApp(const MemoryStackApp());
 }

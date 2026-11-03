@@ -75,38 +75,52 @@ class SectionTitle extends StatelessWidget {
 
 /// A number with a label, its icon in a tinted square, e.g. "12 / due now".
 class StatTile extends StatelessWidget {
-  const StatTile({super.key, required this.icon, required this.value, required this.label, this.color, this.onTap});
+  const StatTile({super.key, required this.icon, required this.value, required this.label, this.color, this.onTap, this.fire = false});
 
   final IconData icon;
   final String value;
   final String label;
   final Color? color; // tile tint; defaults to the brand colour
   final VoidCallback? onTap;
+  final bool fire; // Overdrive: a blazing orange-to-red tile with white text
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final dark = theme.brightness == Brightness.dark;
     final tint = color ?? theme.colorScheme.primary;
+    final ink = fire ? Colors.white : null;
     return Expanded(
       child: Pressable(
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
-          decoration: BoxDecoration(
-            // Softly tinted tile in the stat's colour, like the mockup.
-            color: Color.alphaBlend(tint.withValues(alpha: dark ? 0.14 : 0.08), theme.colorScheme.surfaceContainerLowest),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: tint.withValues(alpha: dark ? 0.28 : 0.14)),
-          ),
+          decoration: fire
+              ? BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFBBF24), Color(0xFFF97316), Color(0xFFDC2626)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(color: const Color(0xFFF97316).withValues(alpha: 0.45), blurRadius: 16, offset: const Offset(0, 6)),
+                  ],
+                )
+              : BoxDecoration(
+                  // Softly tinted tile in the stat's colour, like the mockup.
+                  color: Color.alphaBlend(tint.withValues(alpha: dark ? 0.14 : 0.08), theme.colorScheme.surfaceContainerLowest),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: tint.withValues(alpha: dark ? 0.28 : 0.14)),
+                ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, size: 26, color: tint),
+              Icon(icon, size: 26, color: ink ?? tint),
               const SizedBox(height: 10),
               Builder(
                 builder: (context) {
-                  final style = theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5);
+                  final style = theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5, color: ink);
                   final n = int.tryParse(value);
                   return n == null ? Text(value, style: style) : CountUp(n, style: style);
                 },
@@ -114,7 +128,10 @@ class StatTile extends StatelessWidget {
               Text(
                 label,
                 maxLines: 2,
-                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: ink ?? theme.colorScheme.onSurfaceVariant,
+                  fontWeight: fire ? FontWeight.w800 : FontWeight.w500,
+                ),
               ),
             ],
           ),

@@ -25,6 +25,16 @@ import 'profile_page.dart';
 import 'sheet_page.dart';
 import 'today_page.dart';
 
+/// Signed in but away 13+ days on this device: sign out, so a lost or shared phone does not stay logged in.
+/// Runs at start and whenever the app comes back to the front; otherwise records that you were here.
+Future<void> signOutIfAway() async {
+  final away = Prefs.lastActive;
+  if (FirebaseAuth.instance.currentUser != null && away != null && DateTime.now().difference(away) >= const Duration(days: 13)) {
+    await FirebaseAuth.instance.signOut();
+  }
+  Prefs.markActive(DateTime.now());
+}
+
 /// Signed-in shell: Home, Sheet, Library and Profile. Bottom bar on phones, sidebar on wide screens.
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.user});
@@ -48,11 +58,13 @@ class _HomePageState extends State<HomePage> {
   late final store = Store(widget.user.uid);
   late final Stream<UserData> _data = store.data();
   late final StreamSubscription<UserData> _widgetFeed;
+  late final _life = AppLifecycleListener(onResume: () => unawaited(signOutIfAway()));
   int _tab = _home;
 
   @override
   void initState() {
     super.initState();
+    _life; // start listening for the app coming back
     // Neither may ever break the app: a missing reminder or a failed upgrade is retried next launch.
     unawaited(scheduleDailyReminder(Prefs.reminderMinutes.value).catchError((Object _) {}));
     unawaited(store.upgrade().catchError((Object _) {}));
@@ -168,6 +180,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     unawaited(_widgetFeed.cancel());
+    _life.dispose();
     unawaited(_aptFeed.cancel());
     Prefs.equippedTitle.removeListener(_publishLeaderboard);
     super.dispose();

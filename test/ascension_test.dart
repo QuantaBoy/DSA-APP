@@ -44,4 +44,9 @@ void main() {
     expect(activityPerDay([p], Stats(days: {day: 2})), {day: 3});
     expect(activeDays([p], const Stats()), {day});
   });
+
+  test('overdrive: each new problem past 3 in one day earns a bonus', () {
+    final five = [for (var i = 0; i < 5; i++) _p('o$i', 'Easy')]; // all solved the same day
+    expect(totalXp((problems: five, stats: const Stats(), aptCorrect: 0, aptWrong: 0)), 5 * 30 + 2 * overdriveXp);
+  });
 }

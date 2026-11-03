@@ -1,7 +1,10 @@
+import 'dart:math';
+
 import 'package:flutter/painting.dart';
 
 import '../data/sheet.dart';
 import 'models.dart';
+import 'srs.dart';
 
 /// Levels, ranks and titles, all worked out from what you already did, so nothing extra is stored
 /// and past work counts at once. Reset progress takes you back to level 1.
@@ -16,10 +19,22 @@ int solveXp(String difficulty) => switch (difficulty) {
 /// Everything that earns XP, read from your data.
 typedef Deeds = ({List<Problem> problems, Stats stats, int aptCorrect, int aptWrong});
 
+/// Solving more than this many new problems in a day turns on Overdrive: each extra one earns [overdriveXp].
+const overdriveFrom = 3;
+const overdriveXp = 15;
+
 int totalXp(Deeds d) {
   var xp = 0;
   for (final p in d.problems) {
     xp += solveXp(p.difficulty) + p.remembered * 10 + (p.reviews - p.remembered) * 3;
+  }
+  // Overdrive: every new problem past 3 in one day is worth a bonus.
+  final perDay = <DateTime, int>{};
+  for (final p in d.problems) {
+    perDay.update(dateOnly(p.solvedOn), (n) => n + 1, ifAbsent: () => 1);
+  }
+  for (final n in perDay.values) {
+    xp += max(0, n - overdriveFrom) * overdriveXp;
   }
   return xp + d.aptCorrect * 8 + d.aptWrong * 2 + d.stats.quizRight * 5;
 }

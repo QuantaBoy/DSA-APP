@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 
 import '../data/prefs.dart';
 import '../data/sheet.dart';
 import '../data/store.dart';
+import '../logic/ascension.dart';
 import '../logic/models.dart';
 import '../logic/quiz.dart';
 import '../logic/srs.dart';
@@ -185,13 +185,16 @@ class _TodayPageState extends State<TodayPage> {
                             Navigator.push(context, MaterialPageRoute<void>(builder: (_) => StreakPage(days: activeDays(problems, stats)))),
                           ),
                         ),
+                        // New problems solved today out of the daily goal; past the goal it bursts into Overdrive.
                         StatTile(
                           key: _goalKey,
-                          icon: Icons.task_alt_rounded,
-                          // New problems solved today out of the daily goal; reviews have their own tile.
-                          value: goal == 0 ? '✓' : '${min(solvedToday, goal)}/$goal',
-                          label: 'New today',
+                          icon: solvedToday > goal && goal > 0 ? Icons.local_fire_department_rounded : Icons.task_alt_rounded,
+                          value: goal == 0 ? '✓' : '$solvedToday/$goal',
+                          label: solvedToday > goal && goal > 0
+                              ? 'Overdrive${solvedToday > overdriveFrom ? ' +${(solvedToday - overdriveFrom) * overdriveXp}' : ''}'
+                              : 'New today',
                           color: Accent.green,
+                          fire: solvedToday > goal && goal > 0,
                         ),
                         StatTile(icon: Icons.event_note_rounded, value: '${due.length}', label: 'Due now', color: Accent.red),
                       ],

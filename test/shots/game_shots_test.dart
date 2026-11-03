@@ -18,6 +18,7 @@ import 'package:memory_stack/screens/goal_celebration.dart';
 import 'package:memory_stack/screens/leaderboard_page.dart';
 import 'package:memory_stack/screens/quiz_page.dart';
 import 'package:memory_stack/screens/roadmap_page.dart';
+import 'package:memory_stack/screens/widgets.dart';
 import 'package:memory_stack/data/store.dart';
 import 'package:memory_stack/logic/models.dart';
 
@@ -162,6 +163,30 @@ void main() {
       await t.pump(const Duration(milliseconds: 200));
     }
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('game/quiz.png'));
+  });
+
+  testWidgets('overdrive tile', (t) async {
+    await phone(
+      t,
+      const Scaffold(
+        body: Padding(
+          padding: EdgeInsets.only(top: 24),
+          child: Column(
+            children: [
+              StatRow(
+                children: [
+                  StatTile(icon: Icons.local_fire_department_rounded, value: '2', label: 'Day streak', color: Accent.orange),
+                  StatTile(icon: Icons.local_fire_department_rounded, value: '6/3', label: 'Overdrive +45', fire: true),
+                  StatTile(icon: Icons.event_note_rounded, value: '0', label: 'Due now', color: Accent.red),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+      'overdrive',
+      size: const Size(1170, 600),
+    );
   });
 
   testWidgets('party', (t) => phone(t, const GoalCelebration(streak: 5, solvedToday: 3), 'party'));
