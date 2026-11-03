@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -140,7 +141,11 @@ Future<List<ScannedQuestion>> scanQuestions(Uint8List image, {String mimeType = 
     throw const ScanException('AI is not switched on for this app yet (Firebase console → AI Logic).');
   } on FirebaseAIException catch (e) {
     throw ScanException(scanErrorMessage(e.message));
-  } on Exception {
-    throw const ScanException('Could not reach the AI. Check your internet.');
+  } on TimeoutException {
+    throw const ScanException('The AI took too long. Try a shorter PDF (10–20 pages) or a photo of one page.');
+  } on Exception catch (e) {
+    // Show the real reason, short, so a failed paper import can be diagnosed.
+    final why = e.toString().split('\n').first;
+    throw ScanException('Could not read it with the AI: ${why.length > 140 ? '${why.substring(0, 140)}…' : why}');
   }
 }

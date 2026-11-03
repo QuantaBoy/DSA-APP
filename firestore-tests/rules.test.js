@@ -161,3 +161,17 @@ describe('leaderboard', () => {
     await assertFails(setDoc(ref, { name: 'Alice', streak: 5, solved: 2, updatedAt: new Date(0) }));
   });
 });
+
+describe('shared questions', () => {
+  it('first author shares, everyone reads, only the author edits', async () => {
+    const q = (db) => doc(db, 'questions/p1');
+    await assertSucceeds(setDoc(q(alice()), { text: 'Print stars', by: 'Alice', uid: 'alice' }));
+    await assertSucceeds(getDoc(q(bob())));
+    await assertFails(setDoc(q(bob()), { text: 'spam', by: 'Bob', uid: 'bob' }));
+    await assertFails(deleteDoc(q(bob())));
+    await assertSucceeds(setDoc(q(alice()), { text: 'Print an n x n square', by: 'Alice', uid: 'alice' }));
+    await assertFails(getDoc(q(guest())));
+    await assertFails(setDoc(doc(bob(), 'questions/p2'), { text: 'x'.repeat(1001), by: 'Bob', uid: 'bob' }));
+    await assertFails(setDoc(doc(bob(), 'questions/p3'), { text: 'fake', by: 'Bob', uid: 'alice' }));
+  });
+});

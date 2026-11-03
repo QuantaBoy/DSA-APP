@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_code_editor/flutter_code_editor.dart';
@@ -120,10 +121,18 @@ class _ReviewPageState extends State<ReviewPage> {
   bool get _done => _index >= widget.queue.length;
 
   final _loading = <String>{};
+  final _shared = <String, ({String text, String by})?>{}; // the question bank entry, one read per problem
 
   /// Loads the solution card (one read) as soon as a card shows, so its question can sit on the front.
   void _load(Problem p) {
     if (_solutions.containsKey(p.id) || !_loading.add(p.id)) return;
+    if (leetCodeSlug(p.url) == null) {
+      unawaited(
+        widget.store.sharedQuestion(p.id).then((q) {
+          if (mounted) setState(() => _shared[p.id] = q);
+        }, onError: (Object _) {}),
+      );
+    }
     unawaited(
       widget.store.solution(p.id).then((s) {
         if (mounted) setState(() => _solutions[p.id] = s);
@@ -195,6 +204,13 @@ class _ReviewPageState extends State<ReviewPage> {
     if (card == null) return;
     unawaited(widget.store.setSolution(p.id, card.solution));
     unawaited(widget.store.setPatterns(p.id, card.patterns));
+    // A new question for a problem nobody has shared yet goes to the shared bank for everyone.
+    final q = card.solution.question;
+    if (q.isNotEmpty && _shared[p.id] == null && leetCodeSlug(p.url) == null) {
+      final by = (FirebaseAuth.instance.currentUser?.displayName ?? '').split(' ').first;
+      unawaited(widget.store.shareQuestion(p.id, q, by).catchError((Object _) {}));
+      _shared[p.id] = (text: q, by: by.isEmpty ? 'You' : by);
+    }
     setState(() {
       _solutions[p.id] = card.solution;
       _patterns[p.id] = card.patterns;
@@ -304,11 +320,39 @@ class _ReviewPageState extends State<ReviewPage> {
                                   ),
                                 ),
                               )
+                            else if (_shared[p.id] case final shared?)
+                              Card(
+                                margin: EdgeInsets.zero,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              'Question',
+                                              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                                            ),
+                                          ),
+                                          Text(
+                                            'Added by ${shared.by}',
+                                            style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(shared.text, style: theme.textTheme.bodyMedium?.copyWith(height: 1.5)),
+                                    ],
+                                  ),
+                                ),
+                              )
                             else
                               OutlinedButton.icon(
                                 onPressed: () => _editCard(p),
                                 icon: const Icon(Icons.add_rounded),
-                                label: const Text('Add the question to this card'),
+                                label: const Text('Add the question (shared with everyone)'),
                               ),
                             const SizedBox(height: 28),
                             Icon(Icons.psychology_rounded, size: 42, color: colors.primary),

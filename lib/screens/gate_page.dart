@@ -622,8 +622,9 @@ Future<void> importGatePaper(BuildContext context, Store store) async {
   }
   if (files.isEmpty || !context.mounted) return;
   final bytes = await files.first.readAsBytes();
-  if (bytes.length > 15 * 1024 * 1024) {
-    messenger.showSnackBar(const SnackBar(content: Text('That PDF is over 15 MB. Split it and import the parts.')));
+  // One AI request carries at most ~20 MB, and the file grows a third when sent: keep PDFs under 10 MB.
+  if (bytes.length > 10 * 1024 * 1024) {
+    messenger.showSnackBar(const SnackBar(content: Text('That PDF is over 10 MB. Split it and import the parts.')));
     return;
   }
   if (!context.mounted) return;

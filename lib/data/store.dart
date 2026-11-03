@@ -110,6 +110,19 @@ class Store {
   ]);
 
   /// The saved solution card, or an empty one.
+  /// The shared question for a problem, written by whoever added it first, or null.
+  Future<({String text, String by})?> sharedQuestion(String problemId) async {
+    final d = (await _db.collection('questions').doc(problemId).get()).data();
+    return d == null ? null : (text: d['text'] as String, by: d['by'] as String);
+  }
+
+  /// Shares your question with everyone. Fails quietly when someone else already shared one.
+  Future<void> shareQuestion(String problemId, String text, String by) => _db.collection('questions').doc(problemId).set({
+    'text': text.length > 1000 ? text.substring(0, 1000) : text,
+    'by': by.trim().isEmpty ? 'A friend' : (by.trim().length > 30 ? by.trim().substring(0, 30) : by.trim()),
+    'uid': uid,
+  });
+
   Future<Solution> solution(String id) async {
     final data = (await _notes.doc(id).get()).data();
     return data == null ? const Solution() : Solution.fromMap(data);

@@ -132,14 +132,14 @@ class _SolutionEditorState extends State<_SolutionEditor> {
               'Write what you want to remember. Reviews show this card.',
               style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
             ),
-            label('Question', hint: 'optional, shown when you review'),
+            label('Question', hint: 'in your own words · shared with friends'),
             TextField(
               controller: _question,
               maxLength: Limits.questionLength,
               minLines: 2,
               maxLines: 8,
               textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(hintText: 'Paste or write the problem, e.g. Print a 4×4 square of stars'),
+              decoration: const InputDecoration(hintText: 'e.g. Print an n×n square of stars'),
             ),
             label('Pattern', hint: 'pick up to ${Limits.maxPatterns}'),
             Wrap(

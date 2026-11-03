@@ -67,6 +67,22 @@ service cloud.firestore {
         && data.updatedAt == request.time;
     }
 
+    // Shared question bank: one short question per sheet problem, in the author's own words.
+    // Anyone signed in reads; the first author creates it and only they can change or remove it.
+    function isValidShared(data) {
+      return data.keys().hasOnly(['text', 'by', 'uid'])
+        && data.text is string && data.text.size() > 0 && data.text.size() <= 1000
+        && data.by is string && data.by.size() > 0 && data.by.size() <= 30
+        && data.uid == request.auth.uid;
+    }
+
+    match /questions/{problemId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && problemId.size() <= 64 && isValidShared(request.resource.data);
+      allow update: if request.auth != null && resource.data.uid == request.auth.uid && isValidShared(request.resource.data);
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+    }
+
     match /leaderboard/{uid} {
       allow read: if request.auth != null;
       allow delete: if isOwner(uid);
