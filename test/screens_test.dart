@@ -183,6 +183,13 @@ void main() {
       ),
     );
     expect(find.text('2 active days in the last 18 weeks'), findsOneWidget);
+    // Today's square is on the grid (outlined) and coloured.
+    final today_ = tester.widgetList<Container>(find.byType(Container)).where((c) {
+      final d = c.decoration;
+      return d is BoxDecoration && d.border != null;
+    });
+    expect(today_, hasLength(1));
+    expect((today_.single.decoration! as BoxDecoration).color, isNot(Colors.transparent));
   });
 
   testWidgets('goal celebration dances, shows the streak and closes', (tester) async {

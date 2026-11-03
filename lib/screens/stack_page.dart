@@ -25,6 +25,11 @@ class StackPage extends StatefulWidget {
 enum _Filter { all, fresh, growing, mastered }
 
 class _StackPageState extends State<StackPage> {
+  /// Topics folded or opened by hand; untouched ones open only when something in them is due.
+  final _toggled = <String, bool>{};
+  bool _open(String topic, List<Problem> all, DateTime now) =>
+      _toggled[topic] ?? all.any((p) => p.topic == topic && p.isDue(now)) || all.map((p) => p.topic).toSet().length == 1;
+
   _Filter _filter = _Filter.all;
   String _query = '';
   bool _searching = false;
@@ -199,7 +204,8 @@ class _StackPageState extends State<StackPage> {
               : ListView.separated(
                   padding: const EdgeInsets.only(top: 8, bottom: 96),
                   itemCount: shown.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 10),
+                  // Rows of folded topics take no space.
+                  separatorBuilder: (_, i) => SizedBox(height: _open(shown[i].topic, shown, now) ? 10 : 0),
                   itemBuilder: (context, i) {
                     final p = shown[i];
                     final overdue = p.daysOverdue(now);
@@ -295,18 +301,48 @@ class _StackPageState extends State<StackPage> {
                         ),
                       ),
                     );
-                    if (!firstOfTopic) return row;
+                    final open = _open(p.topic, shown, now);
+                    if (!firstOfTopic) return open ? row : const SizedBox.shrink();
+                    final dueHere = shown.where((x) => x.topic == p.topic && x.isDue(now)).length;
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Padding(
-                          padding: EdgeInsets.fromLTRB(20, i == 0 ? 4 : 14, 20, 8),
-                          child: Text(
-                            '${p.topic.toUpperCase()} · $count',
-                            style: TextStyle(fontSize: 12, letterSpacing: 1.2, fontWeight: FontWeight.w800, color: colors.primary),
+                        // Tap the header to fold or open the topic.
+                        InkWell(
+                          onTap: () => setState(() => _toggled[p.topic] = !open),
+                          child: Padding(
+                            padding: EdgeInsets.fromLTRB(20, i == 0 ? 4 : 10, 16, 8),
+                            child: Row(
+                              children: [
+                                AnimatedRotation(
+                                  turns: open ? 0.25 : 0,
+                                  duration: const Duration(milliseconds: 200),
+                                  child: Icon(Icons.chevron_right_rounded, color: colors.primary),
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    '${p.topic.toUpperCase()} · $count',
+                                    style: TextStyle(fontSize: 12, letterSpacing: 1.2, fontWeight: FontWeight.w800, color: colors.primary),
+                                  ),
+                                ),
+                                if (dueHere > 0)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Accent.red.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      '$dueHere due',
+                                      style: const TextStyle(color: Accent.red, fontSize: 11, fontWeight: FontWeight.w800),
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
-                        row,
+                        if (open) row,
                       ],
                     );
                   },

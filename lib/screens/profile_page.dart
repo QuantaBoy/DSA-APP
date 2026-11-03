@@ -22,7 +22,7 @@ import 'streak_page.dart';
 import 'widgets.dart';
 
 /// Shown in Profile → About. Keep in step with `version:` in pubspec.yaml.
-const appVersion = '1.33.0';
+const appVersion = '1.34.0';
 
 /// First name for greetings, falling back to the email name.
 String firstName(User user) {
@@ -365,7 +365,7 @@ class ActivityHeatmap extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    final start = addDays(today, -(weeks * 7 - 1) - (today.weekday - 1)); // a Monday, so rows are weekdays
+    final start = addDays(today, -(weeks - 1) * 7 - (today.weekday - 1)); // a Monday, so rows are weekdays; the last column is this week
     final most = stats.days.values.fold(1, (a, b) => a > b ? a : b);
     final active = stats.days.entries.where((e) => !e.key.isBefore(start) && e.value > 0).length;
     Color shade(int n) => n == 0

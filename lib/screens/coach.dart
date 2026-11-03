@@ -48,7 +48,14 @@ class _Coach extends StatefulWidget {
 
 class _CoachState extends State<_Coach> with SingleTickerProviderStateMixin {
   int _index = 0;
-  late final _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat(reverse: true);
+  late final _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))
+    ..repeat(reverse: true)
+    // Content can still be settling (cards loading in above the target): follow the target as it moves.
+    ..addListener(() {
+      final r = _targetRect();
+      if (r != _shown && mounted) setState(() => _shown = r);
+    });
+  Rect? _shown;
 
   @override
   void dispose() {

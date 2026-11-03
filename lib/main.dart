@@ -16,6 +16,11 @@ import 'screens/onboarding_page.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // Local test runs (flutter build web --dart-define=EMULATORS=true) talk to the Firebase emulators, never the real data.
+  if (const bool.fromEnvironment('EMULATORS')) {
+    await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
+    FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8085);
+  }
   // Proves requests come from the real app, so others cannot spend the AI quota. Android only for now:
   // web needs a reCAPTCHA key and iOS an Apple developer account. Keep it unenforced in the console
   // until the Play Store build is out, because sideloaded APKs fail Play Integrity.
