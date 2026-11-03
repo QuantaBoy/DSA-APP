@@ -22,7 +22,7 @@ const gateDa = [
     (id: 'prob-rv', name: 'Random variables, expectation, variance'),
     (id: 'prob-discrete', name: 'Discrete distributions: uniform, Bernoulli, binomial'),
     (id: 'prob-continuous', name: 'Continuous: exponential, Poisson, normal, t, chi²'),
-    (id: 'prob-clt', name: 'CDF, central limit theorem'),
+    (id: 'prob-clt', name: 'CDF, conditional PDF, central limit theorem'),
     (id: 'prob-tests', name: 'Confidence intervals, z, t, chi² tests'),
   ]),
   GateSection('linalg', 'Linear Algebra', Color(0xFF0EA5E9), [
@@ -54,7 +54,7 @@ const gateDa = [
     (id: 'db-sql', name: 'SQL, integrity constraints'),
     (id: 'db-normal', name: 'Normal forms'),
     (id: 'db-files', name: 'File organization, indexing'),
-    (id: 'db-transform', name: 'Data types, normalization, discretization, sampling'),
+    (id: 'db-transform', name: 'Data types, normalization, discretization, sampling, compression'),
     (id: 'db-warehouse', name: 'Warehouse schemas, concept hierarchies, measures'),
   ]),
   GateSection('ml', 'Machine Learning', Color(0xFFEF4444), [
