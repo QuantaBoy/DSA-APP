@@ -46,11 +46,7 @@ class _TodayPageState extends State<TodayPage> {
         title: 'Your next step',
         text: 'This card always shows the one thing to do now: review what is due, then solve the next problem.',
       ),
-      (
-        target: _goalKey,
-        title: "Today's goal",
-        text: 'Clear every due review and solve your new problems for the day. Change the goal in Profile.',
-      ),
+      (target: _goalKey, title: 'New today', text: 'New problems solved today out of your daily goal. Change the goal in Profile.'),
       (
         target: _streakKey,
         title: 'Keep the streak',
@@ -190,8 +186,9 @@ class _TodayPageState extends State<TodayPage> {
                         StatTile(
                           key: _goalKey,
                           icon: Icons.task_alt_rounded,
-                          value: '${reviewedToday + min(solvedToday, goal)}/${due.length + reviewedToday + goal}', // extra solves don't overflow the goal
-                          label: "Today's goal",
+                          // New problems solved today out of the daily goal; reviews have their own tile.
+                          value: goal == 0 ? '✓' : '${min(solvedToday, goal)}/$goal',
+                          label: 'New today',
                           color: Accent.green,
                         ),
                         StatTile(icon: Icons.event_note_rounded, value: '${due.length}', label: 'Due now', color: Accent.red),
