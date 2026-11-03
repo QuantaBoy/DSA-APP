@@ -194,7 +194,7 @@ class _SolvePageState extends State<SolvePage> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  _QuestionCard(statement: _statement, platform: p.platform, onOpen: _showQuestion),
+                  QuestionCard(statement: _statement, platform: p.platform, onOpen: _showQuestion),
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -255,8 +255,8 @@ class _SolvePageState extends State<SolvePage> {
 
 /// The problem statement, shown above the editor. LeetCode statements are kept on the device after the
 /// first view; other sites (and LeetCode on the web) get a button that opens the page.
-class _QuestionCard extends StatelessWidget {
-  const _QuestionCard({required this.statement, required this.platform, required this.onOpen});
+class QuestionCard extends StatelessWidget {
+  const QuestionCard({super.key, required this.statement, required this.platform, required this.onOpen});
 
   final Future<String?> statement;
   final String platform;

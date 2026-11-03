@@ -23,7 +23,6 @@ typedef Power = ({
 
 final power = ValueNotifier<Power?>(null);
 
-
 /// The rank badge: a hexagon with the level, wrapped in a living aura that gets wilder each rank.
 class RankBadge extends StatefulWidget {
   const RankBadge({super.key, required this.rank, required this.level, this.size = 120, this.animate = true, this.glow = true});

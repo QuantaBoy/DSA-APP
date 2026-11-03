@@ -2,6 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_code_editor/flutter_code_editor.dart';
+import 'package:flutter_highlight/flutter_highlight.dart';
+import 'package:flutter_highlight/themes/vs2015.dart';
+import 'package:highlight/highlight_core.dart' show Mode;
+import 'package:highlight/languages/cpp.dart';
+import 'package:highlight/languages/java.dart';
+import 'package:highlight/languages/javascript.dart';
+import 'package:highlight/languages/python.dart';
 
 import '../data/store.dart';
 import '../logic/models.dart';
@@ -40,7 +48,7 @@ class _SolutionEditor extends StatefulWidget {
 class _SolutionEditorState extends State<_SolutionEditor> {
   late final _idea = TextEditingController(text: widget.initial.idea);
   late final _mistake = TextEditingController(text: widget.initial.mistake);
-  late final _code = TextEditingController(text: widget.initial.code);
+  late final _code = CodeController(text: widget.initial.code, language: codeLanguage(widget.initial.code).mode);
   late String _time = widget.initial.time;
   late String _space = widget.initial.space;
   late final Set<String> _patterns = {...widget.patterns};
@@ -55,7 +63,13 @@ class _SolutionEditorState extends State<_SolutionEditor> {
   }
 
   void _save() {
-    final solution = Solution(idea: _idea.text.trim(), time: _time, space: _space, mistake: _mistake.text.trim(), code: _code.text.trim());
+    final solution = Solution(
+      idea: _idea.text.trim(),
+      time: _time,
+      space: _space,
+      mistake: _mistake.text.trim(),
+      code: _clip(_code.fullText.trim()),
+    );
     if (!Store.fitsLimits(solution)) return; // fields have maxLength, so this only guards pasted text
     unawaited(HapticFeedback.mediumImpact());
     Navigator.pop(context, (solution: solution, patterns: _patterns.toList()));
@@ -156,13 +170,20 @@ class _SolutionEditorState extends State<_SolutionEditor> {
             const SizedBox(height: 4),
             if (_showCode) ...[
               label('Code', hint: 'optional'),
-              TextField(
-                controller: _code,
-                maxLength: Limits.maxNoteLength,
-                minLines: 4,
-                maxLines: 14,
-                style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
-                decoration: const InputDecoration(hintText: 'Paste your solution'),
+              // Coloured like VS Code (Dark+); the language is guessed from what you paste.
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: CodeTheme(
+                  data: CodeThemeData(styles: vs2015Theme),
+                  child: CodeField(
+                    controller: _code,
+                    minLines: 6,
+                    maxLines: 18,
+                    onChanged: (text) => _code.setLanguage(codeLanguage(text).mode, analyzer: const DefaultLocalAnalyzer()),
+                    textStyle: const TextStyle(fontFamily: 'monospace', fontSize: 13, height: 1.4),
+                    gutterStyle: const GutterStyle(showErrors: false, showFoldingHandles: false, margin: 4, width: 44),
+                  ),
+                ),
               ),
             ] else
               Align(
@@ -266,13 +287,20 @@ class SolutionView extends StatelessWidget {
               leading: Icon(Icons.code_rounded, color: colors.primary),
               title: const Text('Code', style: TextStyle(fontWeight: FontWeight.w700)),
               children: [
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: const Color(0xFF16161D), borderRadius: BorderRadius.circular(12)),
-                  child: SelectableText(
-                    solution.code,
-                    style: const TextStyle(fontFamily: 'monospace', fontSize: 12.5, height: 1.4, color: Colors.white),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: HighlightView(
+                        solution.code,
+                        language: codeLanguage(solution.code).name,
+                        theme: vs2015Theme,
+                        padding: const EdgeInsets.all(12),
+                        textStyle: const TextStyle(fontFamily: 'monospace', fontSize: 12.5, height: 1.4),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -287,3 +315,17 @@ class SolutionView extends StatelessWidget {
     );
   }
 }
+
+/// Best guess at the language of pasted code, for colouring. C++ when unsure.
+({Mode mode, String name}) codeLanguage(String code) {
+  if (RegExp(r'^\s*(def |import |from \w+ import|print\()', multiLine: true).hasMatch(code) && !code.contains(';')) {
+    return (mode: python, name: 'python');
+  }
+  if (code.contains('System.out') || code.contains('public class') || code.contains('public static')) return (mode: java, name: 'java');
+  if (code.contains('console.log') || RegExp(r'\b(const|let|function)\b').hasMatch(code) && !code.contains('#include')) {
+    return (mode: javascript, name: 'javascript');
+  }
+  return (mode: cpp, name: 'cpp');
+}
+
+String _clip(String code) => code.length <= Limits.maxNoteLength ? code : code.substring(0, Limits.maxNoteLength);

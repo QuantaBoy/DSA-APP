@@ -7,6 +7,7 @@ import '../logic/models.dart';
 import '../logic/srs.dart';
 import 'motion.dart';
 import 'open_link.dart';
+import 'review_page.dart';
 import 'solution_sheet.dart';
 import 'widgets.dart';
 
@@ -218,8 +219,20 @@ class _StackPageState extends State<StackPage> {
                                   ),
                                 ),
                                 PopupMenuButton<String>(
-                                  onSelected: (v) => v == 'notes' ? _editNotes(context, p) : _confirmDelete(context, p),
+                                  onSelected: (v) => switch (v) {
+                                    'again' => unawaited(
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute<void>(
+                                          builder: (_) => ReviewPage(store: store, queue: [p]),
+                                        ),
+                                      ),
+                                    ),
+                                    'notes' => _editNotes(context, p),
+                                    _ => _confirmDelete(context, p),
+                                  },
                                   itemBuilder: (_) => const [
+                                    PopupMenuItem(value: 'again', child: Text('Review again (change grade)')),
                                     PopupMenuItem(value: 'notes', child: Text('Solution card')),
                                     PopupMenuItem(value: 'delete', child: Text('Delete')),
                                   ],

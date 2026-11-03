@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_code_editor/flutter_code_editor.dart';
 
+import '../data/leetcode.dart';
+import '../data/statements.dart';
 import '../data/store.dart';
 import '../logic/models.dart';
 import '../logic/srs.dart';
@@ -13,6 +15,7 @@ import 'code_pad.dart';
 import 'motion.dart';
 import 'open_link.dart';
 import 'solution_sheet.dart';
+import 'solve_page.dart';
 import 'streak_page.dart';
 import 'widgets.dart';
 
@@ -38,6 +41,68 @@ class _ReviewPageState extends State<ReviewPage> {
   late final _patterns = {for (final p in widget.queue) p.id: p.patterns}; // edits during the session show at once
 
   final _showKey = GlobalKey(), _gradeKey = GlobalKey();
+  final _statements = <String, Future<String?>>{}; // LeetCode question text, fetched once per card
+
+  Future<String?>? _statement(Problem p) => switch (leetCodeSlug(p.url)) {
+    final slug? => _statements[p.id] ??= leetCodeStatement(slug),
+    null => null,
+  };
+
+  /// A quick pop of praise after each grade, so every review feels like progress.
+  void _cheer(Grade grade) {
+    final (icon, text, color) = switch (grade) {
+      Grade.easy => (Icons.bolt_rounded, 'Flawless!', const Color(0xFF22C55E)),
+      Grade.good => (Icons.check_circle_rounded, 'Nailed it!', const Color(0xFF6C4EF5)),
+      Grade.hard => (Icons.fitness_center_rounded, 'Tough one, you held on!', const Color(0xFFF59E0B)),
+      Grade.again => (Icons.refresh_rounded, "It'll stick next time", const Color(0xFFEF4444)),
+    };
+    final entry = OverlayEntry(
+      builder: (_) => IgnorePointer(
+        child: Center(
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: 1),
+            duration: const Duration(milliseconds: 1100),
+            builder: (context, t, child) => Opacity(
+              opacity: t < 0.75 ? 1 : (1 - t) * 4,
+              child: Transform.translate(
+                offset: Offset(0, -40 * t),
+                child: Transform.scale(scale: Curves.elasticOut.transform((t * 2.2).clamp(0, 1)), child: child),
+              ),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [BoxShadow(color: color.withValues(alpha: 0.45), blurRadius: 24, offset: const Offset(0, 8))],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, color: Colors.white, size: 26),
+                    const SizedBox(width: 10),
+                    Text(
+                      text,
+                      style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      '+${grade.remembered ? 10 : 3} XP',
+                      style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontWeight: FontWeight.w800),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    Overlay.of(context).insert(entry);
+    Future<void>.delayed(const Duration(milliseconds: 1150), entry.remove);
+  }
 
   @override
   void initState() {
@@ -74,6 +139,7 @@ class _ReviewPageState extends State<ReviewPage> {
     final p = _current;
     unawaited(grade.remembered ? HapticFeedback.mediumImpact() : HapticFeedback.heavyImpact());
     unawaited(widget.store.review(p, grade)); // saved locally at once, syncs when online
+    _cheer(grade);
     setState(() {
       _history.add((before: p, grade: grade));
       _index++;
@@ -183,58 +249,63 @@ class _ReviewPageState extends State<ReviewPage> {
                     flipped: _flipped,
                     front: _Face(
                       onTap: _flip,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Wrap(
-                            alignment: WrapAlignment.center,
-                            spacing: 6,
-                            runSpacing: 6,
-                            children: [
-                              Pill.difficulty(p.difficulty),
-                              Pill(p.topic, color: colors.primary),
-                              Pill(p.mastered ? 'Mastered' : 'Stage ${p.stage + 1}/${reviewIntervals.length}', color: Accent.sky),
+                      child: SingleChildScrollView(
+                        child: Column(
+                          children: [
+                            Wrap(
+                              alignment: WrapAlignment.center,
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: [
+                                Pill.difficulty(p.difficulty),
+                                Pill(p.topic, color: colors.primary),
+                                Pill(p.mastered ? 'Mastered' : 'Stage ${p.stage + 1}/${reviewIntervals.length}', color: Accent.sky),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            Text(
+                              p.name,
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -0.4),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Solved ${prettyDay(p.solvedOn)} · ${dueLabel(p.daysOverdue(today()))}',
+                              style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+                            ),
+                            if (_statement(p) case final statement?) ...[
+                              const SizedBox(height: 16),
+                              QuestionCard(statement: statement, platform: p.platform, onOpen: () => openLink(context, p.url!)),
                             ],
-                          ),
-                          const SizedBox(height: 20),
-                          Text(
-                            p.name,
-                            textAlign: TextAlign.center,
-                            style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -0.4),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Solved ${prettyDay(p.solvedOn)} · ${dueLabel(p.daysOverdue(today()))}',
-                            style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
-                          ),
-                          const SizedBox(height: 28),
-                          Icon(Icons.psychology_rounded, size: 42, color: colors.primary),
-                          const SizedBox(height: 8),
-                          Text("What's the approach?", style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Think of the pattern, the key idea and the complexity.\nThen tap to check.',
-                            textAlign: TextAlign.center,
-                            style: theme.textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
-                          ),
-                          const SizedBox(height: 20),
-                          Wrap(
-                            spacing: 8,
-                            children: [
-                              if (p.url != null)
+                            const SizedBox(height: 28),
+                            Icon(Icons.psychology_rounded, size: 42, color: colors.primary),
+                            const SizedBox(height: 8),
+                            Text("What's the approach?", style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Think of the pattern, the key idea and the complexity.\nThen tap to check.',
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
+                            ),
+                            const SizedBox(height: 20),
+                            Wrap(
+                              spacing: 8,
+                              children: [
+                                if (p.url != null)
+                                  TextButton.icon(
+                                    onPressed: () => openLink(context, p.url!),
+                                    icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                                    label: Text(p.platform),
+                                  ),
                                 TextButton.icon(
-                                  onPressed: () => openLink(context, p.url!),
-                                  icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                                  label: Text(p.platform),
+                                  onPressed: () => _practice(p),
+                                  icon: const Icon(Icons.terminal_rounded, size: 18),
+                                  label: const Text('Practice in code'),
                                 ),
-                              TextButton.icon(
-                                onPressed: () => _practice(p),
-                                icon: const Icon(Icons.terminal_rounded, size: 18),
-                                label: const Text('Practice in code'),
-                              ),
-                            ],
-                          ),
-                        ],
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     back: _Face(
