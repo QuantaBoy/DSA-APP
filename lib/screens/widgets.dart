@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
@@ -90,54 +92,51 @@ class StatTile extends StatelessWidget {
     final dark = theme.brightness == Brightness.dark;
     final tint = color ?? theme.colorScheme.primary;
     final ink = fire ? Colors.white : null;
-    return Expanded(
-      child: Pressable(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
-          decoration: fire
-              ? BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFFBBF24), Color(0xFFF97316), Color(0xFFDC2626)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(color: const Color(0xFFF97316).withValues(alpha: 0.45), blurRadius: 16, offset: const Offset(0, 6)),
-                  ],
-                )
-              : BoxDecoration(
-                  // Softly tinted tile in the stat's colour, like the mockup.
-                  color: Color.alphaBlend(tint.withValues(alpha: dark ? 0.14 : 0.08), theme.colorScheme.surfaceContainerLowest),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: tint.withValues(alpha: dark ? 0.28 : 0.14)),
+    final tile = Pressable(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
+        decoration: fire
+            ? BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFBBF24), Color(0xFFF97316), Color(0xFFDC2626)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, size: 26, color: ink ?? tint),
-              const SizedBox(height: 10),
-              Builder(
-                builder: (context) {
-                  final style = theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5, color: ink);
-                  final n = int.tryParse(value);
-                  return n == null ? Text(value, style: style) : CountUp(n, style: style);
-                },
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [BoxShadow(color: const Color(0xFFF97316).withValues(alpha: 0.45), blurRadius: 16, offset: const Offset(0, 6))],
+              )
+            : BoxDecoration(
+                // Softly tinted tile in the stat's colour, like the mockup.
+                color: Color.alphaBlend(tint.withValues(alpha: dark ? 0.14 : 0.08), theme.colorScheme.surfaceContainerLowest),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: tint.withValues(alpha: dark ? 0.28 : 0.14)),
               ),
-              Text(
-                label,
-                maxLines: 2,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: ink ?? theme.colorScheme.onSurfaceVariant,
-                  fontWeight: fire ? FontWeight.w800 : FontWeight.w500,
-                ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 26, color: ink ?? tint),
+            const SizedBox(height: 10),
+            Builder(
+              builder: (context) {
+                final style = theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5, color: ink);
+                final n = int.tryParse(value);
+                return n == null ? Text(value, style: style) : CountUp(n, style: style);
+              },
+            ),
+            Text(
+              label,
+              maxLines: 2,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: ink ?? theme.colorScheme.onSurfaceVariant,
+                fontWeight: fire ? FontWeight.w800 : FontWeight.w500,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
+    return Expanded(child: fire ? _Burning(child: tile) : tile);
   }
 }
 
@@ -262,4 +261,78 @@ Widget adaptiveAction(BuildContext context, String label, VoidCallback onPressed
     );
   }
   return primary ? FilledButton(onPressed: onPressed, child: Text(label)) : TextButton(onPressed: onPressed, child: Text(label));
+}
+
+/// Flames flickering up from the top edge of a tile (Overdrive).
+class _Burning extends StatefulWidget {
+  const _Burning({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_Burning> createState() => _BurningState();
+}
+
+class _BurningState extends State<_Burning> with SingleTickerProviderStateMixin {
+  late final _t = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat();
+
+  @override
+  void dispose() {
+    _t.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _t,
+    builder: (context, child) => CustomPaint(painter: _TileFlames(_t.value), child: child),
+    child: widget.child,
+  );
+}
+
+class _TileFlames extends CustomPainter {
+  _TileFlames(this.t);
+
+  final double t;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Behind the tile: tongues licking up past its top edge and out of its sides.
+    for (final (layer, color, scale) in [(0, const Color(0xFFF97316), 1.0), (1, const Color(0xFFFDE047), 0.55)]) {
+      final paint = Paint()..color = color.withValues(alpha: 0.9);
+      const count = 7;
+      final w = size.width - 24;
+      final path = Path()..moveTo(12, 14);
+      for (var i = 0; i < count; i++) {
+        final x0 = 12 + w * i / count, x1 = 12 + w * (i + 1) / count;
+        final flicker = 0.5 + 0.5 * sin(t * 2 * pi * (2 + layer) + i * 2.1).abs();
+        final h = (14 + 10 * ((i * 37) % 5) / 4) * scale * flicker;
+        final tip = Offset((x0 + x1) / 2 + sin(t * 2 * pi + i) * 3, 2 - h);
+        path
+          ..quadraticBezierTo(x0, 6 - h * 0.4, tip.dx, tip.dy)
+          ..quadraticBezierTo(x1, 6 - h * 0.4, x1, 14);
+      }
+      path.close();
+      canvas.drawPath(path, paint);
+      // Side licks.
+      for (final side in [0.0, size.width]) {
+        final dir = side == 0 ? -1.0 : 1.0;
+        for (var i = 0; i < 3; i++) {
+          final y = 22.0 + i * (size.height - 40) / 2;
+          final h = (8 + 4 * sin(t * 2 * pi * 3 + i + side)) * scale;
+          canvas.drawPath(
+            Path()
+              ..moveTo(side, y)
+              ..quadraticBezierTo(side + dir * h * 0.6, y + 4, side + dir * h, y + 8)
+              ..quadraticBezierTo(side + dir * h * 0.4, y + 12, side, y + 16)
+              ..close(),
+            paint,
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_TileFlames old) => old.t != t;
 }
