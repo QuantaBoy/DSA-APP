@@ -22,6 +22,7 @@ import 'ascension_view.dart';
 import 'library_page.dart';
 import 'motion.dart';
 import 'profile_page.dart';
+import 'search_page.dart';
 import 'sheet_page.dart';
 import 'today_page.dart';
 
@@ -283,6 +284,18 @@ class _HomePageState extends State<HomePage> {
                       title: title,
                       automaticallyImplyLeading: false,
                       actions: [
+                        IconButton(
+                          tooltip: 'Search',
+                          icon: const Icon(Icons.search_rounded),
+                          onPressed: () => unawaited(
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute<void>(
+                                builder: (_) => SearchPage(store: store, problems: data?.problems ?? const []),
+                              ),
+                            ),
+                          ),
+                        ),
                         if (_tab == _home)
                           const Padding(padding: EdgeInsets.only(right: 12), child: TitlePill())
                         else if (_tab != _profile)
@@ -306,6 +319,18 @@ class _HomePageState extends State<HomePage> {
         appBar: AppBar(
           title: title,
           actions: [
+            IconButton(
+              tooltip: 'Search',
+              icon: const Icon(Icons.search_rounded),
+              onPressed: () => unawaited(
+                Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => SearchPage(store: store, problems: data?.problems ?? const []),
+                  ),
+                ),
+              ),
+            ),
             if (_tab == _home) const Padding(padding: EdgeInsets.only(right: 12), child: TitlePill()) else if (_tab != _profile) avatar,
           ],
         ),

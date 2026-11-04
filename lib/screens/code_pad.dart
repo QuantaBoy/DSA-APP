@@ -12,6 +12,7 @@ import 'package:highlight/languages/javascript.dart';
 import 'package:highlight/languages/python.dart';
 
 import '../data/runner.dart';
+import '../data/scan.dart';
 import '../data/templates.dart';
 import 'widgets.dart';
 
@@ -109,6 +110,50 @@ class _CodePadState extends State<CodePad> {
       _apply(_language, kind);
       if (_cases.length == 1 && _cases.first.input.text.trim().isEmpty) _cases.first.input.text = sampleInput[kind]!;
     });
+  }
+
+  /// Asks the AI why this case fails and shows the answer in a sheet.
+  Future<void> _explain(_Case c) async {
+    final r = c.result!;
+    final answer = explainFailure(
+      language: _language,
+      code: widget.controller.fullText,
+      input: c.input.text,
+      expected: c.expected.text,
+      got: [r.output, r.error].where((x) => x.isNotEmpty).join('\n'),
+    );
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+        child: FutureBuilder<String>(
+          future: answer,
+          builder: (context, snap) => Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.auto_awesome_rounded, color: Color(0xFF8B5CF6)),
+                  SizedBox(width: 8),
+                  Text('Why it fails', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (snap.connectionState != ConnectionState.done)
+                const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else
+                SelectableText(snap.hasError ? '${snap.error}' : snap.data!, style: const TextStyle(height: 1.5)),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _runAll() async {
@@ -214,6 +259,7 @@ class _CodePadState extends State<CodePad> {
             index: i,
             testCase: c,
             mono: mono,
+            onExplain: () => _explain(c),
             onRemove: _cases.length > 1 && !_running
                 ? () => setState(() {
                     _cases.removeAt(i).dispose();
@@ -235,12 +281,13 @@ class _CodePadState extends State<CodePad> {
 }
 
 class _CaseView extends StatelessWidget {
-  const _CaseView({required this.index, required this.testCase, required this.mono, this.onRemove});
+  const _CaseView({required this.index, required this.testCase, required this.mono, required this.onExplain, this.onRemove});
 
   final int index;
   final _Case testCase;
   final TextStyle mono;
   final VoidCallback? onRemove;
+  final VoidCallback onExplain;
 
   @override
   Widget build(BuildContext context) {
@@ -333,6 +380,16 @@ class _CaseView extends StatelessWidget {
                         ].join('\n'),
                         style: mono.copyWith(color: r.error.isNotEmpty && r.output.isEmpty ? const Color(0xFFFCA5A5) : Colors.white),
                       ),
+                      if (passed == false || !r.ok)
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            style: TextButton.styleFrom(foregroundColor: const Color(0xFFC4B5FD)),
+                            onPressed: onExplain,
+                            icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+                            label: const Text('Explain with AI'),
+                          ),
+                        ),
                     ],
                   ),
                 ),

@@ -149,3 +149,39 @@ Future<List<ScannedQuestion>> scanQuestions(Uint8List image, {String mimeType = 
     throw ScanException('Could not read it with the AI: ${why.length > 140 ? '${why.substring(0, 140)}…' : why}');
   }
 }
+
+/// A short, friendly explanation of why code fails a test, and the smallest fix. Plain text.
+Future<String> explainFailure({
+  required String language,
+  required String code,
+  required String input,
+  required String expected,
+  required String got,
+}) async {
+  final model = FirebaseAI.googleAI().generativeModel(model: aiModel);
+  final prompt =
+      '''
+A student's $language solution fails a test. In at most 6 short lines: say what is wrong, why, and the smallest fix.
+Do not rewrite the whole solution.
+
+Code:
+$code
+
+Input:
+$input
+
+Expected output:
+$expected
+
+Their output / error:
+$got''';
+  try {
+    final r = await model.generateContent([Content.text(prompt)]).timeout(const Duration(seconds: 60));
+    return (r.text ?? '').trim().isEmpty ? 'The AI had nothing to say. Try again.' : r.text!.trim();
+  } on TimeoutException {
+    throw const ScanException('The AI took too long. Try again.');
+  } on Exception catch (e) {
+    final why = e.toString().split('\n').first;
+    throw ScanException('Could not ask the AI: ${why.length > 140 ? '${why.substring(0, 140)}…' : why}');
+  }
+}

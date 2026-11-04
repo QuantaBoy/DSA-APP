@@ -24,6 +24,26 @@ class Leaderboard {
 
   static const size = 50; // one read per entry each time the list opens
 
+  /// Friends who did something most recently (their entry updates when their streak, solved count, level or title changes).
+  Future<List<({LeaderboardEntry entry, DateTime at})>> recent({int limit = 6}) async {
+    final s = await _entries.orderBy('updatedAt', descending: true).limit(limit).get();
+    return [
+      for (final d in s.docs)
+        if (d.data()['updatedAt'] case final Timestamp t)
+          (
+            entry: (
+              uid: d.id,
+              name: d.data()['name'] as String? ?? '?',
+              streak: d.data()['streak'] as int? ?? 0,
+              solved: d.data()['solved'] as int? ?? 0,
+              level: d.data()['level'] as int? ?? 1,
+              title: d.data()['title'] as String?,
+            ),
+            at: t.toDate(),
+          ),
+    ];
+  }
+
   Stream<List<LeaderboardEntry>> top(Ranking by) => _entries
       .orderBy(by.name, descending: true)
       .limit(size)

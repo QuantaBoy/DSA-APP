@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:math';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../data/leaderboard.dart';
 import '../data/prefs.dart';
 import '../data/sheet.dart';
 import '../data/store.dart';
@@ -15,6 +18,7 @@ import 'coach.dart';
 import 'goal_celebration.dart';
 import 'interview_page.dart';
 import 'motion.dart';
+import 'open_link.dart';
 import 'quiz_page.dart';
 import 'review_page.dart';
 import 'solve_page.dart';
@@ -57,17 +61,15 @@ class _TodayPageState extends State<TodayPage> {
     ]);
   }
 
-  void _review(List<Problem> queue, {required int streakNow, required bool firstToday}) => unawaited(
-    Navigator.push(
-      context,
-      MaterialPageRoute<void>(
-        builder: (_) => ReviewPage(
-          store: widget.store,
-          queue: queue,
-          // First review of the day grows the streak: celebrate it when the session ends.
-          streakBefore: firstToday ? streakNow : null,
-          reviewDays: {...activeDays(widget.problems, widget.stats), today()},
-        ),
+  Future<void> _review(List<Problem> queue, {required int streakNow, required bool firstToday}) => Navigator.push(
+    context,
+    MaterialPageRoute<void>(
+      builder: (_) => ReviewPage(
+        store: widget.store,
+        queue: queue,
+        // First review of the day grows the streak: celebrate it when the session ends.
+        streakBefore: firstToday ? streakNow : null,
+        reviewDays: {...activeDays(widget.problems, widget.stats), today()},
       ),
     ),
   );
@@ -130,7 +132,23 @@ class _TodayPageState extends State<TodayPage> {
             goal: goal,
             next: next,
             sheetStep: next == null || sheet == null ? null : sheet.steps[next.step - 1],
-            onReview: () => _review(due, streakNow: days, firstToday: !activeDays(problems, stats).contains(now)),
+            // Today's flow: reviews first, then straight on to the new problem if the goal still needs one.
+            onReview: () async {
+              await _review(due, streakNow: days, firstToday: !activeDays(problems, stats).contains(now));
+              if (!context.mounted || sheet == null || next == null || solvedToday >= goal) return;
+              final go = await showAdaptiveDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog.adaptive(
+                  title: const Text('Reviews done ✓'),
+                  content: Text('Next up: ${next.title}. Solve it now?'),
+                  actions: [
+                    adaptiveAction(context, 'Later', () => Navigator.pop(context, false)),
+                    adaptiveAction(context, 'Solve it', () => Navigator.pop(context, true), primary: true),
+                  ],
+                ),
+              );
+              if (go ?? false) _solve(sheet, next);
+            },
             onSolve: sheet == null || next == null ? widget.onOpenSheet : () => _solve(sheet, next),
             onOpenSheet: widget.onOpenSheet,
           );
@@ -150,7 +168,7 @@ class _TodayPageState extends State<TodayPage> {
                     child: _ProblemCard(
                       problem: p,
                       now: now,
-                      onTap: () => _review([p], streakNow: days, firstToday: !activeDays(problems, stats).contains(now)),
+                      onTap: () => unawaited(_review([p], streakNow: days, firstToday: !activeDays(problems, stats).contains(now))),
                     ),
                   ),
               ];
@@ -251,6 +269,8 @@ class _TodayPageState extends State<TodayPage> {
                     if (dailyChallenge(sheet, now) case final c?)
                       _Challenge(problem: c, done: problems.any((p) => p.id == c.id), onTap: () => _solve(sheet, c)),
                   _QuizCard(store: widget.store, problems: problems),
+                  if (Prefs.leaderboard.value) const _FriendsFeed(),
+                  _WeekRecap(problems: problems, stats: stats, streak: days),
                   _WeakSpot(
                     stats: stats,
                     problems: problems,
@@ -699,4 +719,138 @@ class _Challenge extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The last 7 days at a glance, with a button to brag on WhatsApp.
+class _WeekRecap extends StatelessWidget {
+  const _WeekRecap({required this.problems, required this.stats, required this.streak});
+
+  final List<Problem> problems;
+  final Stats stats;
+  final int streak;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = today();
+    final from = addDays(now, -6);
+    bool inWeek(DateTime d) => !dateOnly(d).isBefore(from);
+    final solved = problems.where((p) => inWeek(p.solvedOn)).length;
+    final reviews = stats.days.entries.where((e) => inWeek(e.key)).fold(0, (a, e) => a + e.value);
+    if (solved + reviews == 0) return const SizedBox.shrink();
+    final level = power.value?.level.level;
+    final theme = Theme.of(context);
+    final text =
+        'My week on Memory Stack: $solved solved, $reviews reviews, $streak-day streak 🔥'
+        '${level == null ? '' : ', Level $level'}. https://memory-stack-e6990.web.app';
+    Widget stat(String n, String label) => Expanded(
+      child: Column(
+        children: [
+          Text(
+            n,
+            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900, color: theme.colorScheme.primary),
+          ),
+          Text(label, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+        ],
+      ),
+    );
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Card(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 8, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'THIS WEEK',
+                style: TextStyle(fontSize: 12, letterSpacing: 1.4, fontWeight: FontWeight.w800, color: theme.colorScheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 10),
+              Row(children: [stat('$solved', 'solved'), stat('$reviews', 'reviews'), stat('$streak', 'day streak')]),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () => openLink(context, 'https://wa.me/?text=${Uri.encodeComponent(text)}', inApp: false),
+                  icon: const Icon(Icons.share_rounded, size: 18),
+                  label: const Text('Share'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// What friends on the leaderboard did lately: a nudge to keep up.
+class _FriendsFeed extends StatefulWidget {
+  const _FriendsFeed();
+
+  @override
+  State<_FriendsFeed> createState() => _FriendsFeedState();
+}
+
+class _FriendsFeedState extends State<_FriendsFeed> {
+  late final _recent = Leaderboard().recent().catchError((Object _) => <({LeaderboardEntry entry, DateTime at})>[]);
+
+  String _ago(DateTime t) {
+    final d = DateTime.now().difference(t);
+    return d.inMinutes < 60 ? '${max(1, d.inMinutes)}m ago' : (d.inHours < 24 ? '${d.inHours}h ago' : '${d.inDays}d ago');
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder(
+    future: _recent,
+    builder: (context, snap) {
+      final me = FirebaseAuth.instance.currentUser?.uid;
+      final items = [...?snap.data?.where((x) => x.entry.uid != me)];
+      if (items.isEmpty) return const SizedBox.shrink();
+      final theme = Theme.of(context);
+      return Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'FRIENDS',
+                  style: TextStyle(
+                    fontSize: 12,
+                    letterSpacing: 1.4,
+                    fontWeight: FontWeight.w800,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                for (final x in items.take(4))
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
+                      children: [
+                        CircleAvatar(radius: 16, child: Text(x.entry.name.characters.first.toUpperCase())),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            '${x.entry.name} · Lv ${x.entry.level} · 🔥 ${x.entry.streak} · ${x.entry.solved} solved',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        Text(_ago(x.at), style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
 }
