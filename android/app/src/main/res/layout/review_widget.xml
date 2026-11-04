@@ -50,4 +50,14 @@
         android:text="0 day streak"
         android:textColor="#E6FFFFFF"
         android:textSize="13sp" />
+
+    <TextView
+        android:id="@+id/widget_level"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text=""
+        android:textColor="#CCFFFFFF"
+        android:textSize="12sp"
+        android:textStyle="bold" />
 </LinearLayout>

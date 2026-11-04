@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../data/prefs.dart';
+import '../data/sounds.dart';
 import '../logic/ascension.dart';
 import 'roadmap_page.dart';
 
@@ -238,6 +239,7 @@ Future<void> _systemWindow(
   String? titleId,
 }) {
   unawaited(HapticFeedback.heavyImpact());
+  play(Sound.levelUp);
   unawaited(Future<void>.delayed(const Duration(milliseconds: 180), HapticFeedback.heavyImpact));
   return showGeneralDialog<void>(
     context: context,

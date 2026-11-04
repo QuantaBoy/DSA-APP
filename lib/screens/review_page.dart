@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_code_editor/flutter_code_editor.dart';
 
 import '../data/leetcode.dart';
+import '../data/sounds.dart';
 import '../data/statements.dart';
 import '../data/store.dart';
 import '../logic/models.dart';
@@ -168,6 +169,7 @@ class _ReviewPageState extends State<ReviewPage> {
     unawaited(grade.remembered ? HapticFeedback.mediumImpact() : HapticFeedback.heavyImpact());
     unawaited(widget.store.review(p, grade)); // saved locally at once, syncs when online
     _cheer(grade);
+    play(grade.remembered ? Sound.correct : Sound.wrong);
     setState(() {
       _history.add((before: p, grade: grade));
       _index++;

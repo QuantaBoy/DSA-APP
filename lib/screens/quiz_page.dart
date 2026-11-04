@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_highlight/flutter_highlight.dart';
 import 'package:flutter_highlight/themes/vs2015.dart';
 
+import '../data/sounds.dart';
 import '../data/store.dart';
 import '../logic/models.dart';
 import '../logic/quiz.dart';
@@ -82,6 +83,7 @@ class _QuizPageState extends State<QuizPage> with SingleTickerProviderStateMixin
     final right = option == q.answer;
     unawaited(right ? HapticFeedback.mediumImpact() : HapticFeedback.heavyImpact());
     _clock.stop();
+    play(right ? Sound.correct : Sound.wrong);
     setState(() {
       _picked = option;
       if (right) _right++;

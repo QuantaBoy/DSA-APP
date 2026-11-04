@@ -17,11 +17,13 @@ class ReviewWidgetProvider : HomeWidgetProvider() {
     ) {
         val due = widgetData.getInt("due", 0)
         val streak = widgetData.getInt("streak", 0)
+        val level = widgetData.getString("level", "") ?: ""
         appWidgetIds.forEach { id ->
             val views = RemoteViews(context.packageName, R.layout.review_widget).apply {
                 setTextViewText(R.id.widget_due, due.toString())
                 setTextViewText(R.id.widget_due_label, if (due == 1) "review due" else "reviews due")
                 setTextViewText(R.id.widget_streak, "🔥 $streak day streak")
+                setTextViewText(R.id.widget_level, level)
                 setOnClickPendingIntent(R.id.widget_root, HomeWidgetLaunchIntent.getActivity(context, MainActivity::class.java))
             }
             appWidgetManager.updateAppWidget(id, views)

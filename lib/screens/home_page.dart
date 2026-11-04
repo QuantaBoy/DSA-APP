@@ -118,6 +118,14 @@ class _HomePageState extends State<HomePage> {
       progress: {for (final t in titles) t.id: t.progress(deeds, a2z)},
     );
     power.value = now;
+    final active = activeDays(d.problems, d.stats);
+    unawaited(
+      updateHomeWidget(
+        due: d.problems.where((p) => p.isDue(today())).length,
+        streak: streakWithFreezes(active, today()),
+        level: 'Lv ${level.level} · ${Rank.of(level.level).title}',
+      ),
+    );
     _publishLeaderboard();
     // Celebrate what is new since the last look. Seen never goes down, so a slow first load
     // (or a reset) does not replay old level-ups.

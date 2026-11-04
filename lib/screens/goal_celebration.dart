@@ -4,6 +4,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../data/sounds.dart';
+
 /// Full-screen party when today's goal is done: a big check pops in, confetti rains,
 /// and the streak flame counts up.
 class GoalCelebration extends StatefulWidget {
@@ -28,6 +30,7 @@ class _GoalCelebrationState extends State<GoalCelebration> with TickerProviderSt
   void initState() {
     super.initState();
     unawaited(HapticFeedback.heavyImpact());
+    play(Sound.goal);
     _cheerTimer = Timer.periodic(const Duration(milliseconds: 1800), (_) {
       if (mounted) setState(() => _cheer = (_cheer + 1) % _cheers.length);
     });

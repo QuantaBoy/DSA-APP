@@ -24,6 +24,9 @@ abstract final class Prefs {
   /// LeetCode username whose accepted problems are imported, or null.
   static final leetcodeUser = ValueNotifier<String?>(null);
 
+  /// Sound effects on.
+  static final sounds = ValueNotifier(false); // on by default once load() runs (tests never play sound)
+
   /// Title you wear (an id from ascension.dart), or null.
   static final equippedTitle = ValueNotifier<String?>(null);
 
@@ -42,6 +45,7 @@ abstract final class Prefs {
 
   static const _theme = 'themeMode', _onboarding = 'seenOnboarding', _reminder = 'reminderMinutes';
   static const _goal = 'dailyNewGoal', _tips = 'seenTips', _sheet = 'sheetId', _board = 'leaderboard', _leetcode = 'leetcodeUser';
+  static const _sounds = 'sounds';
   static const _goalDay = 'goalCelebrated', _active = 'lastActive';
   static const _title = 'equippedTitle', _seenLevel = 'seenLevel', _seenTitles = 'seenTitles';
   static const _reminderOff = -1;
@@ -67,11 +71,17 @@ abstract final class Prefs {
     leaderboard.value = p.getBool(_board) ?? false;
     leetcodeUser.value = p.getString(_leetcode);
     equippedTitle.value = p.getString(_title);
+    sounds.value = p.getBool(_sounds) ?? true;
     seenLevel = p.getInt(_seenLevel) ?? -1;
     goalCelebrated = p.getString(_goalDay);
     final active = p.getInt(_active);
     lastActive = active == null ? null : DateTime.fromMillisecondsSinceEpoch(active);
     seenTitles = {...?p.getStringList(_seenTitles)};
+  }
+
+  static void setSounds(bool on) {
+    sounds.value = on;
+    unawaited(_prefs().then((p) => p?.setBool(_sounds, on)));
   }
 
   static void markActive(DateTime now) {
