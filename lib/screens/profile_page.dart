@@ -22,7 +22,7 @@ import 'streak_page.dart';
 import 'widgets.dart';
 
 /// Shown in Profile → About. Keep in step with `version:` in pubspec.yaml.
-const appVersion = '1.35.1';
+const appVersion = '1.36.0';
 
 /// First name for greetings, falling back to the email name.
 String firstName(User user) {

@@ -130,7 +130,7 @@ class _TodayPageState extends State<TodayPage> {
             goal: goal,
             next: next,
             sheetStep: next == null || sheet == null ? null : sheet.steps[next.step - 1],
-            onReview: () => _review(due, streakNow: days, firstToday: reviewedToday == 0),
+            onReview: () => _review(due, streakNow: days, firstToday: !activeDays(problems, stats).contains(now)),
             onSolve: sheet == null || next == null ? widget.onOpenSheet : () => _solve(sheet, next),
             onOpenSheet: widget.onOpenSheet,
           );
@@ -150,7 +150,7 @@ class _TodayPageState extends State<TodayPage> {
                     child: _ProblemCard(
                       problem: p,
                       now: now,
-                      onTap: () => _review([p], streakNow: days, firstToday: reviewedToday == 0),
+                      onTap: () => _review([p], streakNow: days, firstToday: !activeDays(problems, stats).contains(now)),
                     ),
                   ),
               ];

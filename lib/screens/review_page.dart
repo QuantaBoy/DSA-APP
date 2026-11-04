@@ -13,6 +13,7 @@ import '../logic/models.dart';
 import '../logic/srs.dart';
 import 'coach.dart';
 import 'code_pad.dart';
+import 'goal_celebration.dart';
 import 'motion.dart';
 import 'open_link.dart';
 import 'solution_sheet.dart';
@@ -166,6 +167,12 @@ class _ReviewPageState extends State<ReviewPage> {
       _index++;
       _flipped = false;
     });
+    if (_done) {
+      // Every finished session gets a burst of confetti over the summary.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) confettiBurst(context);
+      });
+    }
     if (_done && widget.streakBefore != null) {
       // Session done: show the streak growing, then the summary underneath.
       WidgetsBinding.instance.addPostFrameCallback((_) {
