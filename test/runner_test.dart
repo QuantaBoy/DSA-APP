@@ -8,6 +8,7 @@ import 'package:http/testing.dart';
 import 'package:memory_stack/data/runner.dart';
 import 'package:memory_stack/data/templates.dart';
 import 'package:memory_stack/screens/code_pad.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   test('sends code, language and input to Judge0, and reads the result', () async {
@@ -131,5 +132,37 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('1 / 2 PASSED'), findsOneWidget);
     expect(find.text('Wrong answer'), findsOneWidget);
+  });
+
+  testWidgets('test cases and code for a problem come back next time', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    tester.view.physicalSize = const Size(1080, 3000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    Widget pad() => MaterialApp(
+      home: Scaffold(
+        body: SingleChildScrollView(
+          child: CodePad(
+            controller: CodeController(),
+            saveKey: 'two-sum',
+            runner: (language, source, stdin) async => const RunResult(status: 'Ran successfully', ok: true, output: '42'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpWidget(pad());
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'Input (stdin)'), '21');
+    await tester.enterText(find.widgetWithText(TextField, 'Expected (optional)'), '42');
+    await tester.tap(find.text('Run'));
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(const SizedBox()); // close the pad
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(pad()); // open it again
+    await tester.pumpAndSettle();
+    expect(find.text('21'), findsOneWidget);
+    expect(find.text('42'), findsWidgets);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 5)); // let the editor's timers finish
   });
 }

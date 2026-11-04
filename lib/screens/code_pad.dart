@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,6 +11,7 @@ import 'package:highlight/languages/cpp.dart';
 import 'package:highlight/languages/java.dart';
 import 'package:highlight/languages/javascript.dart';
 import 'package:highlight/languages/python.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/runner.dart';
 import '../data/scan.dart';
@@ -48,7 +50,7 @@ class _Case {
 /// add test cases (input + expected output), run them all and see which pass.
 /// The parent owns [controller] so it can read the code (to save it on the solution card).
 class CodePad extends StatefulWidget {
-  const CodePad({super.key, required this.controller, this.title = 'Code', this.runner = runCode, this.onVerdict});
+  const CodePad({super.key, required this.controller, this.title = 'Code', this.runner = runCode, this.onVerdict, this.saveKey});
 
   final CodeController controller;
   final String title;
@@ -56,6 +58,10 @@ class CodePad extends StatefulWidget {
 
   /// After each run: true if every case with an expected output passed, false if one failed, null if none was checked.
   final ValueChanged<bool?>? onVerdict;
+
+  /// When set (a problem id), your language, code and test cases are kept on this device and come back next time,
+  /// in Solve, Practice and the mock interview alike.
+  final String? saveKey;
 
   @override
   State<CodePad> createState() => _CodePadState();
@@ -71,10 +77,49 @@ class _CodePadState extends State<CodePad> {
   void initState() {
     super.initState();
     _apply(_language, _kind);
+    unawaited(_restore());
+  }
+
+  String get _prefsKey => 'pad:${widget.saveKey}';
+
+  Future<void> _restore() async {
+    if (widget.saveKey == null) return;
+    final raw = (await SharedPreferences.getInstance()).getString(_prefsKey);
+    if (raw == null || !mounted) return;
+    final m = jsonDecode(raw) as Map<String, dynamic>;
+    setState(() {
+      final lang = m['lang'] as String?;
+      if (lang != null && languages.containsKey(lang)) _apply(lang, _kind);
+      if (m['code'] case final String code when code.trim().isNotEmpty) widget.controller.fullText = code;
+      final saved = [...?(m['cases'] as List?)?.whereType<Map<String, dynamic>>()];
+      if (saved.isNotEmpty) {
+        for (final c in _cases) {
+          c.dispose();
+        }
+        _cases
+          ..clear()
+          ..addAll([for (final c in saved.take(maxTestCases)) _Case(input: c['i'] as String? ?? '', expected: c['e'] as String? ?? '')]);
+      }
+    });
+  }
+
+  Future<void> _save() async {
+    if (widget.saveKey == null) return;
+    final data = jsonEncode({
+      'lang': _language,
+      'code': widget.controller.fullText,
+      'cases': [
+        for (final c in _cases)
+          if (c.input.text.trim().isNotEmpty || c.expected.text.trim().isNotEmpty) {'i': c.input.text, 'e': c.expected.text},
+      ],
+    });
+    // ponytail: one SharedPreferences entry per problem; fine for hundreds, move to files if thousands.
+    await (await SharedPreferences.getInstance()).setString(_prefsKey, data);
   }
 
   @override
   void dispose() {
+    unawaited(_save());
     for (final c in _cases) {
       c.dispose();
     }
@@ -158,6 +203,7 @@ class _CodePadState extends State<CodePad> {
 
   Future<void> _runAll() async {
     FocusScope.of(context).unfocus();
+    unawaited(_save());
     setState(() {
       _running = true;
       for (final c in _cases) {

@@ -23,7 +23,7 @@ import 'streak_page.dart';
 import 'widgets.dart';
 
 /// Flashcard review: recall the approach, flip to check against your solution card, grade it.
-/// Swipe right for Good, left for Again; Undo takes back the last grade.
+/// Grade with the four buttons; Undo takes back the last grade.
 class ReviewPage extends StatefulWidget {
   const ReviewPage({super.key, required this.store, required this.queue, this.streakBefore, this.reviewDays = const {}});
 
@@ -155,7 +155,7 @@ class _ReviewPageState extends State<ReviewPage> {
       (
         target: _gradeKey,
         title: 'Grade honestly',
-        text: 'Again brings it back tomorrow; Easy pushes it far out. Or swipe the card: right Good, left Again.',
+        text: 'Again brings it back tomorrow; Easy pushes it far out. Undo fixes a wrong tap.',
       ),
     ]);
     final id = _current.id;
@@ -286,153 +286,151 @@ class _ReviewPageState extends State<ReviewPage> {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                child: _SwipeCard(
-                  enabled: _flipped,
-                  onSwipe: (right) => _grade(right ? Grade.good : Grade.again),
-                  child: _FlipCard(
-                    flipped: _flipped,
-                    front: _Face(
-                      onTap: _flip,
-                      child: SingleChildScrollView(
-                        child: Column(
-                          children: [
-                            Wrap(
-                              alignment: WrapAlignment.center,
-                              spacing: 6,
-                              runSpacing: 6,
-                              children: [
-                                Pill.difficulty(p.difficulty),
-                                Pill(p.topic, color: colors.primary),
-                                Pill(p.mastered ? 'Mastered' : 'Stage ${p.stage + 1}/${reviewIntervals.length}', color: Accent.sky),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-                            Text(
-                              p.name,
-                              textAlign: TextAlign.center,
-                              style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -0.4),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Solved ${prettyDay(p.solvedOn)} · ${dueLabel(p.daysOverdue(today()))}',
-                              style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
-                            ),
-                            const SizedBox(height: 16),
-                            if (_statement(p) case final statement?)
-                              QuestionCard(statement: statement, platform: p.platform, onOpen: () => openLink(context, p.url!))
-                            else if (_solutions[p.id]?.question case final q? when q.isNotEmpty)
-                              Card(
-                                margin: EdgeInsets.zero,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text('Question', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-                                      const SizedBox(height: 8),
-                                      Text(q, style: theme.textTheme.bodyMedium?.copyWith(height: 1.5)),
-                                    ],
-                                  ),
-                                ),
-                              )
-                            else if (_shared[p.id] case final shared?)
-                              Card(
-                                margin: EdgeInsets.zero,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              'Question',
-                                              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-                                            ),
-                                          ),
-                                          Text(
-                                            'Added by ${shared.by}',
-                                            style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(shared.text, style: theme.textTheme.bodyMedium?.copyWith(height: 1.5)),
-                                    ],
-                                  ),
-                                ),
-                              )
-                            else
-                              OutlinedButton.icon(
-                                onPressed: () => _editCard(p),
-                                icon: const Icon(Icons.add_rounded),
-                                label: const Text('Add the question (shared with everyone)'),
-                              ),
-                            const SizedBox(height: 28),
-                            Icon(Icons.psychology_rounded, size: 42, color: colors.primary),
-                            const SizedBox(height: 8),
-                            Text("What's the approach?", style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Think of the pattern, the key idea and the complexity.\nThen tap to check.',
-                              textAlign: TextAlign.center,
-                              style: theme.textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
-                            ),
-                            const SizedBox(height: 20),
-                            // Hint ladder: pattern first, then the key idea, before flipping the whole card.
-                            if (_hintsFor(p) case final hints when hints.isNotEmpty) ...[
-                              for (final h in hints.take(_hints[p.id] ?? 0))
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 6),
-                                  child: Text(
-                                    '💡 $h',
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(fontWeight: FontWeight.w700),
-                                  ),
-                                ),
-                              if ((_hints[p.id] ?? 0) < hints.length)
-                                TextButton.icon(
-                                  onPressed: () => setState(() => _hints[p.id] = (_hints[p.id] ?? 0) + 1),
-                                  icon: const Icon(Icons.lightbulb_outline_rounded, size: 18),
-                                  label: Text('Hint ${(_hints[p.id] ?? 0) + 1} of ${hints.length}'),
-                                ),
+                // Grades come only from the buttons: a swipe here clashed with the phone's back gesture
+                // and graded cards "Again" by accident.
+                child: _FlipCard(
+                  flipped: _flipped,
+                  front: _Face(
+                    onTap: _flip,
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: [
+                              Pill.difficulty(p.difficulty),
+                              Pill(p.topic, color: colors.primary),
+                              Pill(p.mastered ? 'Mastered' : 'Stage ${p.stage + 1}/${reviewIntervals.length}', color: Accent.sky),
                             ],
-                            Wrap(
-                              spacing: 8,
-                              children: [
-                                if (p.url != null)
-                                  TextButton.icon(
-                                    onPressed: () => openLink(context, p.url!),
-                                    icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                                    label: Text(p.platform),
-                                  ),
-                                TextButton.icon(
-                                  onPressed: () => _practice(p),
-                                  icon: const Icon(Icons.terminal_rounded, size: 18),
-                                  label: const Text('Practice in code'),
+                          ),
+                          const SizedBox(height: 20),
+                          Text(
+                            p.name,
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -0.4),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Solved ${prettyDay(p.solvedOn)} · ${dueLabel(p.daysOverdue(today()))}',
+                            style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+                          ),
+                          const SizedBox(height: 16),
+                          if (_statement(p) case final statement?)
+                            QuestionCard(statement: statement, platform: p.platform, onOpen: () => openLink(context, p.url!))
+                          else if (_solutions[p.id]?.question case final q? when q.isNotEmpty)
+                            Card(
+                              margin: EdgeInsets.zero,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Question', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                                    const SizedBox(height: 8),
+                                    Text(q, style: theme.textTheme.bodyMedium?.copyWith(height: 1.5)),
+                                  ],
                                 ),
-                              ],
+                              ),
+                            )
+                          else if (_shared[p.id] case final shared?)
+                            Card(
+                              margin: EdgeInsets.zero,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            'Question',
+                                            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                                          ),
+                                        ),
+                                        Text(
+                                          'Added by ${shared.by}',
+                                          style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(shared.text, style: theme.textTheme.bodyMedium?.copyWith(height: 1.5)),
+                                  ],
+                                ),
+                              ),
+                            )
+                          else
+                            OutlinedButton.icon(
+                              onPressed: () => _editCard(p),
+                              icon: const Icon(Icons.add_rounded),
+                              label: const Text('Add the question (shared with everyone)'),
                             ),
+                          const SizedBox(height: 28),
+                          Icon(Icons.psychology_rounded, size: 42, color: colors.primary),
+                          const SizedBox(height: 8),
+                          Text("What's the approach?", style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Think of the pattern, the key idea and the complexity.\nThen tap to check.',
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
+                          ),
+                          const SizedBox(height: 20),
+                          // Hint ladder: pattern first, then the key idea, before flipping the whole card.
+                          if (_hintsFor(p) case final hints when hints.isNotEmpty) ...[
+                            for (final h in hints.take(_hints[p.id] ?? 0))
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 6),
+                                child: Text(
+                                  '💡 $h',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                            if ((_hints[p.id] ?? 0) < hints.length)
+                              TextButton.icon(
+                                onPressed: () => setState(() => _hints[p.id] = (_hints[p.id] ?? 0) + 1),
+                                icon: const Icon(Icons.lightbulb_outline_rounded, size: 18),
+                                label: Text('Hint ${(_hints[p.id] ?? 0) + 1} of ${hints.length}'),
+                              ),
                           ],
-                        ),
+                          Wrap(
+                            spacing: 8,
+                            children: [
+                              if (p.url != null)
+                                TextButton.icon(
+                                  onPressed: () => openLink(context, p.url!),
+                                  icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                                  label: Text(p.platform),
+                                ),
+                              TextButton.icon(
+                                onPressed: () => _practice(p),
+                                icon: const Icon(Icons.terminal_rounded, size: 18),
+                                label: const Text('Practice in code'),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                    back: _Face(
-                      child: SingleChildScrollView(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(p.name, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
-                            const SizedBox(height: 16),
-                            if (_solutions[p.id] == null)
-                              const Center(
-                                child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()),
-                              )
-                            else
-                              SolutionView(solution: _solutions[p.id]!, patterns: _patterns[p.id] ?? const [], onEdit: () => _editCard(p)),
-                          ],
-                        ),
+                  ),
+                  back: _Face(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(p.name, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
+                          const SizedBox(height: 16),
+                          if (_solutions[p.id] == null)
+                            const Center(
+                              child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()),
+                            )
+                          else
+                            SolutionView(solution: _solutions[p.id]!, patterns: _patterns[p.id] ?? const [], onEdit: () => _editCard(p)),
+                        ],
                       ),
                     ),
                   ),
@@ -454,10 +452,7 @@ class _ReviewPageState extends State<ReviewPage> {
                     : Column(
                         key: _gradeKey,
                         children: [
-                          Text(
-                            'How well did you remember it?  Swipe → Good · ← Again',
-                            style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
-                          ),
+                          Text('How well did you remember it?', style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
                           const SizedBox(height: 8),
                           Row(
                             children: [
@@ -644,73 +639,6 @@ class _FlipCard extends StatelessWidget {
   );
 }
 
-/// Drag the card sideways to grade it; it tilts and tints towards the grade, then flies off.
-class _SwipeCard extends StatefulWidget {
-  const _SwipeCard({required this.child, required this.enabled, required this.onSwipe});
-
-  final Widget child;
-  final bool enabled; // only after the answer is shown
-  final void Function(bool right) onSwipe;
-
-  @override
-  State<_SwipeCard> createState() => _SwipeCardState();
-}
-
-class _SwipeCardState extends State<_SwipeCard> {
-  double _dx = 0;
-
-  @override
-  Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
-    final progress = (_dx / (width * 0.35)).clamp(-1.0, 1.0);
-    final tint = progress > 0 ? Accent.green : Accent.red;
-    return GestureDetector(
-      onHorizontalDragUpdate: widget.enabled ? (d) => setState(() => _dx += d.delta.dx) : null,
-      onHorizontalDragEnd: widget.enabled
-          ? (d) {
-              final fling = d.primaryVelocity ?? 0;
-              if (progress.abs() >= 1 || fling.abs() > 900) {
-                widget.onSwipe((progress.abs() >= 1 ? progress : fling) > 0);
-              } else {
-                setState(() => _dx = 0);
-              }
-            }
-          : null,
-      child: AnimatedContainer(
-        duration: _dx == 0 ? const Duration(milliseconds: 250) : Duration.zero,
-        curve: Curves.easeOutBack,
-        transform: Matrix4.translationValues(_dx, 0, 0)..rotateZ(progress * 0.12),
-        transformAlignment: Alignment.bottomCenter,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            widget.child,
-            if (progress != 0)
-              IgnorePointer(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: tint.withValues(alpha: 0.18 * progress.abs()),
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: tint.withValues(alpha: progress.abs()), width: 3),
-                  ),
-                  alignment: progress > 0 ? Alignment.topLeft : Alignment.topRight,
-                  padding: const EdgeInsets.all(20),
-                  child: Opacity(
-                    opacity: progress.abs(),
-                    child: Text(
-                      progress > 0 ? 'GOOD' : 'AGAIN',
-                      style: TextStyle(color: tint, fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: 2),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _GradeButton extends StatelessWidget {
   const _GradeButton({required this.grade, required this.days, required this.onPressed});
 
@@ -781,7 +709,7 @@ class _PracticeSheetState extends State<_PracticeSheet> {
     builder: (context, scroll) => ListView(
       controller: scroll,
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-      children: [CodePad(controller: _code, title: 'Practice: ${widget.problem.name}')],
+      children: [CodePad(controller: _code, title: 'Practice: ${widget.problem.name}', saveKey: widget.problem.id)],
     ),
   );
 }
