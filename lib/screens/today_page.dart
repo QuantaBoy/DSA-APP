@@ -247,6 +247,9 @@ class _TodayPageState extends State<TodayPage> {
                     ),
                   ),
                   _AptitudeDue(store: widget.store),
+                  if (sheet != null && Prefs.sheetId.value == 'a2z')
+                    if (dailyChallenge(sheet, now) case final c?)
+                      _Challenge(problem: c, done: problems.any((p) => p.id == c.id), onTap: () => _solve(sheet, c)),
                   _QuizCard(store: widget.store, problems: problems),
                   _WeakSpot(
                     stats: stats,
@@ -635,6 +638,60 @@ class _WeakSpot extends StatelessWidget {
                   ),
                 ),
                 const Icon(Icons.chevron_right_rounded),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One problem a day for everyone, worth double XP when solved that day.
+class _Challenge extends StatelessWidget {
+  const _Challenge({required this.problem, required this.done, required this.onTap});
+
+  final SheetProblem problem;
+  final bool done;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Pressable(
+        onTap: done ? null : onTap,
+        child: Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: Accent.amber.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(14)),
+                  child: Icon(done ? Icons.emoji_events_rounded : Icons.bolt_rounded, color: Accent.amber),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        done ? 'Daily challenge done! 2× XP' : 'Daily challenge · 2× XP',
+                        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                      Text(
+                        '${problem.title}${problem.difficulty == null ? '' : ' · ${problem.difficulty}'}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ),
+                if (!done) const Icon(Icons.chevron_right_rounded),
               ],
             ),
           ),

@@ -106,7 +106,7 @@ class _HomePageState extends State<HomePage> {
       aptCorrect: aptCorrect,
       aptWrong: _apt.fold(0, (a, c) => a + c.reviews) - aptCorrect,
     );
-    final xp = totalXp(deeds);
+    final xp = totalXp(deeds, await _a2z);
     final level = levelFor(xp);
     final a2z = await _a2z;
     final now = (

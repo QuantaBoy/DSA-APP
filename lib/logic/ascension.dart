@@ -23,8 +23,20 @@ typedef Deeds = ({List<Problem> problems, Stats stats, int aptCorrect, int aptWr
 const overdriveFrom = 3;
 const overdriveXp = 15;
 
-int totalXp(Deeds d) {
+/// Today's challenge from the A2Z sheet (Easy or Medium), the same for everyone on a given day.
+SheetProblem? dailyChallenge(Sheet? a2z, DateTime day) {
+  final pool = a2z?.problems.where((p) => p.difficulty != 'Hard').toList() ?? const [];
+  if (pool.isEmpty) return null;
+  final d = dateOnly(day);
+  return pool[(d.year * 372 + d.month * 31 + d.day) * 7919 % pool.length];
+}
+
+/// [a2z] lets a daily challenge solved on its own day count double.
+int totalXp(Deeds d, [Sheet? a2z]) {
   var xp = 0;
+  for (final p in d.problems) {
+    if (dailyChallenge(a2z, p.solvedOn)?.id == p.id) xp += solveXp(p.difficulty); // the 2× bonus
+  }
   for (final p in d.problems) {
     xp += solveXp(p.difficulty) + p.remembered * 10 + (p.reviews - p.remembered) * 3;
   }

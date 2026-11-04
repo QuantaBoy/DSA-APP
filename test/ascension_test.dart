@@ -49,4 +49,14 @@ void main() {
     final five = [for (var i = 0; i < 5; i++) _p('o$i', 'Easy')]; // all solved the same day
     expect(totalXp((problems: five, stats: const Stats(), aptCorrect: 0, aptWrong: 0)), 5 * 30 + 2 * overdriveXp);
   });
+
+  test('the daily challenge is the same all day and counts double when solved that day', () {
+    SheetProblem sp(String id) => SheetProblem.fromJson({'id': id, 's': 1, 'sec': 'x', 't': id, 'd': 'Easy', 'p': 'LeetCode', 'u': 'u'});
+    final sheet = Sheet(title: 'A2Z', source: '', steps: ['s'], problems: [for (var i = 0; i < 9; i++) sp('c$i')]);
+    final day = DateTime.utc(2026, 1, 1);
+    final c = dailyChallenge(sheet, day)!;
+    expect(dailyChallenge(sheet, day)!.id, c.id);
+    final solved = _p(c.id, 'Easy'); // solved on 2026-01-01
+    expect(totalXp((problems: [solved], stats: const Stats(), aptCorrect: 0, aptWrong: 0), sheet), 60);
+  });
 }
