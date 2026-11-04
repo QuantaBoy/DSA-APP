@@ -24,7 +24,9 @@ Future<void> main() async {
   // Proves requests come from the real app, so others cannot spend the AI quota. Android only for now:
   // web needs a reCAPTCHA key and iOS an Apple developer account. Keep it unenforced in the console
   // until the Play Store build is out, because sideloaded APKs fail Play Integrity.
-  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+  // ponytail: off until the Play Store build; sideloaded APKs fail Play Integrity and block every AI call.
+  // Turn on with --dart-define=APP_CHECK=true, and before 21 Jan 2027, when Google enforces it for AI Logic.
+  if (const bool.fromEnvironment('APP_CHECK') && !kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
     await FirebaseAppCheck.instance.activate(
       providerAndroid: kDebugMode ? const AndroidDebugProvider() : const AndroidPlayIntegrityProvider(),
     );
