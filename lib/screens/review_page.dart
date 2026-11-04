@@ -122,6 +122,12 @@ class _ReviewPageState extends State<ReviewPage> {
   bool get _done => _index >= widget.queue.length;
 
   final _loading = <String>{};
+  final _hints = <String, int>{}; // hints shown per problem
+
+  List<String> _hintsFor(Problem p) => [
+    if ((_patterns[p.id] ?? const []).isNotEmpty) 'Pattern: ${_patterns[p.id]!.join(', ')}',
+    if (_solutions[p.id]?.idea case final idea? when idea.isNotEmpty) 'Key idea: $idea',
+  ];
   final _shared = <String, ({String text, String by})?>{}; // the question bank entry, one read per problem
 
   /// Loads the solution card (one read) as soon as a card shows, so its question can sit on the front.
@@ -372,6 +378,24 @@ class _ReviewPageState extends State<ReviewPage> {
                               style: theme.textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
                             ),
                             const SizedBox(height: 20),
+                            // Hint ladder: pattern first, then the key idea, before flipping the whole card.
+                            if (_hintsFor(p) case final hints when hints.isNotEmpty) ...[
+                              for (final h in hints.take(_hints[p.id] ?? 0))
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 6),
+                                  child: Text(
+                                    '💡 $h',
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(fontWeight: FontWeight.w700),
+                                  ),
+                                ),
+                              if ((_hints[p.id] ?? 0) < hints.length)
+                                TextButton.icon(
+                                  onPressed: () => setState(() => _hints[p.id] = (_hints[p.id] ?? 0) + 1),
+                                  icon: const Icon(Icons.lightbulb_outline_rounded, size: 18),
+                                  label: Text('Hint ${(_hints[p.id] ?? 0) + 1} of ${hints.length}'),
+                                ),
+                            ],
                             Wrap(
                               spacing: 8,
                               children: [

@@ -79,6 +79,8 @@ class _HomePageState extends State<HomePage> {
         ),
       );
       unawaited(_updatePower());
+      final active = activeDays(d.problems, d.stats);
+      unawaited(scheduleStreakSaver(streak: streakWithFreezes(active, now), activeToday: active.contains(now)).catchError((Object _) {}));
       _syncLeetCode();
     }, onError: (Object _) {});
     _aptFeed = store.aptCards().listen((c) {

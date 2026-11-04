@@ -50,3 +50,26 @@ Future<void> scheduleDailyReminder(int? minutesOfDay) async {
     matchDateTimeComponents: DateTimeComponents.time,
   );
 }
+
+const _streakId = 1;
+
+/// Tonight at 21:00, a nudge to save a streak that has no activity yet today; cancelled once you do something.
+Future<void> scheduleStreakSaver({required int streak, required bool activeToday}) async {
+  if (!_supported) return;
+  await _notifications.cancel(id: _streakId);
+  final now = DateTime.now();
+  final at = DateTime(now.year, now.month, now.day, 21);
+  if (streak == 0 || activeToday || !at.isAfter(now)) return;
+  tzdata.initializeTimeZones();
+  await _notifications.zonedSchedule(
+    id: _streakId,
+    title: '🔥 Your $streak-day streak ends at midnight',
+    body: 'One review or one solve keeps it alive.',
+    scheduledDate: tz.TZDateTime.from(at, tz.UTC),
+    notificationDetails: const NotificationDetails(
+      android: AndroidNotificationDetails('streak_saver', 'Streak saver', channelDescription: 'A nudge when your streak is about to end.'),
+      iOS: DarwinNotificationDetails(),
+    ),
+    androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+  );
+}

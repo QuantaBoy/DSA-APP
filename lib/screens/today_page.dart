@@ -248,6 +248,11 @@ class _TodayPageState extends State<TodayPage> {
                   ),
                   _AptitudeDue(store: widget.store),
                   _QuizCard(store: widget.store, problems: problems),
+                  _WeakSpot(
+                    stats: stats,
+                    problems: problems,
+                    onReview: (ps) => _review(ps, streakNow: days, firstToday: !activeDays(problems, stats).contains(now)),
+                  ),
                   if (twoColumns)
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -581,4 +586,60 @@ class _QuizCard extends StatelessWidget {
       );
     },
   );
+}
+
+/// The topic you remember least (3+ reviews, under 60% recall): one tap reviews all its problems.
+class _WeakSpot extends StatelessWidget {
+  const _WeakSpot({required this.stats, required this.problems, required this.onReview});
+
+  final Stats stats;
+  final List<Problem> problems;
+  final void Function(List<Problem>) onReview;
+
+  @override
+  Widget build(BuildContext context) {
+    final weak = [
+      for (final e in stats.topics.entries)
+        if (e.value.total >= 3 && e.value.remembered / e.value.total < 0.6) (topic: e.key, recall: e.value.remembered / e.value.total),
+    ]..sort((a, b) => a.recall.compareTo(b.recall));
+    final w = weak.firstOrNull;
+    final inTopic = w == null ? const <Problem>[] : problems.where((p) => p.topic == w.topic).toList();
+    if (w == null || inTopic.isEmpty) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Pressable(
+        onTap: () => onReview(inTopic),
+        child: Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: Accent.red.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(14)),
+                  child: const Icon(Icons.trending_down_rounded, color: Accent.red),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Weak spot: ${w.topic}', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+                      Text(
+                        '${(w.recall * 100).round()}% recall · review its ${inTopic.length} problems now',
+                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
