@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../logic/models.dart';
 import '../logic/srs.dart';
@@ -133,7 +136,25 @@ class Store {
   Future<void> setSolution(String id, Solution s) {
     if (s.isEmpty) return _notes.doc(id).delete();
     if (!fitsLimits(s)) throw ArgumentError.value(s, 'solution', 'a field is over its length limit');
+    if (s.question.isNotEmpty && !id.startsWith('lc-')) shareIfNew(id, s.question);
     return _notes.doc(id).set(s.toMap());
+  }
+
+  /// Shares your question for a sheet problem when nobody has yet (the rules refuse to overwrite someone else's).
+  /// Never throws: sharing is a bonus, your own card is saved either way.
+  void shareIfNew(String problemId, String question) {
+    final name = (FirebaseAuth.instance.currentUser?.displayName ?? '').trim().split(' ').first;
+    // ignore: discarded_futures
+    unawaited(
+      _db
+          .collection('questions')
+          .doc(problemId)
+          .get()
+          .then((d) async {
+            if (!d.exists || d.data()?['uid'] == uid) await shareQuestion(problemId, question, name);
+          })
+          .catchError((Object _) {}),
+    );
   }
 
   static bool fitsLimits(Solution s) =>

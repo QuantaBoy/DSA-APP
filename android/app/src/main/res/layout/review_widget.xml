@@ -75,11 +75,12 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
+            android:gravity="center_vertical"
             android:orientation="horizontal">
         <TextView
             android:id="@+id/day0"
             android:layout_width="0dp"
-            android:layout_height="match_parent"
+            android:layout_height="52dp"
             android:layout_weight="1"
             android:layout_marginEnd="4dp"
             android:background="@drawable/widget_day_future"
@@ -87,12 +88,12 @@
             android:text="○
 M"
             android:textColor="#1F2333"
-            android:textSize="11sp"
+            android:textSize="13sp"
             android:textStyle="bold" />
         <TextView
             android:id="@+id/day1"
             android:layout_width="0dp"
-            android:layout_height="match_parent"
+            android:layout_height="52dp"
             android:layout_weight="1"
             android:layout_marginEnd="4dp"
             android:background="@drawable/widget_day_future"
@@ -100,12 +101,12 @@ M"
             android:text="○
 T"
             android:textColor="#1F2333"
-            android:textSize="11sp"
+            android:textSize="13sp"
             android:textStyle="bold" />
         <TextView
             android:id="@+id/day2"
             android:layout_width="0dp"
-            android:layout_height="match_parent"
+            android:layout_height="52dp"
             android:layout_weight="1"
             android:layout_marginEnd="4dp"
             android:background="@drawable/widget_day_future"
@@ -113,12 +114,12 @@ T"
             android:text="○
 W"
             android:textColor="#1F2333"
-            android:textSize="11sp"
+            android:textSize="13sp"
             android:textStyle="bold" />
         <TextView
             android:id="@+id/day3"
             android:layout_width="0dp"
-            android:layout_height="match_parent"
+            android:layout_height="52dp"
             android:layout_weight="1"
             android:layout_marginEnd="4dp"
             android:background="@drawable/widget_day_future"
@@ -126,12 +127,12 @@ W"
             android:text="○
 T"
             android:textColor="#1F2333"
-            android:textSize="11sp"
+            android:textSize="13sp"
             android:textStyle="bold" />
         <TextView
             android:id="@+id/day4"
             android:layout_width="0dp"
-            android:layout_height="match_parent"
+            android:layout_height="52dp"
             android:layout_weight="1"
             android:layout_marginEnd="4dp"
             android:background="@drawable/widget_day_future"
@@ -139,12 +140,12 @@ T"
             android:text="○
 F"
             android:textColor="#1F2333"
-            android:textSize="11sp"
+            android:textSize="13sp"
             android:textStyle="bold" />
         <TextView
             android:id="@+id/day5"
             android:layout_width="0dp"
-            android:layout_height="match_parent"
+            android:layout_height="52dp"
             android:layout_weight="1"
             android:layout_marginEnd="4dp"
             android:background="@drawable/widget_day_future"
@@ -152,12 +153,12 @@ F"
             android:text="○
 S"
             android:textColor="#1F2333"
-            android:textSize="11sp"
+            android:textSize="13sp"
             android:textStyle="bold" />
         <TextView
             android:id="@+id/day6"
             android:layout_width="0dp"
-            android:layout_height="match_parent"
+            android:layout_height="52dp"
             android:layout_weight="1"
             android:layout_marginEnd="0dp"
             android:background="@drawable/widget_day_future"
@@ -165,7 +166,7 @@ S"
             android:text="○
 S"
             android:textColor="#1F2333"
-            android:textSize="11sp"
+            android:textSize="13sp"
             android:textStyle="bold" />
         </LinearLayout>
     </LinearLayout>

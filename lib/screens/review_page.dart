@@ -109,6 +109,8 @@ class _ReviewPageState extends State<ReviewPage> {
     }
     unawaited(
       widget.store.solution(p.id).then((s) {
+        // A question written before sharing existed goes to the shared bank now.
+        if (s.question.isNotEmpty && leetCodeSlug(p.url) == null) widget.store.shareIfNew(p.id, s.question);
         if (mounted) setState(() => _solutions[p.id] = s);
       }, onError: (Object _) {}),
     );
