@@ -101,9 +101,22 @@ class _HomePageState extends State<HomePage> {
   late final Future<Sheet?> _a2z = loadSheet('a2z').then<Sheet?>((s) => s, onError: (Object _) => null);
   bool _celebrating = false;
 
+  int? _powerKey;
+
   Future<void> _updatePower() async {
     final d = _last;
     if (d == null) return;
+    // Skip the work (XP, titles over the whole sheet) when nothing that counts has changed.
+    final key = Object.hash(
+      d.problems.length,
+      d.stats.reviews,
+      d.stats.quizRight,
+      d.stats.gateCovered.length,
+      _apt.fold<int>(0, (a, c) => a + c.reviews),
+      Object.hashAll(d.problems.map((p) => p.remembered)),
+    );
+    if (key == _powerKey) return;
+    _powerKey = key;
     final aptCorrect = _apt.fold(0, (a, c) => a + c.remembered);
     final deeds = (
       problems: d.problems,

@@ -29,6 +29,9 @@ bool isStarterCode(String code) {
       ].contains(text);
 }
 
+/// Very long output (a loop printing forever) would freeze the screen: keep the start only.
+String _cap(String s) => s.length <= 10000 ? s : '${s.substring(0, 10000)}\n… output cut at 10,000 characters';
+
 /// What happened when the code ran.
 class RunResult {
   const RunResult({required this.status, required this.ok, this.output = '', this.error = '', this.time, this.memoryKb});
@@ -45,7 +48,7 @@ class RunResult {
     return RunResult(
       status: statusId == 3 ? 'Ran successfully' : (j['status'] as Map?)?['description'] as String? ?? 'Unknown',
       ok: statusId == 3,
-      output: j['stdout'] as String? ?? '',
+      output: _cap(j['stdout'] as String? ?? ''),
       error: [j['compile_output'], j['stderr'], if (statusId != 3) j['message']].whereType<String>().join('\n').trim(),
       time: j['time'] as String?,
       memoryKb: (j['memory'] as num?)?.toInt(),
@@ -71,7 +74,16 @@ Future<RunResult> runCode(String language, String code, String stdin, {http.Clie
             if (judge0Key.isNotEmpty) 'X-RapidAPI-Key': judge0Key,
             if (judge0Key.isNotEmpty) 'X-RapidAPI-Host': Uri.parse(judge0Url).host,
           },
-          body: jsonEncode({'language_id': languages[language]!.id, 'source_code': code, 'stdin': stdin}),
+          // An endless loop is stopped after 2 s of CPU (5 s wall clock) and its output capped,
+          // so a runaway program comes back as "Time Limit Exceeded" instead of freezing the app.
+          body: jsonEncode({
+            'language_id': languages[language]!.id,
+            'source_code': code,
+            'stdin': stdin,
+            'cpu_time_limit': 2,
+            'wall_time_limit': 5,
+            'max_file_size': 64,
+          }),
         )
         .timeout(const Duration(seconds: 30));
     if (response.statusCode == 429) {

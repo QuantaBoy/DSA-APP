@@ -28,7 +28,7 @@ void main() {
       );
     });
     final r = await runCode('Python', 'print(int(input())*2)', '21', client: client);
-    expect(sent, {'language_id': 71, 'source_code': 'print(int(input())*2)', 'stdin': '21'});
+    expect(sent, {'language_id': 71, 'source_code': 'print(int(input())*2)', 'stdin': '21', 'cpu_time_limit': 2, 'wall_time_limit': 5, 'max_file_size': 64});
     expect([r.ok, r.status, r.output, r.time, r.memoryKb], [true, 'Ran successfully', '42\n', '0.01', 2048]);
   });
 
