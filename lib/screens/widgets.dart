@@ -77,7 +77,16 @@ class SectionTitle extends StatelessWidget {
 
 /// A number with a label, its icon in a tinted square, e.g. "12 / due now".
 class StatTile extends StatelessWidget {
-  const StatTile({super.key, required this.icon, required this.value, required this.label, this.color, this.onTap, this.fire = false});
+  const StatTile({
+    super.key,
+    required this.icon,
+    required this.value,
+    required this.label,
+    this.color,
+    this.onTap,
+    this.fire = false,
+    this.compact = false,
+  });
 
   final IconData icon;
   final String value;
@@ -85,6 +94,7 @@ class StatTile extends StatelessWidget {
   final Color? color; // tile tint; defaults to the brand colour
   final VoidCallback? onTap;
   final bool fire; // Overdrive: a blazing orange-to-red tile with white text
+  final bool compact; // one slim line: icon, number, label
 
   @override
   Widget build(BuildContext context) {
@@ -112,28 +122,51 @@ class StatTile extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: tint.withValues(alpha: dark ? 0.28 : 0.14)),
               ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, size: 26, color: ink ?? tint),
-            const SizedBox(height: 10),
-            Builder(
-              builder: (context) {
-                final style = theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5, color: ink);
-                final n = int.tryParse(value);
-                return n == null ? Text(value, style: style) : CountUp(n, style: style);
-              },
-            ),
-            Text(
-              label,
-              maxLines: 2,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: ink ?? theme.colorScheme.onSurfaceVariant,
-                fontWeight: fire ? FontWeight.w800 : FontWeight.w500,
+        child: compact
+            ? Row(
+                children: [
+                  Icon(icon, size: 22, color: ink ?? tint),
+                  const SizedBox(width: 8),
+                  Text(
+                    value,
+                    style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900, color: ink),
+                  ),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: ink ?? theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(icon, size: 26, color: ink ?? tint),
+                  const SizedBox(height: 10),
+                  Builder(
+                    builder: (context) {
+                      final style = theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5, color: ink);
+                      final n = int.tryParse(value);
+                      return n == null ? Text(value, style: style) : CountUp(n, style: style);
+                    },
+                  ),
+                  Text(
+                    label,
+                    maxLines: 2,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: ink ?? theme.colorScheme.onSurfaceVariant,
+                      fontWeight: fire ? FontWeight.w800 : FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
       ),
     );
     return Expanded(child: fire ? _Burning(child: tile) : tile);

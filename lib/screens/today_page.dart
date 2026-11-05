@@ -22,7 +22,6 @@ import 'open_link.dart';
 import 'quiz_page.dart';
 import 'review_page.dart';
 import 'solve_page.dart';
-import 'streak_page.dart';
 import 'widgets.dart';
 
 /// Home: one obvious next step (review → solve the next sheet problem → done), today's goal,
@@ -41,7 +40,7 @@ class TodayPage extends StatefulWidget {
 }
 
 class _TodayPageState extends State<TodayPage> {
-  final _heroKey = GlobalKey(), _goalKey = GlobalKey(), _streakKey = GlobalKey();
+  final _heroKey = GlobalKey(), _goalKey = GlobalKey();
 
   @override
   void initState() {
@@ -53,11 +52,6 @@ class _TodayPageState extends State<TodayPage> {
         text: 'This card always shows the one thing to do now: review what is due, then solve the next problem.',
       ),
       (target: _goalKey, title: 'New today', text: 'New problems solved today out of your daily goal. Change the goal in Profile.'),
-      (
-        target: _streakKey,
-        title: 'Keep the streak',
-        text: 'Revise every day to grow it. Miss one day a week and a streak freeze saves it. Tap for details.',
-      ),
     ]);
   }
 
@@ -193,16 +187,6 @@ class _TodayPageState extends State<TodayPage> {
                     index: 1,
                     child: StatRow(
                       children: [
-                        StatTile(
-                          key: _streakKey,
-                          icon: Icons.local_fire_department_rounded,
-                          value: '$days',
-                          label: 'Day streak',
-                          color: Accent.orange,
-                          onTap: () => unawaited(
-                            Navigator.push(context, MaterialPageRoute<void>(builder: (_) => StreakPage(days: activeDays(problems, stats)))),
-                          ),
-                        ),
                         // New problems solved today out of the daily goal; past the goal it bursts into Overdrive.
                         StatTile(
                           key: _goalKey,
@@ -213,62 +197,28 @@ class _TodayPageState extends State<TodayPage> {
                               : 'New today',
                           color: Accent.green,
                           fire: solvedToday > goal && goal > 0,
+                          compact: true,
                         ),
-                        StatTile(icon: Icons.event_note_rounded, value: '${due.length}', label: 'Due now', color: Accent.red),
+                        StatTile(
+                          icon: Icons.event_note_rounded,
+                          value: '${due.length}',
+                          label: 'Due now',
+                          color: Accent.red,
+                          compact: true,
+                        ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  _AptitudeDue(store: widget.store),
                   Rise(
                     index: 2,
-                    child: Pressable(
-                      onTap: () => unawaited(
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute<void>(
-                            builder: (_) => InterviewSetupPage(store: widget.store, problems: problems),
-                          ),
-                        ),
-                      ),
-                      child: Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: Accent.violet.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: const Icon(Icons.timer_rounded, color: Accent.violet),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Mock interview', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
-                                    Text(
-                                      'A random problem against the clock',
-                                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const Icon(Icons.chevron_right_rounded),
-                            ],
-                          ),
-                        ),
-                      ),
+                    child: _ActionRow(
+                      store: widget.store,
+                      problems: problems,
+                      challenge: sheet != null && Prefs.sheetId.value == 'a2z' ? dailyChallenge(sheet, now) : null,
+                      onChallenge: (c) => _solve(sheet!, c),
                     ),
                   ),
-                  _AptitudeDue(store: widget.store),
-                  if (sheet != null && Prefs.sheetId.value == 'a2z')
-                    if (dailyChallenge(sheet, now) case final c?)
-                      _Challenge(problem: c, done: problems.any((p) => p.id == c.id), onTap: () => _solve(sheet, c)),
-                  _QuizCard(store: widget.store, problems: problems),
                   if (Prefs.leaderboard.value) const _FriendsFeed(),
                   _WeekRecap(problems: problems, stats: stats, streak: days),
                   _WeakSpot(
@@ -544,73 +494,6 @@ class _AptitudeDue extends StatelessWidget {
   );
 }
 
-/// Quick-fire quiz from your stack. Locked until 3 problems; harder question kinds open as you level up.
-class _QuizCard extends StatelessWidget {
-  const _QuizCard({required this.store, required this.problems});
-
-  final Store store;
-  final List<Problem> problems;
-
-  @override
-  Widget build(BuildContext context) => ValueListenableBuilder(
-    valueListenable: power,
-    builder: (context, p, _) {
-      final theme = Theme.of(context);
-      final level = p?.level.level ?? 1;
-      final locked = problems.length < 3;
-      final shape = quizShape(level);
-      final nextKind = QuizKind.values.where((k) => k.fromLevel > level).firstOrNull;
-      final subtitle = locked
-          ? 'Solve ${3 - problems.length} more to unlock'
-          : '${shape.count} questions · ${shape.seconds}s each${nextKind == null ? '' : ' · ${nextKind.label} at Lv ${nextKind.fromLevel}'}';
-      return Padding(
-        padding: const EdgeInsets.only(top: 12),
-        child: Pressable(
-          onTap: locked
-              ? null
-              : () => unawaited(
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute<void>(
-                      builder: (_) => QuizPage(store: store, problems: problems, level: level),
-                    ),
-                  ),
-                ),
-          child: Opacity(
-            opacity: locked ? 0.55 : 1,
-            child: Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(color: Accent.green.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(14)),
-                      child: Icon(locked ? Icons.lock_rounded : Icons.quiz_rounded, color: Accent.green),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Quick quiz', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
-                          Text(subtitle, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-                        ],
-                      ),
-                    ),
-                    const Icon(Icons.chevron_right_rounded),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-    },
-  );
-}
-
 /// The topic you remember least (3+ reviews, under 60% recall): one tap reviews all its problems.
 class _WeakSpot extends StatelessWidget {
   const _WeakSpot({required this.stats, required this.problems, required this.onReview});
@@ -667,60 +550,6 @@ class _WeakSpot extends StatelessWidget {
   }
 }
 
-/// One problem a day for everyone, worth double XP when solved that day.
-class _Challenge extends StatelessWidget {
-  const _Challenge({required this.problem, required this.done, required this.onTap});
-
-  final SheetProblem problem;
-  final bool done;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(top: 12),
-      child: Pressable(
-        onTap: done ? null : onTap,
-        child: Card(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: Accent.amber.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(14)),
-                  child: Icon(done ? Icons.emoji_events_rounded : Icons.bolt_rounded, color: Accent.amber),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        done ? 'Daily challenge done! 2× XP' : 'Daily challenge · 2× XP',
-                        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                      Text(
-                        '${problem.title}${problem.difficulty == null ? '' : ' · ${problem.difficulty}'}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                      ),
-                    ],
-                  ),
-                ),
-                if (!done) const Icon(Icons.chevron_right_rounded),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// The last 7 days at a glance, with a button to brag on WhatsApp.
 class _WeekRecap extends StatelessWidget {
   const _WeekRecap({required this.problems, required this.stats, required this.streak});
@@ -742,42 +571,43 @@ class _WeekRecap extends StatelessWidget {
     final text =
         'My week on Memory Stack: $solved solved, $reviews reviews, $streak-day streak 🔥'
         '${level == null ? '' : ', Level $level'}. https://memory-stack-e6990.web.app';
-    Widget stat(String n, String label) => Expanded(
-      child: Column(
-        children: [
-          Text(
-            n,
-            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900, color: theme.colorScheme.primary),
-          ),
-          Text(label, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-        ],
+    Widget stat(String emoji, String n) => Padding(
+      padding: const EdgeInsets.only(right: 14),
+      child: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(text: '$emoji '),
+            TextSpan(
+              text: n,
+              style: TextStyle(fontWeight: FontWeight.w900, color: theme.colorScheme.primary),
+            ),
+          ],
+        ),
+        style: theme.textTheme.titleSmall,
       ),
     );
     return Padding(
-      padding: const EdgeInsets.only(top: 12),
-      child: Card(
-        margin: const EdgeInsets.symmetric(horizontal: 16),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 8, 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'THIS WEEK',
-                style: TextStyle(fontSize: 12, letterSpacing: 1.4, fontWeight: FontWeight.w800, color: theme.colorScheme.onSurfaceVariant),
-              ),
-              const SizedBox(height: 10),
-              Row(children: [stat('$solved', 'solved'), stat('$reviews', 'reviews'), stat('$streak', 'day streak')]),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: () => openLink(context, 'https://wa.me/?text=${Uri.encodeComponent(text)}', inApp: false),
-                  icon: const Icon(Icons.share_rounded, size: 18),
-                  label: const Text('Share'),
-                ),
-              ),
-            ],
-          ),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 6, 4, 6),
+        decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerLowest, borderRadius: BorderRadius.circular(18)),
+        child: Row(
+          children: [
+            Text(
+              'WEEK',
+              style: TextStyle(fontSize: 11, letterSpacing: 1.4, fontWeight: FontWeight.w800, color: theme.colorScheme.onSurfaceVariant),
+            ),
+            const SizedBox(width: 12),
+            stat('✅', '$solved'),
+            stat('🔁', '$reviews'),
+            stat('🔥', '$streak'),
+            const Spacer(),
+            IconButton(
+              tooltip: 'Share my week',
+              onPressed: () => openLink(context, 'https://wa.me/?text=${Uri.encodeComponent(text)}', inApp: false),
+              icon: Icon(Icons.share_rounded, color: theme.colorScheme.primary, size: 20),
+            ),
+          ],
         ),
       ),
     );
@@ -808,49 +638,183 @@ class _FriendsFeedState extends State<_FriendsFeed> {
       final items = [...?snap.data?.where((x) => x.entry.uid != me)];
       if (items.isEmpty) return const SizedBox.shrink();
       final theme = Theme.of(context);
-      return Padding(
-        padding: const EdgeInsets.only(top: 12),
-        child: Card(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'FRIENDS',
-                  style: TextStyle(
-                    fontSize: 12,
-                    letterSpacing: 1.4,
-                    fontWeight: FontWeight.w800,
-                    color: theme.colorScheme.onSurfaceVariant,
+      // A row of friends: avatar ringed in fire when they were active today, flame count and level underneath.
+      return SizedBox(
+        height: 92,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          children: [
+            for (final x in items)
+              Tooltip(
+                message: '${x.entry.name} · ${x.entry.solved} solved · ${_ago(x.at)}',
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 14),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(2.5),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: DateTime.now().difference(x.at).inHours < 24
+                              ? const LinearGradient(colors: [Color(0xFFFBBF24), Color(0xFFEF4444)])
+                              : null,
+                          color: theme.colorScheme.outlineVariant,
+                        ),
+                        child: CircleAvatar(
+                          radius: 20,
+                          backgroundColor: theme.colorScheme.primaryContainer,
+                          child: Text(x.entry.name.characters.first.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.w900)),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '🔥${x.entry.streak} · Lv${x.entry.level}',
+                        style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 6),
-                for (final x in items.take(4))
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(
-                      children: [
-                        CircleAvatar(radius: 16, child: Text(x.entry.name.characters.first.toUpperCase())),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            '${x.entry.name} · Lv ${x.entry.level} · 🔥 ${x.entry.streak} · ${x.entry.solved} solved',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                        Text(_ago(x.at), style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
+              ),
+          ],
         ),
       );
     },
   );
+}
+
+/// Three square shortcuts side by side: quiz, today's 2× challenge (glowing until done) and a mock interview.
+class _ActionRow extends StatelessWidget {
+  const _ActionRow({required this.store, required this.problems, required this.challenge, required this.onChallenge});
+
+  final Store store;
+  final List<Problem> problems;
+  final SheetProblem? challenge;
+  final ValueChanged<SheetProblem> onChallenge;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: power,
+    builder: (context, p, _) {
+      final level = p?.level.level ?? 1;
+      final quizLocked = problems.length < 3;
+      final c = challenge;
+      final challengeDone = c != null && problems.any((x) => x.id == c.id);
+      void go(Widget page) => unawaited(Navigator.push(context, MaterialPageRoute<void>(builder: (_) => page)));
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        child: Row(
+          children: [
+            _Action(
+              icon: quizLocked ? Icons.lock_rounded : Icons.quiz_rounded,
+              label: 'Quiz',
+              sub: quizLocked ? '${3 - problems.length} to unlock' : '${quizShape(level).count} Qs',
+              color: Accent.green,
+              onTap: quizLocked ? null : () => go(QuizPage(store: store, problems: problems, level: level)),
+            ),
+            const SizedBox(width: 10),
+            if (c != null) ...[
+              _Action(
+                icon: challengeDone ? Icons.emoji_events_rounded : Icons.bolt_rounded,
+                label: challengeDone ? 'Done!' : '2× XP',
+                sub: c.title,
+                color: Accent.amber,
+                glow: !challengeDone,
+                onTap: challengeDone ? null : () => onChallenge(c),
+              ),
+              const SizedBox(width: 10),
+            ],
+            _Action(
+              icon: Icons.timer_rounded,
+              label: 'Interview',
+              sub: 'vs clock',
+              color: Accent.violet,
+              onTap: () => go(InterviewSetupPage(store: store, problems: problems)),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+class _Action extends StatefulWidget {
+  const _Action({required this.icon, required this.label, required this.sub, required this.color, this.onTap, this.glow = false});
+
+  final IconData icon;
+  final String label;
+  final String sub;
+  final Color color;
+  final VoidCallback? onTap;
+  final bool glow; // breathing glow, for something waiting for you today
+
+  @override
+  State<_Action> createState() => _ActionState();
+}
+
+class _ActionState extends State<_Action> with SingleTickerProviderStateMixin {
+  late final _t = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400));
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.glow) unawaited(_t.repeat(reverse: true));
+  }
+
+  @override
+  void dispose() {
+    _t.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Expanded(
+      child: Pressable(
+        onTap: widget.onTap,
+        child: AnimatedBuilder(
+          animation: _t,
+          builder: (context, child) => Container(
+            height: 104,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: widget.color.withValues(alpha: widget.glow ? 0.3 + 0.5 * _t.value : 0.15), width: 1.5),
+              boxShadow: [
+                if (widget.glow)
+                  BoxShadow(
+                    color: widget.color.withValues(alpha: 0.15 + 0.25 * _t.value),
+                    blurRadius: 10 + 10 * _t.value,
+                  ),
+              ],
+            ),
+            child: child,
+          ),
+          child: Opacity(
+            opacity: widget.onTap == null && widget.icon == Icons.lock_rounded ? 0.55 : 1,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(color: widget.color.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(12)),
+                  child: Icon(widget.icon, color: widget.color, size: 22),
+                ),
+                const Spacer(),
+                Text(widget.label, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900)),
+                Text(
+                  widget.sub,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

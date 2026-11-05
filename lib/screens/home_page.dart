@@ -24,6 +24,7 @@ import 'motion.dart';
 import 'profile_page.dart';
 import 'search_page.dart';
 import 'sheet_page.dart';
+import 'streak_page.dart';
 import 'today_page.dart';
 
 /// Signed in but away 13+ days on this device: sign out, so a lost or shared phone does not stay logged in.
@@ -251,6 +252,18 @@ class _HomePageState extends State<HomePage> {
               builder: (context, id, _) => Text(sheets.firstWhere((s) => s.id == id, orElse: () => sheets.first).name),
             )
           : Text(_tab == _home ? 'Hi, ${firstName(widget.user)} 👋' : _tabs[_tab].title);
+      final streak = data == null ? 0 : streakWithFreezes(activeDays(data.problems, data.stats), today());
+      final streakChip = Padding(
+        padding: const EdgeInsets.only(right: 12),
+        child: StreakChip(
+          days: streak,
+          onTap: data == null
+              ? null
+              : () => unawaited(
+                  Navigator.push(context, MaterialPageRoute<void>(builder: (_) => StreakPage(days: activeDays(data.problems, data.stats)))),
+                ),
+        ),
+      );
       final avatar = Padding(
         padding: const EdgeInsets.only(right: 12),
         child: IconButton(
@@ -296,10 +309,7 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ),
                         ),
-                        if (_tab == _home)
-                          const Padding(padding: EdgeInsets.only(right: 12), child: TitlePill())
-                        else if (_tab != _profile)
-                          avatar,
+                        if (_tab == _home) streakChip else if (_tab != _profile) avatar,
                       ],
                     ),
                     Expanded(
@@ -331,7 +341,7 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
-            if (_tab == _home) const Padding(padding: EdgeInsets.only(right: 12), child: TitlePill()) else if (_tab != _profile) avatar,
+            if (_tab == _home) streakChip else if (_tab != _profile) avatar,
           ],
         ),
         body: content,

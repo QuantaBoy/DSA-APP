@@ -653,7 +653,12 @@ class _PowerStripState extends State<PowerStrip> with SingleTickerProviderStateM
                                 _Bar(value: p.level.into / p.level.needed, from: flame, to: hot, t: _spin),
                                 const SizedBox(height: 6),
                                 Text(
-                                  _cry,
+                                  switch (p.next) {
+                                    final n? => '🏅 ${n.progress.total - n.progress.done} MORE TO ${n.title.name.toUpperCase()}',
+                                    null => _cry,
+                                  },
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     color: Colors.white.withValues(alpha: 0.8),
                                     fontSize: 10,
@@ -887,5 +892,44 @@ class _TitlePillState extends State<TitlePill> with SingleTickerProviderStateMix
         ),
       );
     },
+  );
+}
+
+/// Top-bar streak: just the flame and the number, bouncing in when it changes. Tap for the streak page.
+class StreakChip extends StatelessWidget {
+  const StreakChip({super.key, required this.days, this.onTap});
+
+  final int days;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        gradient: days > 0 ? const LinearGradient(colors: [Color(0xFFFBBF24), Color(0xFFF97316)]) : null,
+        color: days > 0 ? null : Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('🔥', style: TextStyle(fontSize: 16, color: days > 0 ? null : Colors.grey)),
+          const SizedBox(width: 4),
+          TweenAnimationBuilder<double>(
+            key: ValueKey(days),
+            tween: Tween(begin: 1.6, end: 1),
+            duration: const Duration(milliseconds: 600),
+            curve: Curves.elasticOut,
+            builder: (context, s, child) => Transform.scale(scale: s, child: child),
+            child: Text(
+              '$days',
+              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: days > 0 ? Colors.white : null),
+            ),
+          ),
+        ],
+      ),
+    ),
   );
 }
