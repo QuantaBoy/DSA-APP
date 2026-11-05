@@ -113,7 +113,17 @@ void main() {
 
   testWidgets(
     'today',
-    (t) => shot(t, 'today', 'Hi, Three', TodayPage(store: Store('x', db: FakeFirebaseFirestore()), problems: problems, stats: stats, onOpenSheet: () {})),
+    (t) => shot(
+      t,
+      'today',
+      'Hi, Three',
+      TodayPage(
+        store: Store('x', db: FakeFirebaseFirestore()),
+        problems: problems,
+        stats: stats,
+        onOpenSheet: () {},
+      ),
+    ),
   );
   testWidgets('stack', (t) => shot(t, 'stack', 'My stack', StackPage(store: Store('x'), problems: problems), tab: 2));
   testWidgets('stats', (t) => shot(t, 'stats', 'Stats', StatsPage(problems: problems, stats: stats), tab: 3));

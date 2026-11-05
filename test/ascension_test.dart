@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:memory_stack/data/home_widget.dart';
 import 'package:memory_stack/data/sheet.dart';
 import 'package:memory_stack/logic/ascension.dart';
 import 'package:memory_stack/logic/models.dart';
@@ -58,5 +59,11 @@ void main() {
     expect(dailyChallenge(sheet, day)!.id, c.id);
     final solved = _p(c.id, 'Easy'); // solved on 2026-01-01
     expect(totalXp((problems: [solved], stats: const Stats(), aptCorrect: 0, aptWrong: 0), sheet), 60);
+  });
+
+  test('the widget week string marks done, missed, today and ahead', () {
+    final wed = DateTime.utc(2026, 11, 4); // a Wednesday
+    expect(weekString({DateTime.utc(2026, 11, 2)}, wed), 'dmtffff');
+    expect(weekString({DateTime.utc(2026, 11, 2), wed}, wed), 'dmdffff');
   });
 }

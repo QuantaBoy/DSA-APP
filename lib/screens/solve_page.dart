@@ -10,12 +10,15 @@ import 'package:webview_flutter/webview_flutter.dart';
 import '../data/leetcode.dart';
 import '../data/runner.dart';
 import '../data/sheet.dart';
+import '../data/sounds.dart';
 import '../data/statements.dart';
 import '../data/store.dart';
+import '../logic/ascension.dart';
 import '../logic/models.dart';
 import '../logic/srs.dart';
 import 'coach.dart';
 import 'code_pad.dart';
+import 'goal_celebration.dart';
 import 'open_link.dart';
 import 'solution_sheet.dart';
 import 'widgets.dart';
@@ -140,6 +143,11 @@ class _SolvePageState extends State<SolvePage> {
       final problem = widget.sheet.toProblem(p, today()).copyWith(patterns: card?.patterns);
       unawaited(widget.store.addProblem(problem, solution: card?.solution));
       unawaited(HapticFeedback.mediumImpact());
+      play(Sound.correct);
+      if (mounted) {
+        confettiBurst(context);
+        cheer(context, icon: Icons.rocket_launch_rounded, text: 'Solved!', color: const Color(0xFF6C4EF5), xp: solveXp(problem.difficulty));
+      }
       messenger.showSnackBar(SnackBar(content: Text('${p.title} added to your stack. First review ${prettyDay(problem.nextDue)}.')));
     }
     navigator.pop();

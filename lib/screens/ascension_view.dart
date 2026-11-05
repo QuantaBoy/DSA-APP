@@ -915,7 +915,7 @@ class StreakChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('🔥', style: TextStyle(fontSize: 16, color: days > 0 ? null : Colors.grey)),
+          days > 0 ? const _LiveFlame() : const Text('🔥', style: TextStyle(fontSize: 16, color: Colors.grey)),
           const SizedBox(width: 4),
           TweenAnimationBuilder<double>(
             key: ValueKey(days),
@@ -930,6 +930,62 @@ class StreakChip extends StatelessWidget {
           ),
         ],
       ),
+    ),
+  );
+}
+
+/// A flame that never stops burning: it flickers, sways and throws small embers upward.
+class _LiveFlame extends StatefulWidget {
+  const _LiveFlame();
+
+  @override
+  State<_LiveFlame> createState() => _LiveFlameState();
+}
+
+class _LiveFlameState extends State<_LiveFlame> with SingleTickerProviderStateMixin {
+  late final _t = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..repeat();
+
+  @override
+  void dispose() {
+    _t.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: 20,
+    height: 22,
+    child: AnimatedBuilder(
+      animation: _t,
+      builder: (context, child) {
+        final v = _t.value;
+        return Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.bottomCenter,
+          children: [
+            // Embers drifting up.
+            for (var i = 0; i < 3; i++)
+              Positioned(
+                bottom: 14 + ((v + i / 3) % 1) * 14,
+                left: 6 + sin((v + i) * 2 * pi) * 5,
+                child: Opacity(
+                  opacity: 1 - (v + i / 3) % 1,
+                  child: Container(
+                    width: 3,
+                    height: 3,
+                    decoration: const BoxDecoration(color: Color(0xFFFFF3B0), shape: BoxShape.circle),
+                  ),
+                ),
+              ),
+            Transform.rotate(
+              angle: sin(v * 2 * pi) * 0.1,
+              alignment: Alignment.bottomCenter,
+              child: Transform.scale(scaleY: 1 + 0.12 * sin(v * 4 * pi).abs(), alignment: Alignment.bottomCenter, child: child),
+            ),
+          ],
+        );
+      },
+      child: const Text('🔥', style: TextStyle(fontSize: 16)),
     ),
   );
 }

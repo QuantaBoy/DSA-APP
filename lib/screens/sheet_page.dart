@@ -6,11 +6,14 @@ import 'package:flutter/services.dart';
 import '../data/leetcode.dart';
 import '../data/prefs.dart';
 import '../data/sheet.dart';
+import '../data/sounds.dart';
 import '../data/statements.dart';
 import '../data/store.dart';
+import '../logic/ascension.dart';
 import '../logic/models.dart';
 import '../logic/srs.dart';
 import 'coach.dart';
+import 'goal_celebration.dart';
 import 'motion.dart';
 import 'open_link.dart';
 import 'solution_sheet.dart';
@@ -60,6 +63,8 @@ class _SheetPageState extends State<SheetPage> {
       }
     }
     if (!mounted) return;
+    play(Sound.correct);
+    cheer(context, icon: Icons.rocket_launch_rounded, text: 'Solved!', color: const Color(0xFF6C4EF5), xp: solveXp(problem.difficulty));
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(

@@ -5,10 +5,12 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../data/scan.dart';
+import '../data/sounds.dart';
 import '../data/store.dart';
 import '../logic/gate.dart';
 import '../logic/models.dart';
 import '../logic/srs.dart';
+import 'goal_celebration.dart';
 import 'widgets.dart';
 
 String _letter(int i) => String.fromCharCode(65 + i); // A, B, C…
@@ -490,6 +492,8 @@ class _AptReviewPageState extends State<AptReviewPage> {
       if (right) _correct++;
     });
     unawaited(right ? HapticFeedback.mediumImpact() : HapticFeedback.heavyImpact());
+    play(right ? Sound.correct : Sound.wrong);
+    if (right) cheer(context, icon: Icons.check_circle_rounded, text: 'Correct!', color: const Color(0xFF22C55E), xp: 8);
     unawaited(widget.store.reviewApt(card, correct: right));
   }
 

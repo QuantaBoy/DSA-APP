@@ -63,52 +63,7 @@ class _ReviewPageState extends State<ReviewPage> {
       Grade.hard => (Icons.fitness_center_rounded, 'Tough one, you held on!', const Color(0xFFF59E0B)),
       Grade.again => (Icons.refresh_rounded, "It'll stick next time", const Color(0xFFEF4444)),
     };
-    final entry = OverlayEntry(
-      builder: (_) => IgnorePointer(
-        child: Center(
-          child: TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0, end: 1),
-            duration: const Duration(milliseconds: 1100),
-            builder: (context, t, child) => Opacity(
-              opacity: t < 0.75 ? 1 : (1 - t) * 4,
-              child: Transform.translate(
-                offset: Offset(0, -40 * t),
-                child: Transform.scale(scale: Curves.elasticOut.transform((t * 2.2).clamp(0, 1)), child: child),
-              ),
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(30),
-                  boxShadow: [BoxShadow(color: color.withValues(alpha: 0.45), blurRadius: 24, offset: const Offset(0, 8))],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(icon, color: Colors.white, size: 26),
-                    const SizedBox(width: 10),
-                    Text(
-                      text,
-                      style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      '+${grade.remembered ? 10 : 3} XP',
-                      style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontWeight: FontWeight.w800),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-    Overlay.of(context).insert(entry);
-    Future<void>.delayed(const Duration(milliseconds: 1150), entry.remove);
+    cheer(context, icon: icon, text: text, color: color, xp: grade.remembered ? 10 : 3);
   }
 
   @override

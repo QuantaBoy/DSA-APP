@@ -79,6 +79,7 @@ class _HomePageState extends State<HomePage> {
         updateHomeWidget(
           due: d.problems.where((p) => p.isDue(now)).length,
           streak: streakWithFreezes(activeDays(d.problems, d.stats), now),
+          week: weekString(activeDays(d.problems, d.stats), now),
         ),
       );
       unawaited(_updatePower());
@@ -128,6 +129,7 @@ class _HomePageState extends State<HomePage> {
         due: d.problems.where((p) => p.isDue(today())).length,
         streak: streakWithFreezes(active, today()),
         level: 'Lv ${level.level} · ${Rank.of(level.level).title}',
+        week: weekString(active, today()),
       ),
     );
     _publishLeaderboard();

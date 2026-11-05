@@ -1,63 +1,172 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Streak tile on the left, this week's days on the right (done ✓, missed !, today ◔, ahead ○). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/widget_background"
-    android:orientation="vertical"
-    android:gravity="center_vertical"
-    android:padding="16dp">
+    android:orientation="horizontal">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="MEMORY STACK"
-        android:textColor="#CCFFFFFF"
-        android:textSize="11sp"
-        android:textStyle="bold"
-        android:letterSpacing="0.1" />
+    <FrameLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="2"
+        android:layout_marginEnd="8dp"
+        android:background="@drawable/widget_background">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:text="🔥"
+            android:textSize="44sp" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <TextView
+                android:id="@+id/widget_streak"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textColor="#FFFFFF"
+                android:textSize="34sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Streak days"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </FrameLayout>
 
     <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="bottom">
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="5"
+        android:background="@drawable/widget_card"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/widget_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Daily goal"
+            android:textColor="#1F2333"
+            android:textSize="15sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/widget_due"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="0"
-            android:textColor="#FFFFFF"
-            android:textSize="34sp"
-            android:textStyle="bold" />
+            android:layout_marginBottom="8dp"
+            android:text=""
+            android:textColor="#6B7085"
+            android:textSize="11sp" />
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
         <TextView
-            android:id="@+id/widget_due_label"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:layout_marginBottom="6dp"
-            android:text="reviews due"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp" />
+            android:id="@+id/day0"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:background="@drawable/widget_day_future"
+            android:gravity="center"
+            android:text="○
+M"
+            android:textColor="#1F2333"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+        <TextView
+            android:id="@+id/day1"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:background="@drawable/widget_day_future"
+            android:gravity="center"
+            android:text="○
+T"
+            android:textColor="#1F2333"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+        <TextView
+            android:id="@+id/day2"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:background="@drawable/widget_day_future"
+            android:gravity="center"
+            android:text="○
+W"
+            android:textColor="#1F2333"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+        <TextView
+            android:id="@+id/day3"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:background="@drawable/widget_day_future"
+            android:gravity="center"
+            android:text="○
+T"
+            android:textColor="#1F2333"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+        <TextView
+            android:id="@+id/day4"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:background="@drawable/widget_day_future"
+            android:gravity="center"
+            android:text="○
+F"
+            android:textColor="#1F2333"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+        <TextView
+            android:id="@+id/day5"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:background="@drawable/widget_day_future"
+            android:gravity="center"
+            android:text="○
+S"
+            android:textColor="#1F2333"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+        <TextView
+            android:id="@+id/day6"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginEnd="0dp"
+            android:background="@drawable/widget_day_future"
+            android:gravity="center"
+            android:text="○
+S"
+            android:textColor="#1F2333"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+        </LinearLayout>
     </LinearLayout>
-
-    <TextView
-        android:id="@+id/widget_streak"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="0 day streak"
-        android:textColor="#E6FFFFFF"
-        android:textSize="13sp" />
-
-    <TextView
-        android:id="@+id/widget_level"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
-        android:text=""
-        android:textColor="#CCFFFFFF"
-        android:textSize="12sp"
-        android:textStyle="bold" />
 </LinearLayout>

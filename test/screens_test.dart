@@ -54,15 +54,9 @@ void main() {
       ),
     );
     expect(find.text('2 problems to review'), findsOneWidget);
-    // Both lists start folded; Show opens them.
-    expect(find.text('2 days overdue'), findsNothing);
-    for (final show in find.text('Show').evaluate().toList().reversed) {
-      await tester.tap(find.byWidget(show.widget));
-    }
-    await tester.pump(const Duration(seconds: 2)); // the streak flame flickers forever, so no pumpAndSettle
     expect(find.text('2 days overdue'), findsOneWidget);
     expect(find.text('Due today'), findsOneWidget);
-    expect(find.text('Coming up this week (1)'), findsOneWidget);
+    expect(find.text('Coming up this week'), findsOneWidget);
   });
 
   testWidgets('Today with an empty stack points to the sheet', (tester) async {
