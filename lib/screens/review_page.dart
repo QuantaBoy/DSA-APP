@@ -152,11 +152,7 @@ class _ReviewPageState extends State<ReviewPage> {
     unawaited(HapticFeedback.selectionClick());
     setState(() => _flipped = true);
     showTipsOnce(context, 'review-grade', [
-      (
-        target: _gradeKey,
-        title: 'Grade honestly',
-        text: 'Again brings it back tomorrow; Easy pushes it far out. Undo fixes a wrong tap.',
-      ),
+      (target: _gradeKey, title: 'Grade honestly', text: 'Again brings it back tomorrow; Easy pushes it far out. Undo fixes a wrong tap.'),
     ]);
     final id = _current.id;
     if (_solutions.containsKey(id)) return;
@@ -232,13 +228,17 @@ class _ReviewPageState extends State<ReviewPage> {
     });
   }
 
-  Future<void> _practice(Problem p) => showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    showDragHandle: true,
-    builder: (_) => _PracticeSheet(problem: p),
-  );
+  /// Solve it again in code; when every test passes you can submit, which grades the card Good.
+  Future<void> _practice(Problem p) async {
+    final submitted = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (_) => _PracticeSheet(problem: p),
+    );
+    if ((submitted ?? false) && mounted && !_done && _current.id == p.id) _grade(Grade.good);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -406,10 +406,10 @@ class _ReviewPageState extends State<ReviewPage> {
                                   icon: const Icon(Icons.open_in_new_rounded, size: 18),
                                   label: Text(p.platform),
                                 ),
-                              TextButton.icon(
+                              FilledButton.icon(
                                 onPressed: () => _practice(p),
                                 icon: const Icon(Icons.terminal_rounded, size: 18),
-                                label: const Text('Practice in code'),
+                                label: const Text('Practice in code · prove it'),
                               ),
                             ],
                           ),
@@ -694,6 +694,7 @@ class _PracticeSheet extends StatefulWidget {
 
 class _PracticeSheetState extends State<_PracticeSheet> {
   final _code = CodeController();
+  bool _passed = false;
 
   @override
   void dispose() {
@@ -709,7 +710,33 @@ class _PracticeSheetState extends State<_PracticeSheet> {
     builder: (context, scroll) => ListView(
       controller: scroll,
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-      children: [CodePad(controller: _code, title: 'Practice: ${widget.problem.name}', saveKey: widget.problem.id)],
+      children: [
+        CodePad(
+          controller: _code,
+          title: 'Practice: ${widget.problem.name}',
+          saveKey: widget.problem.id,
+          onVerdict: (v) => setState(() => _passed = v ?? false),
+        ),
+        const SizedBox(height: 12),
+        // Only a passing run can clear the review from here.
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 250),
+          child: _passed
+              ? FilledButton.icon(
+                  key: const ValueKey('submit'),
+                  style: FilledButton.styleFrom(backgroundColor: Accent.green, minimumSize: const Size.fromHeight(54)),
+                  onPressed: () => Navigator.pop(context, true),
+                  icon: const Icon(Icons.check_circle_rounded),
+                  label: const Text('All tests pass · Submit review'),
+                )
+              : Text(
+                  'Add a test case with the expected output and run it. When all pass, you can submit.',
+                  key: const ValueKey('hint'),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                ),
+        ),
+      ],
     ),
   );
 }

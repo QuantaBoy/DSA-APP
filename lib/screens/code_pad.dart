@@ -356,6 +356,7 @@ class _CaseView extends StatelessWidget {
                   IconButton(tooltip: 'Remove case', onPressed: onRemove, icon: const Icon(Icons.close_rounded, size: 18)),
               ],
             ),
+            const SizedBox(height: 10), // room for the fields' floating labels
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: Row(
