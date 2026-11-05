@@ -22,6 +22,7 @@ import 'ascension_view.dart';
 import 'library_page.dart';
 import 'motion.dart';
 import 'profile_page.dart';
+import 'review_page.dart';
 import 'search_page.dart';
 import 'sheet_page.dart';
 import 'streak_page.dart';
@@ -84,6 +85,7 @@ class _HomePageState extends State<HomePage> {
       final active = activeDays(d.problems, d.stats);
       unawaited(scheduleStreakSaver(streak: streakWithFreezes(active, now), activeToday: active.contains(now)).catchError((Object _) {}));
       _syncLeetCode();
+      _celebrateStreak(active, now);
     }, onError: (Object _) {});
     _aptFeed = store.aptCards().listen((c) {
       _apt = c;
@@ -170,6 +172,31 @@ class _HomePageState extends State<HomePage> {
           )
           .catchError((Object _) {}),
     );
+  }
+
+  /// The moment today becomes an active day (first solve, review or quiz), the streak grows: show it, once a day.
+  /// The first data after opening only records the day, so reopening the app never replays it.
+  bool _sawData = false;
+  void _celebrateStreak(Set<DateTime> active, DateTime now) {
+    final day = dayKey(now);
+    final first = !_sawData;
+    _sawData = true;
+    if (!active.contains(now) || Prefs.streakCelebrated == day || reviewOpen) return;
+    Prefs.markStreakCelebrated(day);
+    if (first || !mounted) return;
+    final streak = streakWithFreezes(active, now);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(
+        Navigator.push(
+          context,
+          PageRouteBuilder<void>(
+            pageBuilder: (_, _, _) => StreakCelebration(before: streak - 1, reviewDays: active),
+            transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child),
+          ),
+        ),
+      );
+    });
   }
 
   bool _leetCodeSynced = false; // once per app start, on the first data
@@ -297,18 +324,19 @@ class _HomePageState extends State<HomePage> {
                       title: title,
                       automaticallyImplyLeading: false,
                       actions: [
-                        IconButton(
-                          tooltip: 'Search',
-                          icon: const Icon(Icons.search_rounded),
-                          onPressed: () => unawaited(
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute<void>(
-                                builder: (_) => SearchPage(store: store, problems: data?.problems ?? const []),
+                        if (_tab == _library)
+                          IconButton(
+                            tooltip: 'Search',
+                            icon: const Icon(Icons.search_rounded),
+                            onPressed: () => unawaited(
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute<void>(
+                                  builder: (_) => SearchPage(store: store, problems: data?.problems ?? const []),
+                                ),
                               ),
                             ),
                           ),
-                        ),
                         if (_tab == _home) streakChip else if (_tab != _profile) avatar,
                       ],
                     ),
@@ -329,18 +357,20 @@ class _HomePageState extends State<HomePage> {
         appBar: AppBar(
           title: title,
           actions: [
-            IconButton(
-              tooltip: 'Search',
-              icon: const Icon(Icons.search_rounded),
-              onPressed: () => unawaited(
-                Navigator.push(
-                  context,
-                  MaterialPageRoute<void>(
-                    builder: (_) => SearchPage(store: store, problems: data?.problems ?? const []),
+            // Search lives with your saved things, in Library.
+            if (_tab == _library)
+              IconButton(
+                tooltip: 'Search',
+                icon: const Icon(Icons.search_rounded),
+                onPressed: () => unawaited(
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => SearchPage(store: store, problems: data?.problems ?? const []),
+                    ),
                   ),
                 ),
               ),
-            ),
             if (_tab == _home) streakChip else if (_tab != _profile) avatar,
           ],
         ),

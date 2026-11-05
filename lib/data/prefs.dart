@@ -36,6 +36,9 @@ abstract final class Prefs {
   /// Day (yyyy-mm-dd) the goal celebration last played, so it plays once a day.
   static String? goalCelebrated;
 
+  /// Day (yyyy-mm-dd) the streak celebration last played.
+  static String? streakCelebrated;
+
   /// When the app was last opened on this device (for signing out after a long break).
   static DateTime? lastActive;
   static Set<String> seenTitles = const {};
@@ -45,7 +48,7 @@ abstract final class Prefs {
 
   static const _theme = 'themeMode', _onboarding = 'seenOnboarding', _reminder = 'reminderMinutes';
   static const _goal = 'dailyNewGoal', _tips = 'seenTips', _sheet = 'sheetId', _board = 'leaderboard', _leetcode = 'leetcodeUser';
-  static const _sounds = 'sounds';
+  static const _sounds = 'sounds', _streakDay = 'streakCelebrated';
   static const _goalDay = 'goalCelebrated', _active = 'lastActive';
   static const _title = 'equippedTitle', _seenLevel = 'seenLevel', _seenTitles = 'seenTitles';
   static const _reminderOff = -1;
@@ -74,6 +77,7 @@ abstract final class Prefs {
     sounds.value = p.getBool(_sounds) ?? true;
     seenLevel = p.getInt(_seenLevel) ?? -1;
     goalCelebrated = p.getString(_goalDay);
+    streakCelebrated = p.getString(_streakDay);
     final active = p.getInt(_active);
     lastActive = active == null ? null : DateTime.fromMillisecondsSinceEpoch(active);
     seenTitles = {...?p.getStringList(_seenTitles)};
@@ -87,6 +91,11 @@ abstract final class Prefs {
   static void markActive(DateTime now) {
     lastActive = now;
     unawaited(_prefs().then((p) => p?.setInt(_active, now.millisecondsSinceEpoch)));
+  }
+
+  static void markStreakCelebrated(String day) {
+    streakCelebrated = day;
+    unawaited(_prefs().then((p) => p?.setString(_streakDay, day)));
   }
 
   static void markGoalCelebrated(String day) {

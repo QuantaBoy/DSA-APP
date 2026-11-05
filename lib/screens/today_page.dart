@@ -1,10 +1,7 @@
 import 'dart:async';
-import 'dart:math';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import '../data/leaderboard.dart';
 import '../data/prefs.dart';
 import '../data/sheet.dart';
 import '../data/store.dart';
@@ -18,10 +15,10 @@ import 'coach.dart';
 import 'goal_celebration.dart';
 import 'interview_page.dart';
 import 'motion.dart';
-import 'open_link.dart';
 import 'quiz_page.dart';
 import 'review_page.dart';
 import 'solve_page.dart';
+import 'streak_page.dart';
 import 'widgets.dart';
 
 /// Home: one obvious next step (review → solve the next sheet problem → done), today's goal,
@@ -41,6 +38,7 @@ class TodayPage extends StatefulWidget {
 
 class _TodayPageState extends State<TodayPage> {
   final _heroKey = GlobalKey(), _goalKey = GlobalKey();
+  bool _showDue = false, _showUpcoming = false;
 
   @override
   void initState() {
@@ -150,13 +148,18 @@ class _TodayPageState extends State<TodayPage> {
             builder: (context, box) {
               final twoColumns = box.maxWidth >= 720; // PC: due and upcoming side by side
               List<Widget> dueList(int start) => [
-                SectionTitle('Due now', action: due.isEmpty ? null : 'See all', onAction: widget.onSeeAll),
+                // Folded by default: the card on top already starts these reviews. Tap to open the list.
+                SectionTitle(
+                  'Due now (${due.length})',
+                  action: due.isEmpty ? null : (_showDue ? 'Hide' : 'Show'),
+                  onAction: () => setState(() => _showDue = !_showDue),
+                ),
                 if (due.isEmpty)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
                     child: Text('Nothing due. Nice!', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
                   ),
-                for (final (i, p) in due.indexed)
+                for (final (i, p) in _showDue ? due.indexed : const <(int, Problem)>[])
                   Rise(
                     index: start + i,
                     child: _ProblemCard(
@@ -167,8 +170,13 @@ class _TodayPageState extends State<TodayPage> {
                   ),
               ];
               List<Widget> upcomingList(int start) => [
-                if (upcoming.isNotEmpty) const SectionTitle('Coming up this week'),
-                for (final (i, p) in upcoming.indexed)
+                if (upcoming.isNotEmpty)
+                  SectionTitle(
+                    'Coming up this week (${upcoming.length})',
+                    action: _showUpcoming ? 'Hide' : 'Show',
+                    onAction: () => setState(() => _showUpcoming = !_showUpcoming),
+                  ),
+                for (final (i, p) in _showUpcoming ? upcoming.indexed : const <(int, Problem)>[])
                   Rise(
                     index: start + i,
                     child: _ProblemCard(problem: p, now: now),
@@ -219,8 +227,16 @@ class _TodayPageState extends State<TodayPage> {
                       onChallenge: (c) => _solve(sheet!, c),
                     ),
                   ),
-                  if (Prefs.leaderboard.value) const _FriendsFeed(),
-                  _WeekRecap(problems: problems, stats: stats, streak: days),
+                  Rise(
+                    index: 3,
+                    child: _StreakWeek(
+                      active: activeDays(problems, stats),
+                      streak: days,
+                      onTap: () => unawaited(
+                        Navigator.push(context, MaterialPageRoute<void>(builder: (_) => StreakPage(days: activeDays(problems, stats)))),
+                      ),
+                    ),
+                  ),
                   _WeakSpot(
                     stats: stats,
                     problems: problems,
@@ -550,139 +566,6 @@ class _WeakSpot extends StatelessWidget {
   }
 }
 
-/// The last 7 days at a glance, with a button to brag on WhatsApp.
-class _WeekRecap extends StatelessWidget {
-  const _WeekRecap({required this.problems, required this.stats, required this.streak});
-
-  final List<Problem> problems;
-  final Stats stats;
-  final int streak;
-
-  @override
-  Widget build(BuildContext context) {
-    final now = today();
-    final from = addDays(now, -6);
-    bool inWeek(DateTime d) => !dateOnly(d).isBefore(from);
-    final solved = problems.where((p) => inWeek(p.solvedOn)).length;
-    final reviews = stats.days.entries.where((e) => inWeek(e.key)).fold(0, (a, e) => a + e.value);
-    if (solved + reviews == 0) return const SizedBox.shrink();
-    final level = power.value?.level.level;
-    final theme = Theme.of(context);
-    final text =
-        'My week on Memory Stack: $solved solved, $reviews reviews, $streak-day streak 🔥'
-        '${level == null ? '' : ', Level $level'}. https://memory-stack-e6990.web.app';
-    Widget stat(String emoji, String n) => Padding(
-      padding: const EdgeInsets.only(right: 14),
-      child: Text.rich(
-        TextSpan(
-          children: [
-            TextSpan(text: '$emoji '),
-            TextSpan(
-              text: n,
-              style: TextStyle(fontWeight: FontWeight.w900, color: theme.colorScheme.primary),
-            ),
-          ],
-        ),
-        style: theme.textTheme.titleSmall,
-      ),
-    );
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(14, 6, 4, 6),
-        decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerLowest, borderRadius: BorderRadius.circular(18)),
-        child: Row(
-          children: [
-            Text(
-              'WEEK',
-              style: TextStyle(fontSize: 11, letterSpacing: 1.4, fontWeight: FontWeight.w800, color: theme.colorScheme.onSurfaceVariant),
-            ),
-            const SizedBox(width: 12),
-            stat('✅', '$solved'),
-            stat('🔁', '$reviews'),
-            stat('🔥', '$streak'),
-            const Spacer(),
-            IconButton(
-              tooltip: 'Share my week',
-              onPressed: () => openLink(context, 'https://wa.me/?text=${Uri.encodeComponent(text)}', inApp: false),
-              icon: Icon(Icons.share_rounded, color: theme.colorScheme.primary, size: 20),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// What friends on the leaderboard did lately: a nudge to keep up.
-class _FriendsFeed extends StatefulWidget {
-  const _FriendsFeed();
-
-  @override
-  State<_FriendsFeed> createState() => _FriendsFeedState();
-}
-
-class _FriendsFeedState extends State<_FriendsFeed> {
-  late final _recent = Leaderboard().recent().catchError((Object _) => <({LeaderboardEntry entry, DateTime at})>[]);
-
-  String _ago(DateTime t) {
-    final d = DateTime.now().difference(t);
-    return d.inMinutes < 60 ? '${max(1, d.inMinutes)}m ago' : (d.inHours < 24 ? '${d.inHours}h ago' : '${d.inDays}d ago');
-  }
-
-  @override
-  Widget build(BuildContext context) => FutureBuilder(
-    future: _recent,
-    builder: (context, snap) {
-      final me = FirebaseAuth.instance.currentUser?.uid;
-      final items = [...?snap.data?.where((x) => x.entry.uid != me)];
-      if (items.isEmpty) return const SizedBox.shrink();
-      final theme = Theme.of(context);
-      // A row of friends: avatar ringed in fire when they were active today, flame count and level underneath.
-      return SizedBox(
-        height: 92,
-        child: ListView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          children: [
-            for (final x in items)
-              Tooltip(
-                message: '${x.entry.name} · ${x.entry.solved} solved · ${_ago(x.at)}',
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 14),
-                  child: Column(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(2.5),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: DateTime.now().difference(x.at).inHours < 24
-                              ? const LinearGradient(colors: [Color(0xFFFBBF24), Color(0xFFEF4444)])
-                              : null,
-                          color: theme.colorScheme.outlineVariant,
-                        ),
-                        child: CircleAvatar(
-                          radius: 20,
-                          backgroundColor: theme.colorScheme.primaryContainer,
-                          child: Text(x.entry.name.characters.first.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.w900)),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '🔥${x.entry.streak} · Lv${x.entry.level}',
-                        style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-          ],
-        ),
-      );
-    },
-  );
-}
-
 /// Three square shortcuts side by side: quiz, today's 2× challenge (glowing until done) and a mock interview.
 class _ActionRow extends StatelessWidget {
   const _ActionRow({required this.store, required this.problems, required this.challenge, required this.onChallenge});
@@ -817,4 +700,182 @@ class _ActionState extends State<_Action> with SingleTickerProviderStateMixin {
       ),
     );
   }
+}
+
+/// Streak card: a big flame tile with the count, and this week's days (done ✓, missed !, today in progress).
+class _StreakWeek extends StatelessWidget {
+  const _StreakWeek({required this.active, required this.streak, required this.onTap});
+
+  final Set<DateTime> active;
+  final int streak;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final now = today();
+    final monday = addDays(now, -(now.weekday - 1));
+    const names = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    return Pressable(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        child: Row(
+          children: [
+            Container(
+              width: 112,
+              height: 112,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF6C4EF5), Color(0xFF3B82F6)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Stack(
+                children: [
+                  const Positioned(
+                    right: -14,
+                    bottom: -18,
+                    child: _Flicker(child: Text('🔥', style: TextStyle(fontSize: 72))),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0, end: streak.toDouble()),
+                          duration: const Duration(milliseconds: 900),
+                          curve: Curves.easeOutCubic,
+                          builder: (context, v, _) => Text(
+                            '${v.round()}',
+                            style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.w900, height: 1),
+                          ),
+                        ),
+                        const Text(
+                          'Streak days',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Container(
+                height: 112,
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+                decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerLowest, borderRadius: BorderRadius.circular(24)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('This week', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900)),
+                    const Spacer(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        for (var i = 0; i < 7; i++)
+                          _Day(
+                            label: names[i],
+                            state: switch (addDays(monday, i)) {
+                              final d when active.contains(d) => _DayState.done,
+                              final d when d == now => _DayState.today,
+                              final d when d.isBefore(now) => _DayState.missed,
+                              _ => _DayState.future,
+                            },
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+enum _DayState { done, missed, today, future }
+
+class _Day extends StatelessWidget {
+  const _Day({required this.label, required this.state});
+
+  final String label;
+  final _DayState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final (Color bg, Widget mark) = switch (state) {
+      _DayState.done => (Accent.green.withValues(alpha: 0.14), const Icon(Icons.check_circle_rounded, color: Accent.green, size: 20)),
+      _DayState.missed => (Accent.red.withValues(alpha: 0.12), const Icon(Icons.priority_high_rounded, color: Accent.red, size: 18)),
+      _DayState.today => (
+        colors.primary.withValues(alpha: 0.14),
+        SizedBox.square(
+          dimension: 18,
+          child: CircularProgressIndicator(
+            value: 0.3,
+            strokeWidth: 3,
+            color: colors.primary,
+            backgroundColor: colors.primary.withValues(alpha: 0.2),
+          ),
+        ),
+      ),
+      _DayState.future => (colors.surfaceContainerHighest, Icon(Icons.circle_outlined, color: colors.outlineVariant, size: 18)),
+    };
+    return Container(
+      width: 30,
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(10),
+        border: state == _DayState.today ? Border.all(color: colors.primary, width: 1.5) : null,
+      ),
+      child: Column(
+        children: [
+          SizedBox(height: 20, child: Center(child: mark)),
+          const SizedBox(height: 4),
+          Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
+        ],
+      ),
+    );
+  }
+}
+
+/// A flame that sways and breathes.
+class _Flicker extends StatefulWidget {
+  const _Flicker({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_Flicker> createState() => _FlickerState();
+}
+
+class _FlickerState extends State<_Flicker> with SingleTickerProviderStateMixin {
+  late final _t = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _t.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _t,
+    builder: (context, child) => Transform.rotate(
+      angle: (_t.value - 0.5) * 0.12,
+      alignment: Alignment.bottomCenter,
+      child: Transform.scale(scale: 0.95 + 0.08 * _t.value, alignment: Alignment.bottomCenter, child: child),
+    ),
+    child: widget.child,
+  );
 }

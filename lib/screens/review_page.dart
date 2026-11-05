@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_code_editor/flutter_code_editor.dart';
 
 import '../data/leetcode.dart';
+import '../data/prefs.dart';
 import '../data/sounds.dart';
 import '../data/statements.dart';
 import '../data/store.dart';
@@ -24,6 +25,9 @@ import 'widgets.dart';
 
 /// Flashcard review: recall the approach, flip to check against your solution card, grade it.
 /// Grade with the four buttons; Undo takes back the last grade.
+/// True while a review session is open: its own end screen shows the streak, so Home waits.
+bool reviewOpen = false;
+
 class ReviewPage extends StatefulWidget {
   const ReviewPage({super.key, required this.store, required this.queue, this.streakBefore, this.reviewDays = const {}});
 
@@ -110,6 +114,7 @@ class _ReviewPageState extends State<ReviewPage> {
   @override
   void initState() {
     super.initState();
+    reviewOpen = true;
     showTipsOnce(context, 'review', [
       (
         target: _showKey,
@@ -117,6 +122,12 @@ class _ReviewPageState extends State<ReviewPage> {
         text: 'Think of the approach, then tap to flip the card and compare with your solution card.',
       ),
     ]);
+  }
+
+  @override
+  void dispose() {
+    reviewOpen = false;
+    super.dispose();
   }
 
   Problem get _current => widget.queue[_index];
@@ -185,7 +196,10 @@ class _ReviewPageState extends State<ReviewPage> {
           Navigator.push(
             context,
             PageRouteBuilder<void>(
-              pageBuilder: (_, _, _) => StreakCelebration(before: widget.streakBefore!, reviewDays: widget.reviewDays),
+              pageBuilder: (_, _, _) {
+                Prefs.markStreakCelebrated(dayKey(today()));
+                return StreakCelebration(before: widget.streakBefore!, reviewDays: widget.reviewDays);
+              },
               transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child),
             ),
           ),
@@ -294,6 +308,8 @@ class _ReviewPageState extends State<ReviewPage> {
                     onTap: _flip,
                     child: SingleChildScrollView(
                       child: Column(
+                        // Full width, so the question card and buttons line up with the card edges.
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Wrap(
                             alignment: WrapAlignment.center,
@@ -397,22 +413,21 @@ class _ReviewPageState extends State<ReviewPage> {
                                 label: Text('Hint ${(_hints[p.id] ?? 0) + 1} of ${hints.length}'),
                               ),
                           ],
-                          Wrap(
-                            spacing: 8,
-                            children: [
-                              if (p.url != null)
-                                TextButton.icon(
-                                  onPressed: () => openLink(context, p.url!),
-                                  icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                                  label: Text(p.platform),
-                                ),
-                              FilledButton.icon(
-                                onPressed: () => _practice(p),
-                                icon: const Icon(Icons.terminal_rounded, size: 18),
-                                label: const Text('Practice in code · prove it'),
-                              ),
-                            ],
+                          const SizedBox(height: 8),
+                          FilledButton.icon(
+                            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+                            onPressed: () => _practice(p),
+                            icon: const Icon(Icons.terminal_rounded, size: 20),
+                            label: const Text('Practice in code · prove it'),
                           ),
+                          if (p.url != null)
+                            Center(
+                              child: TextButton.icon(
+                                onPressed: () => openLink(context, p.url!),
+                                icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                                label: Text('Open on ${p.platform}'),
+                              ),
+                            ),
                         ],
                       ),
                     ),
