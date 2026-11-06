@@ -177,7 +177,7 @@ class StreakPage extends StatelessWidget {
     final colors = theme.colorScheme;
     final dark = theme.brightness == Brightness.dark;
     final now = today();
-    final info = streakInfo(days, now); // one missed day a week is forgiven
+    final info = (days: streakWithFreezes(days, now), frozen: const <DateTime>[]); // a missed day breaks the streak
     final current = info.days;
     final record = longestStreak(days) > current ? longestStreak(days) : current;
     final end = days.contains(now) ? now : addDays(now, -1);
@@ -241,12 +241,10 @@ class StreakPage extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.ac_unit_rounded, size: 16, color: Accent.sky),
+                      const Icon(Icons.warning_amber_rounded, size: 16, color: Accent.sky),
                       const SizedBox(width: 6),
                       Text(
-                        info.frozen.isEmpty
-                            ? 'Streak freeze: miss 1 day a week, keep your streak'
-                            : 'Streak freeze saved ${info.frozen.length} day${info.frozen.length == 1 ? '' : 's'}',
+                        'Miss a day and the streak starts over',
                         style: theme.textTheme.labelMedium?.copyWith(color: Accent.sky, fontWeight: FontWeight.w700),
                       ),
                     ],

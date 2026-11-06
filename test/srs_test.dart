@@ -105,7 +105,7 @@ void main() {
     expect(streakStart(days, d(2026, 10, 20)), isNull);
   });
 
-  test('one missed day a week is forgiven by a streak freeze', () {
+  test('streakInfo can still forgive one day a week (the app no longer uses it)', () {
     // Reviewed 1-5 Oct, missed 6 Oct, reviewed 7-10 Oct.
     final days = [
       for (var i = 1; i <= 10; i++)

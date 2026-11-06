@@ -130,7 +130,8 @@ const streakMilestones = [3, 7, 14, 30, 60, 100, 200, 365];
 }
 
 /// Streak length with freezes, for the places that only show the number.
-int streakWithFreezes(Iterable<DateTime> reviewDays, DateTime on) => streakInfo(reviewDays, on).days;
+/// Missing a whole day breaks the streak (freezes were too forgiving: the streak never seemed to break).
+int streakWithFreezes(Iterable<DateTime> reviewDays, DateTime on) => streak(reviewDays, on);
 
 /// A mock interview on a problem you already solved counts as a review:
 /// not solved is Again, solved within half the time is Easy, within the time Good, over it Hard.
