@@ -46,56 +46,9 @@ class RoadmapPage extends StatelessWidget {
         final progress = p?.progress ?? const <String, Progress>{};
         final current = titles.where((t) => !earned.contains(t.id)).firstOrNull;
         final colors = Theme.of(context).colorScheme;
-        final level = p?.level.level ?? 1;
         return ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
           children: [
-            // Every rank, so you see where the climb goes: reached ones lit, the rest locked.
-            Text(
-              'RANKS',
-              style: TextStyle(fontSize: 12, letterSpacing: 1.4, fontWeight: FontWeight.w800, color: colors.onSurfaceVariant),
-            ),
-            const SizedBox(height: 8),
-            for (final (i, r) in Rank.values.indexed)
-              Container(
-                margin: const EdgeInsets.only(bottom: 6),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(
-                  color: level >= r.fromLevel
-                      ? r.colors.first.withValues(alpha: 0.14)
-                      : colors.surfaceContainerHighest.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Rank.of(level) == r ? Border.all(color: r.colors.last, width: 2) : null,
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      level >= r.fromLevel ? Icons.shield_rounded : Icons.lock_rounded,
-                      color: level >= r.fromLevel ? r.colors.last : colors.outline,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        r.title,
-                        style: TextStyle(fontWeight: FontWeight.w800, color: level >= r.fromLevel ? null : colors.outline),
-                      ),
-                    ),
-                    Text(
-                      i == Rank.values.length - 1 ? 'Lv ${r.fromLevel}+' : 'Lv ${r.fromLevel}–${Rank.values[i + 1].fromLevel - 1}',
-                      style: TextStyle(color: colors.onSurfaceVariant, fontWeight: FontWeight.w700, fontSize: 12),
-                    ),
-                    if (Rank.of(level) == r) ...[
-                      const SizedBox(width: 8),
-                      Text(
-                        'YOU',
-                        style: TextStyle(color: r.colors.last, fontWeight: FontWeight.w900, fontSize: 11),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            const SizedBox(height: 18),
             Row(
               children: [
                 Expanded(
